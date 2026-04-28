@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "multichat",
+  "version": "${version}",
+  "name": "MultiChat",
+  "description": "Made by Mobilelize",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/multichat/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.mobilelize.multichat.client.MultichatClient"
+    ],
+    "main": [
+      "net.mobilelize.multichat.Multichat"
+    ]
+  },
+  "mixins": [
+    "multichat.mixins.json",
+    {
+      "config": "multichat.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
