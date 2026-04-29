@@ -4,6 +4,8 @@
   "package": "net.mobilelize.multichat.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "ChatHudMixin",
+    "ChatHudAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
