@@ -13,10 +13,14 @@ public class ChatPanel {
     public final int margin;
     public final List<ChatHudLine.Visible> messages = new ArrayList<>();
     public int scrolledLines = 0;
+    public boolean enabled;
+    public boolean showOnlyWhenFocused;
 
-    public ChatPanel(Anchor anchor, int margin) {
+    public ChatPanel(Anchor anchor, int margin, boolean enabled, boolean showOnlyWhenFocused) {
         this.anchor = anchor;
         this.margin = margin;
+        this.enabled = enabled;
+        this.showOnlyWhenFocused = showOnlyWhenFocused;
     }
 
     public int computeXOffset(int scaledWindowWidth, float scale, int chatWidth) {

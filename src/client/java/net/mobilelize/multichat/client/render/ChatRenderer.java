@@ -17,24 +17,14 @@ import java.util.List;
 public class ChatRenderer {
 
     public static final List<ChatPanel> PANELS = new ArrayList<>(List.of(
-        new ChatPanel(ChatPanel.Anchor.LEFT,  0),   // panel 0 — default left position
-        new ChatPanel(ChatPanel.Anchor.RIGHT, 0)    // panel 1 — right wall
+        new ChatPanel(ChatPanel.Anchor.LEFT,  0, true,  false),  // left — always on, always visible
+        new ChatPanel(ChatPanel.Anchor.RIGHT, 0, false, false)   // right — off by default
     ));
 
     public static int lastMouseX = 0;
 
-    private static int routeCounter = 0;
-
-    /** Returns the panel index this message should be routed to, then advances counter. */
-    public static int nextRouteTarget() {
-        int idx = routeCounter % PANELS.size();
-        routeCounter++;
-        return idx;
-    }
-
     /** Called before refresh() re-routes all history — clears panels so no duplicates. */
     public static void resetForRefresh() {
-        routeCounter = 0;
         PANELS.forEach(p -> p.messages.clear());
     }
 
@@ -67,6 +57,8 @@ public class ChatRenderer {
         int topY             = MathHelper.floor((float)(windowHeight - 40) / scale);
 
         for (ChatPanel panel : PANELS) {
+            if (!panel.enabled) continue;
+            if (panel.showOnlyWhenFocused && !focused) continue;
             List<ChatHudLine.Visible> panelMessages = panel.messages;
             if (panelMessages.isEmpty()) continue;
 

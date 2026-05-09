@@ -15,6 +15,9 @@
     ],
     "main": [
       "net.mobilelize.multichat.Multichat"
+    ],
+    "modmenu": [
+      "net.mobilelize.multichat.client.config.ModMenuIntegration"
     ]
   },
   "mixins": [

@@ -54,6 +54,7 @@ public class ChatHudMixin {
         double rawChatX = ChatRenderer.lastMouseX / (double) scale - 4.0;
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (!panel.enabled) continue;
             if (panel.messages.isEmpty()) continue;
 
             int xOffset       = panel.computeXOffset(windowWidth, scale, chatWidth);
@@ -84,26 +85,26 @@ public class ChatHudMixin {
         ChatHudAccessor accessor = (ChatHudAccessor) self;
         MinecraftClient client = accessor.getClient();
 
-        int targetIdx = ChatRenderer.nextRouteTarget();
-        ChatPanel target = ChatRenderer.PANELS.get(targetIdx);
-
-        int width = MathHelper.floor((double) self.getWidth() / self.getChatScale());
+        int baseWidth = MathHelper.floor((double) self.getWidth() / self.getChatScale());
         MessageIndicator.Icon icon = message.getIcon();
-        if (icon != null) {
-            width -= icon.width + 4 + 2;
-        }
+        int iconDeduction = icon != null ? icon.width + 4 + 2 : 0;
+        int width = baseWidth - iconDeduction;
 
         List<OrderedText> lines = ChatMessages.breakRenderedChatMessageLines(
                 message.content(), width, client.textRenderer);
 
-        for (int j = 0; j < lines.size(); j++) {
-            boolean endOfEntry = j == lines.size() - 1;
-            target.messages.add(0, new ChatHudLine.Visible(
-                    message.creationTick(), lines.get(j), message.indicator(), endOfEntry));
-        }
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (!panel.enabled) continue;
 
-        while (target.messages.size() > 100) {
-            target.messages.remove(target.messages.size() - 1);
+            for (int j = 0; j < lines.size(); j++) {
+                boolean endOfEntry = j == lines.size() - 1;
+                panel.messages.add(0, new ChatHudLine.Visible(
+                        message.creationTick(), lines.get(j), message.indicator(), endOfEntry));
+            }
+
+            while (panel.messages.size() > 100) {
+                panel.messages.remove(panel.messages.size() - 1);
+            }
         }
     }
 
@@ -133,6 +134,7 @@ public class ChatHudMixin {
 
         for (int i = 0; i < ChatRenderer.PANELS.size(); i++) {
             ChatPanel panel   = ChatRenderer.PANELS.get(i);
+            if (!panel.enabled) continue;
             if (panel.messages.isEmpty()) continue;
 
             int xOffset       = panel.computeXOffset(windowWidth, scale, chatWidth);
