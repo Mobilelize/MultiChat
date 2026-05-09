@@ -17,6 +17,17 @@ public class ConfigMenu {
                 .setSavingRunnable(ConfigMenu::applyAndSave);
 
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
+
+        ConfigCategory general = builder.getOrCreateCategory(Text.literal("General"));
+
+        general.addEntry(entryBuilder.startBooleanToggle(
+                Text.literal("Show Unread Badges"),
+                MultichatClient.CONFIG.showUnreadBadges)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Shows unread message counts on inactive tabs."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.showUnreadBadges = v)
+                .build());
+
         ConfigCategory category = builder.getOrCreateCategory(Text.literal("Right Panel"));
 
         category.addEntry(entryBuilder.startBooleanToggle(

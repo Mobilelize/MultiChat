@@ -9,6 +9,9 @@ import net.minecraft.network.message.ChatVisibility;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import net.mobilelize.multichat.client.ChatPanel;
+import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
 import java.util.ArrayList;
@@ -17,19 +20,33 @@ import java.util.List;
 public class ChatRenderer {
 
     public static final List<ChatPanel> PANELS = new ArrayList<>(List.of(
-        new ChatPanel(ChatPanel.Anchor.LEFT,  0, true,  false),  // left — always on, always visible
-        new ChatPanel(ChatPanel.Anchor.RIGHT, 0, false, false)   // right — off by default
+        new ChatPanel(ChatPanel.Anchor.LEFT,  0, true,  false),
+        new ChatPanel(ChatPanel.Anchor.RIGHT, 0, false, false)
     ));
 
     public static int lastMouseX = 0;
 
-    /** Called before refresh() re-routes all history — clears panels so no duplicates. */
-    public static void resetForRefresh() {
-        PANELS.forEach(p -> p.messages.clear());
+    public static final int TAB_HEIGHT = 10;
+
+    public static String getTabLabel(ChatTab tab) {
+        boolean badges = MultichatClient.CONFIG != null && MultichatClient.CONFIG.showUnreadBadges;
+        if (badges && tab.unreadCount > 0) return tab.name + " [" + tab.unreadCount + "]";
+        return tab.name;
     }
 
+    public static void resetForRefresh() {
+        PANELS.forEach(p -> p.tabs.forEach(t -> {
+            t.messages.clear();
+            t.unreadCount = 0;
+        }));
+    }
+
+    /**
+     * Main render entry. Called when our system handles all rendering (LEFT tab != VANILLA).
+     * skipLeftMessages = true when vanilla rendered LEFT chat; we only add our tab bar + RIGHT panel.
+     */
     public static void render(ChatHud chat, DrawContext context, int currentTick,
-                               int mouseX, int mouseY, boolean focused) {
+                               int mouseX, int mouseY, boolean focused, boolean skipLeftMessages) {
         ChatHudAccessor accessor = (ChatHudAccessor) chat;
         MinecraftClient client = accessor.getClient();
 
@@ -37,10 +54,10 @@ public class ChatRenderer {
 
         if (client.options.getChatVisibility().getValue() == ChatVisibility.HIDDEN) return;
 
-        boolean anyMessages = PANELS.stream().anyMatch(p -> !p.messages.isEmpty());
-        if (!anyMessages) return;
+        boolean anyVisible = PANELS.stream().anyMatch(p -> p.enabled && (!p.showOnlyWhenFocused || focused));
+        if (!anyVisible) return;
 
-        client.getProfiler().push("chat");
+        client.getProfiler().push("multichat");
 
         float scale       = (float) chat.getChatScale();
         int chatWidth     = MathHelper.ceil((float) chat.getWidth() / scale);
@@ -56,23 +73,60 @@ public class ChatRenderer {
         boolean hasUnread    = accessor.getHasUnreadNewMessages();
         int topY             = MathHelper.floor((float)(windowHeight - 40) / scale);
 
-        for (ChatPanel panel : PANELS) {
+        for (int i = 0; i < PANELS.size(); i++) {
+            ChatPanel panel = PANELS.get(i);
             if (!panel.enabled) continue;
             if (panel.showOnlyWhenFocused && !focused) continue;
-            List<ChatHudLine.Visible> panelMessages = panel.messages;
-            if (panelMessages.isEmpty()) continue;
 
+            ChatTab activeTab = panel.getActiveTab();
             int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
+
+            if (focused) renderTabBar(client, context, panel, xOffset, topY, scale);
+
+            if (activeTab.type == TabType.VANILLA) continue;
+            if (i == 0 && skipLeftMessages) continue;
+
+            List<ChatHudLine.Visible> msgs = activeTab.messages;
+            if (msgs.isEmpty()) continue;
+
             int hoveredIndex = computeHoveredIndex(panel, client, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
 
             renderAt(client, context, currentTick, focused,
-                    panelMessages, panelMessages.size(), panel.scrolledLines, hasUnread,
+                    msgs, msgs.size(), activeTab.scrolledLines, hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
                     lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset);
         }
 
         client.getProfiler().pop();
+    }
+
+    private static void renderTabBar(MinecraftClient client, DrawContext context,
+                                      ChatPanel panel, int xOffset, int topY, float scale) {
+        context.getMatrices().push();
+        context.getMatrices().scale(scale, scale, 1.0F);
+        context.getMatrices().translate(4.0F + xOffset, 0.0F, 0.0F);
+
+        int x = -4;
+
+        for (int i = 0; i < panel.tabs.size(); i++) {
+            ChatTab tab = panel.tabs.get(i);
+            boolean active = (i == panel.activeTab);
+
+            String label = getTabLabel(tab);
+            int labelWidth = client.textRenderer.getWidth(label);
+            int tabWidth   = labelWidth + 8;
+
+            int bgColor   = active ? 0xBB888888 : 0x88444444;
+            int textColor = active ? 0xFFFFFFFF : 0xFF999999;
+
+            context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, bgColor);
+            context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, textColor);
+
+            x += tabWidth + 1;
+        }
+
+        context.getMatrices().pop();
     }
 
     private static void renderAt(MinecraftClient client, DrawContext context,
@@ -156,24 +210,20 @@ public class ChatRenderer {
         context.getMatrices().pop();
     }
 
-    /**
-     * Returns the message index (endOfEntry line) the mouse is over for the given panel,
-     * or -1 if not hovering this panel.
-     */
     public static int computeHoveredIndex(ChatPanel panel, MinecraftClient client,
                                            int mouseX, int mouseY, int visibleLineCount,
                                            int windowHeight, float scale, int lineHeight,
                                            int chatWidth, int xOffset, boolean focused) {
         if (!focused) return -1;
 
-        double rawChatX = mouseX / (double) scale - 4.0;
+        double rawChatX   = mouseX / (double) scale - 4.0;
         double localChatX = rawChatX - xOffset;
-        double chatY = ((double) windowHeight - mouseY - 40.0) / (scale * lineHeight);
+        double chatY      = ((double) windowHeight - mouseY - 40.0) / (scale * lineHeight);
 
         if (localChatX < -4.0 || localChatX > chatWidth) return -1;
 
-        List<ChatHudLine.Visible> visibleMessages = panel.messages;
-        int scrolledLines = panel.scrolledLines;
+        List<ChatHudLine.Visible> visibleMessages = panel.getActiveTab().messages;
+        int scrolledLines = panel.getActiveTab().scrolledLines;
         int maxLines = Math.min(visibleLineCount, visibleMessages.size());
 
         if (chatY < 0.0 || chatY >= maxLines) return -1;
