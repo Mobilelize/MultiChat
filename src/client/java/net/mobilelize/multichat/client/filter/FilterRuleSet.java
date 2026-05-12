@@ -9,17 +9,19 @@ public class FilterRuleSet {
 
     public final List<FilterRule> whitelist = new ArrayList<>();
     public final List<FilterRule> blacklist = new ArrayList<>();
+    public WhitelistMode whitelistMode = WhitelistMode.ANY;
 
-    /**
-     * Empty whitelist = no restriction (pass all).
-     * Empty blacklist = block nothing.
-     * Result: passes if (whitelist empty OR any whitelist rule matches) AND no blacklist rule matches.
-     */
     public boolean matches(String text, MessageIndicator indicator) {
         for (FilterRule rule : blacklist) {
             if (rule.matches(text, indicator)) return false;
         }
         if (whitelist.isEmpty()) return true;
+        if (whitelistMode == WhitelistMode.ALL) {
+            for (FilterRule rule : whitelist) {
+                if (!rule.matches(text, indicator)) return false;
+            }
+            return true;
+        }
         for (FilterRule rule : whitelist) {
             if (rule.matches(text, indicator)) return true;
         }

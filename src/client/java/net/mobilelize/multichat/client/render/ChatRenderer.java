@@ -47,6 +47,7 @@ public class ChatRenderer {
         TABS.forEach(t -> {
             t.messages.clear();
             t.unreadCount = 0;
+            t.resetCollapse();
         });
     }
 
@@ -87,7 +88,7 @@ public class ChatRenderer {
             if (activeTab == null) continue;
             int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
 
-            if (focused) renderTabBar(client, context, panel, xOffset, topY, scale, chatWidth);
+            if (focused && panel.showTabs) renderTabBar(client, context, panel, xOffset, topY, scale, chatWidth);
 
             if (activeTab.type == TabType.VANILLA) continue;
             if (panel == LEFT && skipLeftMessages) continue;

@@ -91,7 +91,7 @@ public class ContextMenu {
                 ChatRenderer.contextTab = (ChatRenderer.contextTab == tab) ? null : tab;
                 MultichatClient.saveTabsToConfig();
             }
-            case 1 -> tab.messages.clear();        // Clear Messages
+            case 1 -> { tab.messages.clear(); tab.resetCollapse(); } // Clear Messages
             case 2 -> tab.unreadCount = 0;          // Clear Badge
             case 3 -> {                             // Toggle Badge
                 tab.showBadge = !tab.showBadge;

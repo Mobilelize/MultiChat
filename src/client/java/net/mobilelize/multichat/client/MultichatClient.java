@@ -21,9 +21,11 @@ public class MultichatClient implements ClientModInitializer {
         CONFIG = LzConfig.load(MultiChatConfig.class);
 
         ChatRenderer.LEFT.showBadges           = CONFIG.leftPanelShowBadges;
+        ChatRenderer.LEFT.showTabs             = CONFIG.leftPanelShowTabs;
         ChatRenderer.RIGHT.enabled             = CONFIG.rightPanelEnabled;
         ChatRenderer.RIGHT.showOnlyWhenFocused = CONFIG.rightPanelShowOnlyWhenFocused;
         ChatRenderer.RIGHT.showBadges          = CONFIG.rightPanelShowBadges;
+        ChatRenderer.RIGHT.showTabs            = CONFIG.rightPanelShowTabs;
 
         restoreTabsFromConfig();
         MultiChatCommand.register();
@@ -42,6 +44,9 @@ public class MultichatClient implements ClientModInitializer {
             tc.differenceMode = tab.differenceMode;
             tc.showBadge      = tab.showBadge;
             tc.visibility     = tab.visibility;
+            tc.collapseRepeating  = tab.collapseRepeating;
+            tc.messageCap         = tab.messageCap;
+            tc.whitelistMode      = tab.filterRules.whitelistMode;
             tc.contextPrefix      = tab.contextPrefix;
             tc.contextCommandMode = tab.contextCommandMode;
             tc.whitelist          = serializeRules(tab.filterRules.whitelist);
@@ -60,13 +65,18 @@ public class MultichatClient implements ClientModInitializer {
                 tc.visibility != null ? tc.visibility : TabVisibility.BOTH);
             tab.differenceMode      = tc.differenceMode;
             tab.showBadge           = tc.showBadge;
+            tab.collapseRepeating           = tc.collapseRepeating;
+            tab.messageCap                  = tc.messageCap;
+            tab.filterRules.whitelistMode   = tc.whitelistMode != null ? tc.whitelistMode : net.mobilelize.multichat.client.filter.WhitelistMode.ANY;
             tab.contextPrefix       = tc.contextPrefix != null ? tc.contextPrefix : "";
             tab.contextCommandMode  = tc.contextCommandMode;
             for (RuleConfig rc : tc.whitelist) {
-                if (rc.type != null) tab.filterRules.whitelist.add(new FilterRule(rc.type, rc.value));
+                if (rc.type != null) tab.filterRules.whitelist.add(new FilterRule(rc.type, rc.value,
+                    rc.indicator != null ? rc.indicator : net.mobilelize.multichat.client.filter.IndicatorFilter.ANY));
             }
             for (RuleConfig rc : tc.blacklist) {
-                if (rc.type != null) tab.filterRules.blacklist.add(new FilterRule(rc.type, rc.value));
+                if (rc.type != null) tab.filterRules.blacklist.add(new FilterRule(rc.type, rc.value,
+                    rc.indicator != null ? rc.indicator : net.mobilelize.multichat.client.filter.IndicatorFilter.ANY));
             }
             ChatRenderer.TABS.add(tab);
         }
@@ -81,8 +91,9 @@ public class MultichatClient implements ClientModInitializer {
         List<RuleConfig> out = new ArrayList<>();
         for (FilterRule r : rules) {
             RuleConfig rc = new RuleConfig();
-            rc.type  = r.type;
-            rc.value = r.value;
+            rc.type      = r.type;
+            rc.value     = r.value;
+            rc.indicator = r.indicator;
             out.add(rc);
         }
         return out;

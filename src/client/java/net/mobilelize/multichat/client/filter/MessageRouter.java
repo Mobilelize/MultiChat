@@ -3,6 +3,9 @@ package net.mobilelize.multichat.client.filter;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.minecraft.text.OrderedText;
+import net.minecraft.text.Text;
+
+import java.util.ArrayList;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.TabType;
@@ -13,8 +16,6 @@ import java.util.List;
 
 public class MessageRouter {
 
-    static final int CAP_ALL      = 5000;
-    static final int CAP_FILTERED = 500;
 
     // ------------------------------------------------------------------
     // Real-time routing (called per incoming message)
@@ -59,12 +60,40 @@ public class MessageRouter {
     }
 
     private static void addLines(ChatTab tab, ChatHudLine original, List<OrderedText> lines) {
-        for (int j = 0; j < lines.size(); j++) {
-            tab.messages.add(0, new ChatHudLine.Visible(
-                original.creationTick(), lines.get(j), original.indicator(), j == lines.size() - 1));
+        String text = original.content().getString();
+
+        if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText) && tab.collapseLastLines != null) {
+            // Remove previous collapsed message
+            for (int i = 0; i < tab.collapseLineCount && !tab.messages.isEmpty(); i++)
+                tab.messages.remove(0);
+
+            tab.collapseRepeat++;
+            tab.collapseLastTick = original.creationTick();
+
+            // Re-add original lines with updated count suffix on last line
+            OrderedText suffix = Text.literal(" (x" + tab.collapseRepeat + ")").formatted(net.minecraft.util.Formatting.DARK_GRAY).asOrderedText();
+            List<OrderedText> updated = new ArrayList<>(tab.collapseLastLines);
+            int last = updated.size() - 1;
+            updated.set(last, OrderedText.concat(updated.get(last), suffix));
+
+            for (int j = 0; j < updated.size(); j++)
+                tab.messages.add(0, new ChatHudLine.Visible(
+                    tab.collapseLastTick, updated.get(j), original.indicator(), j == updated.size() - 1));
+        } else {
+            tab.collapseLastText  = text;
+            tab.collapseRepeat    = 1;
+            tab.collapseLineCount = lines.size();
+            tab.collapseLastTick  = original.creationTick();
+            tab.collapseLastLines = new ArrayList<>(lines);
+
+            for (int j = 0; j < lines.size(); j++)
+                tab.messages.add(0, new ChatHudLine.Visible(
+                    original.creationTick(), lines.get(j), original.indicator(), j == lines.size() - 1));
         }
-        int cap = tab.type == TabType.ALL ? CAP_ALL : CAP_FILTERED;
-        while (tab.messages.size() > cap) tab.messages.remove(tab.messages.size() - 1);
+
+        if (tab.messageCap > 0) {
+            while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
+        }
         if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
     }
 
@@ -84,6 +113,7 @@ public class MessageRouter {
     public static void refilterTab(ChatTab tab) {
         if (tab.type != TabType.FILTERED) return;
         tab.messages.clear();
+        tab.resetCollapse();
 
         ChatTab allTab = ChatRenderer.TABS.stream()
             .filter(t -> t.type == TabType.ALL)
@@ -123,6 +153,8 @@ public class MessageRouter {
             }
         }
 
-        while (tab.messages.size() > CAP_FILTERED) tab.messages.remove(tab.messages.size() - 1);
+        if (tab.messageCap > 0) {
+            while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
+        }
     }
 }

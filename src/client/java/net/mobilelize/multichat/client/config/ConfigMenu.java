@@ -21,6 +21,14 @@ public class ConfigMenu {
         ConfigCategory leftPanel = builder.getOrCreateCategory(Text.literal("Left Panel"));
 
         leftPanel.addEntry(eb.startBooleanToggle(
+                Text.literal("Show Tabs"),
+                MultichatClient.CONFIG.leftPanelShowTabs)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Show the tab bar on the left panel."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelShowTabs = v)
+                .build());
+
+        leftPanel.addEntry(eb.startBooleanToggle(
                 Text.literal("Show Badges"),
                 MultichatClient.CONFIG.leftPanelShowBadges)
                 .setDefaultValue(true)
@@ -54,14 +62,24 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowBadges = v)
                 .build());
 
+        rightPanel.addEntry(eb.startBooleanToggle(
+                Text.literal("Show Tabs"),
+                MultichatClient.CONFIG.rightPanelShowTabs)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Show the tab bar on the right panel."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowTabs = v)
+                .build());
+
         return builder.build();
     }
 
     private static void applyAndSave() {
         ChatRenderer.LEFT.showBadges           = MultichatClient.CONFIG.leftPanelShowBadges;
+        ChatRenderer.LEFT.showTabs             = MultichatClient.CONFIG.leftPanelShowTabs;
         ChatRenderer.RIGHT.enabled             = MultichatClient.CONFIG.rightPanelEnabled;
         ChatRenderer.RIGHT.showOnlyWhenFocused = MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused;
         ChatRenderer.RIGHT.showBadges          = MultichatClient.CONFIG.rightPanelShowBadges;
+        ChatRenderer.RIGHT.showTabs            = MultichatClient.CONFIG.rightPanelShowTabs;
         MultichatClient.CONFIG.save();
     }
 }

@@ -16,6 +16,7 @@ public class ChatPanel {
     public boolean enabled;
     public boolean showOnlyWhenFocused;
     public boolean showBadges = true;
+    public boolean showTabs   = true;
     public int tabScrollOffset = 0;
     public int tabLastRendered = -1;
     private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();

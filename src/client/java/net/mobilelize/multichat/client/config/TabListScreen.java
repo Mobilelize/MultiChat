@@ -18,21 +18,26 @@ public class TabListScreen extends Screen {
     private static final int LIST_TOP   = 32;
     private static final int ROW_HEIGHT = 22;
 
+    private static final int SB_W = 6;
+
     private final Screen parent;
     private TextFieldWidget nameField;
-    private int scrollOffset = 0;
+    private int     scrollOffset       = 0;
+    private boolean scrollDragging     = false;
+    private int     scrollDragStartY   = 0;
+    private int     scrollDragStartOff = 0;
 
     public TabListScreen(Screen parent) {
         super(Text.literal("MultiChat — Tabs"));
         this.parent = parent;
     }
 
-    private List<ChatTab> filteredTabs() {
-        return ChatRenderer.TABS.stream().filter(t -> t.type == TabType.FILTERED).toList();
+    private List<ChatTab> allTabs() {
+        return ChatRenderer.TABS;
     }
 
     private int listBottom()  { return height - 62; }
-    private int maxScroll()   { return Math.max(0, filteredTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
+    private int maxScroll()   { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
     @Override
     protected void init() {
@@ -47,10 +52,10 @@ public class TabListScreen extends Screen {
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Settings"),
                 btn -> client.setScreen(ConfigMenu.create(this)))
-            .dimensions(width / 2 - 154, height - 26, 100, 20).build());
+            .dimensions(width / 2 - 102, height - 26, 100, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Done"), btn -> close())
-            .dimensions(width / 2 - 50, height - 26, 100, 20).build());
+            .dimensions(width / 2 + 2, height - 26, 100, 20).build());
     }
 
     private void addTab() {
@@ -70,7 +75,7 @@ public class TabListScreen extends Screen {
 
         ctx.enableScissor(0, LIST_TOP, width, listBottom());
 
-        List<ChatTab> tabs = filteredTabs();
+        List<ChatTab> tabs = allTabs();
         int lx = width / 2 - 130;
 
         for (int i = 0; i < tabs.size(); i++) {
@@ -78,49 +83,116 @@ public class TabListScreen extends Screen {
             int y = LIST_TOP + i * ROW_HEIGHT - scrollOffset;
             if (y + ROW_HEIGHT <= LIST_TOP || y >= listBottom()) continue;
 
-            ctx.fill(lx, y, lx + 260, y + ROW_HEIGHT - 2, 0x44FFFFFF);
+            int rowY1 = y + 1, rowY2 = y + ROW_HEIGHT - 1;
+            int btnY1 = y + 3, btnY2 = y + ROW_HEIGHT - 3;
+            int textY = y + (ROW_HEIGHT - 8) / 2;
+
+            boolean builtin = tab.type != TabType.FILTERED;
+
+            ctx.fill(lx, rowY1, lx + 260, rowY2, builtin ? 0x44AAAAFF : 0x55FFFFFF);
+            ctx.drawBorder(lx, rowY1, 260, rowY2 - rowY1, builtin ? 0x886688CC : 0x88AAAAAA);
 
             ctx.drawTextWithShadow(textRenderer,
                 Text.literal(tab.name + " §7[" + tab.visibility.name().toLowerCase() + "]"),
-                lx + 4, y + 5, 0xFFFFFF);
+                lx + 6, textY, builtin ? 0xAADDFF : 0xFFFFFF);
 
-            boolean hoverEdit   = mouseX >= lx + 188 && mouseX < lx + 230 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            boolean hoverRemove = mouseX >= lx + 232 && mouseX < lx + 260 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            boolean hoverEdit   = mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            boolean hoverRemove = !builtin && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
-            ctx.fill(lx + 188, y + 2, lx + 230, y + ROW_HEIGHT - 2, hoverEdit   ? 0xAA888888 : 0x55666666);
-            ctx.fill(lx + 232, y + 2, lx + 260, y + ROW_HEIGHT - 2, hoverRemove ? 0xAAFF4444 : 0x55AA2222);
+            ctx.fill(lx + 186, btnY1, lx + 228, btnY2, hoverEdit ? 0xAA888888 : 0x66555555);
+            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("Edit"), lx + 207, textY, 0xFFFFFF);
 
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("Edit"), lx + 209, y + 5, 0xFFFFFF);
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("X"),    lx + 246, y + 5, 0xFFFFFF);
+            if (!builtin) {
+                ctx.fill(lx + 231, btnY1, lx + 259, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
+                ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("X"), lx + 245, textY, 0xFFFFFF);
+            }
         }
 
         ctx.disableScissor();
+
+        // Scrollbar
+        int max = maxScroll();
+        if (max > 0) {
+            int sbX    = lx + 265;
+            int trackH = listBottom() - LIST_TOP;
+            int totalH = tabs.size() * ROW_HEIGHT;
+            int thumbH = Math.max(20, trackH * trackH / totalH);
+            int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
+
+            ctx.fill(sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
+            ctx.fill(sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
+                scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
+        }
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
+
+        int lxSb = width / 2 - 130 + 265;
+        int max  = maxScroll();
+        if (button == 0 && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
+            int trackH = listBottom() - LIST_TOP;
+            int totalH = allTabs().size() * ROW_HEIGHT;
+            int thumbH = Math.max(20, trackH * trackH / totalH);
+            int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
+            if (my >= thumbY && my < thumbY + thumbH) {
+                scrollDragging     = true;
+                scrollDragStartY   = (int) my;
+                scrollDragStartOff = scrollOffset;
+            } else {
+                // Click on track: jump to position
+                int travel = trackH - thumbH;
+                if (travel > 0)
+                    scrollOffset = Math.max(0, Math.min(max,
+                        (int)((my - LIST_TOP - thumbH / 2.0) * max / travel)));
+            }
+            return true;
+        }
+
         if (my < LIST_TOP || my >= listBottom()) return false;
 
         int lx   = width / 2 - 130;
         int relY = (int)(my - LIST_TOP) + scrollOffset;
         int idx  = relY / ROW_HEIGHT;
-        List<ChatTab> tabs = filteredTabs();
+        List<ChatTab> tabs = allTabs();
         if (idx < 0 || idx >= tabs.size()) return false;
 
         ChatTab tab = tabs.get(idx);
 
-        if (mx >= lx + 188 && mx < lx + 230) {
+        if (mx >= lx + 186 && mx < lx + 228) {
             client.setScreen(TabEditScreen.create(this, tab));
             return true;
         }
-        if (mx >= lx + 232 && mx < lx + 260) {
+        if (tab.type == TabType.FILTERED && mx >= lx + 231 && mx < lx + 259) {
             ChatRenderer.TABS.remove(tab);
             MultichatClient.saveTabsToConfig();
             clearAndInit();
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (scrollDragging) {
+            int max    = maxScroll();
+            int trackH = listBottom() - LIST_TOP;
+            int totalH = allTabs().size() * ROW_HEIGHT;
+            int thumbH = Math.max(20, trackH * trackH / totalH);
+            int travel = trackH - thumbH;
+            if (travel > 0)
+                scrollOffset = Math.max(0, Math.min(max,
+                    scrollDragStartOff + (int)((my - scrollDragStartY) * max / travel)));
+            return true;
+        }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        scrollDragging = false;
+        return super.mouseReleased(mx, my, button);
     }
 
     @Override

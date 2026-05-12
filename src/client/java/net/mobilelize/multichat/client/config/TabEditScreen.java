@@ -3,19 +3,41 @@ package net.mobilelize.multichat.client.config;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
+import me.shedaniel.clothconfig2.gui.entries.MultiElementListEntry;
+import me.shedaniel.clothconfig2.gui.entries.NestedListListEntry;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.filter.FilterRule;
 import net.mobilelize.multichat.client.filter.FilterType;
+import net.mobilelize.multichat.client.filter.IndicatorFilter;
+import net.mobilelize.multichat.client.filter.WhitelistMode;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class TabEditScreen {
+
+    private static class MutableRule {
+        FilterType      type;
+        String          value;
+        IndicatorFilter indicator;
+
+        MutableRule(FilterType type, String value, IndicatorFilter indicator) {
+            this.type      = type;
+            this.value     = value;
+            this.indicator = indicator;
+        }
+
+        FilterRule toFilterRule() { return new FilterRule(type, value, indicator); }
+    }
 
     public static Screen create(Screen parent, ChatTab tab) {
         ConfigBuilder builder = ConfigBuilder.create()
@@ -30,10 +52,27 @@ public class TabEditScreen {
         ConfigCategory     cat = builder.getOrCreateCategory(Text.literal("Settings"));
 
         cat.addEntry(eb.startEnumSelector(Text.literal("Visibility"), TabVisibility.class, tab.visibility)
-            .setDefaultValue(TabVisibility.BOTH)
+            .setDefaultValue(tab.type == TabType.FILTERED ? TabVisibility.BOTH : tab.visibility)
             .setTooltip(Text.literal("Which panel(s) show this tab."))
             .setSaveConsumer(v -> tab.visibility = v)
             .build());
+
+        if (tab.type == TabType.FILTERED) {
+            cat.addEntry(eb.startBooleanToggle(Text.literal("Collapse Repeating"), tab.collapseRepeating)
+                .setDefaultValue(false)
+                .setTooltip(Text.literal("Stack identical messages with a counter instead of repeating lines."))
+                .setSaveConsumer(v -> tab.collapseRepeating = v)
+                .build());
+
+            cat.addEntry(eb.startIntField(Text.literal("Message Cap"), tab.messageCap)
+                .setDefaultValue(0)
+                .setMin(0)
+                .setTooltip(Text.literal("Max messages stored. 0 = unlimited."))
+                .setSaveConsumer(v -> tab.messageCap = v)
+                .build());
+        }
+
+        if (tab.type != TabType.FILTERED) return builder.build();
 
         cat.addEntry(eb.startBooleanToggle(Text.literal("Difference Mode"), tab.differenceMode)
             .setDefaultValue(false)
@@ -49,70 +88,74 @@ public class TabEditScreen {
 
         cat.addEntry(eb.startStrField(Text.literal("Context Prefix"), tab.contextPrefix)
             .setDefaultValue("")
-            .setTooltip(Text.literal("Prefix prepended to messages when this tab's context is active. E.g. 'msg Fred' or 'w Steve'."))
+            .setTooltip(Text.literal("Prefix prepended when this tab's context is active. E.g. 'msg Fred'."))
             .setSaveConsumer(v -> tab.contextPrefix = v.trim())
             .build());
 
         cat.addEntry(eb.startBooleanToggle(Text.literal("Context Command Mode"), tab.contextCommandMode)
             .setDefaultValue(true)
-            .setTooltip(Text.literal("ON: message sent as command (adds /). OFF: sent as chat text."))
+            .setTooltip(Text.literal("ON: sent as command. OFF: sent as chat text."))
             .setSaveConsumer(v -> tab.contextCommandMode = v)
             .build());
 
-        cat.addEntry(eb.startStrList(Text.literal("Whitelist Rules"), serializeRules(tab.filterRules.whitelist))
-            .setDefaultValue(List.of())
-            .setTooltip(Text.literal("contains:text  |  word:text  |  starts_with:x  |  ends_with:x  |  exact:x  |  regex:pattern  |  sender:name  |  indicator:system  |  all"))
-            .setSaveConsumer(list -> {
-                tab.filterRules.whitelist.clear();
-                tab.filterRules.whitelist.addAll(parseRules(list));
-            })
+        cat.addEntry(eb.startEnumSelector(Text.literal("Whitelist Mode"), WhitelistMode.class, tab.filterRules.whitelistMode)
+            .setDefaultValue(WhitelistMode.ANY)
+            .setTooltip(Text.literal("ANY: message matches if any whitelist rule matches. ALL: message must match every whitelist rule."))
+            .setSaveConsumer(v -> tab.filterRules.whitelistMode = v)
             .build());
 
-        cat.addEntry(eb.startStrList(Text.literal("Blacklist Rules"), serializeRules(tab.filterRules.blacklist))
-            .setDefaultValue(List.of())
-            .setTooltip(Text.literal("contains:text  |  word:text  |  starts_with:x  |  ends_with:x  |  exact:x  |  regex:pattern  |  sender:name  |  indicator:system  |  all"))
-            .setSaveConsumer(list -> {
-                tab.filterRules.blacklist.clear();
-                tab.filterRules.blacklist.addAll(parseRules(list));
-            })
-            .build());
+        cat.addEntry(buildRuleList(eb, Text.literal("Whitelist"), tab.filterRules.whitelist, list -> {
+            tab.filterRules.whitelist.clear();
+            list.forEach(mr -> tab.filterRules.whitelist.add(mr.toFilterRule()));
+        }));
+
+        cat.addEntry(buildRuleList(eb, Text.literal("Blacklist"), tab.filterRules.blacklist, list -> {
+            tab.filterRules.blacklist.clear();
+            list.forEach(mr -> tab.filterRules.blacklist.add(mr.toFilterRule()));
+        }));
 
         return builder.build();
     }
 
-    private static List<String> serializeRules(List<FilterRule> rules) {
-        return rules.stream().map(FilterRule::toString).toList();
-    }
+    private static NestedListListEntry<MutableRule, MultiElementListEntry<MutableRule>> buildRuleList(
+            ConfigEntryBuilder eb, Text label, List<FilterRule> source, Consumer<List<MutableRule>> saveConsumer) {
 
-    private static List<FilterRule> parseRules(List<String> strings) {
-        List<FilterRule> result = new ArrayList<>();
-        for (String s : strings) {
-            s = s.trim();
-            if (s.equalsIgnoreCase("all")) {
-                result.add(new FilterRule(FilterType.ALL, ""));
-                continue;
+        List<MutableRule> rules = source.stream()
+            .map(r -> new MutableRule(r.type, r.value, r.indicator))
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        return new NestedListListEntry<>(
+            label,
+            rules,
+            true,          // defaultExpanded
+            Optional::empty,
+            saveConsumer,
+            ArrayList::new, // default (empty list)
+            eb.getResetButtonKey(),
+            true,          // deleteButtonEnabled
+            true,          // insertInFront
+            (elem, nestedList) -> {
+                MutableRule rule = elem != null ? elem : new MutableRule(FilterType.CONTAINS, "", IndicatorFilter.ANY);
+                return new MultiElementListEntry<>(
+                    Text.literal("Rule"),
+                    rule,
+                    List.of(
+                        eb.startEnumSelector(Text.literal("Type"), FilterType.class, rule.type)
+                            .setDefaultValue(FilterType.CONTAINS)
+                            .setSaveConsumer(v -> rule.type = v)
+                            .build(),
+                        eb.startStrField(Text.literal("Value"), rule.value)
+                            .setDefaultValue("")
+                            .setSaveConsumer(v -> rule.value = v)
+                            .build(),
+                        eb.startEnumSelector(Text.literal("Indicator"), IndicatorFilter.class, rule.indicator)
+                            .setDefaultValue(IndicatorFilter.ANY)
+                            .setSaveConsumer(v -> rule.indicator = v)
+                            .build()
+                    ),
+                    true
+                );
             }
-            if (s.equalsIgnoreCase("indicator")) {
-                result.add(new FilterRule(FilterType.INDICATOR, ""));
-                continue;
-            }
-            int colon = s.indexOf(':');
-            if (colon < 0) continue;
-            String type  = s.substring(0, colon).trim().toLowerCase();
-            String value = s.substring(colon + 1).trim();
-            FilterType ft = switch (type) {
-                case "contains"     -> FilterType.CONTAINS;
-                case "starts_with"  -> FilterType.STARTS_WITH;
-                case "ends_with"    -> FilterType.ENDS_WITH;
-                case "exact"        -> FilterType.EXACT;
-                case "word"         -> FilterType.WORD;
-                case "regex"        -> FilterType.REGEX;
-                case "sender"       -> FilterType.SENDER;
-                default             -> null;
-            };
-            if (ft == null) continue;
-            result.add(new FilterRule(ft, value));
-        }
-        return result;
+        );
     }
 }

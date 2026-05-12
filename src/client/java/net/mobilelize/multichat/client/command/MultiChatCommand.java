@@ -179,7 +179,7 @@ public class MultiChatCommand {
         if (tab.type != TabType.FILTERED) { feedback(ctx, "Built-in tabs cannot have filter rules."); return 0; }
 
         FilterType ft = parseFilterType(typeName);
-        if (ft == null) { feedback(ctx, "Unknown type '" + typeName + "'. Use: all, contains, starts_with, ends_with, exact, word, regex, sender, indicator."); return 0; }
+        if (ft == null) { feedback(ctx, "Unknown type '" + typeName + "'. Use: contains, starts_with, ends_with, exact, word, regex."); return 0; }
 
         FilterRule rule = new FilterRule(ft, value);
 
@@ -281,15 +281,12 @@ public class MultiChatCommand {
 
     public static FilterType parseFilterType(String s) {
         return switch (s) {
-            case "all"          -> FilterType.ALL;
             case "contains"     -> FilterType.CONTAINS;
             case "starts_with"  -> FilterType.STARTS_WITH;
             case "ends_with"    -> FilterType.ENDS_WITH;
             case "exact"        -> FilterType.EXACT;
             case "word"         -> FilterType.WORD;
             case "regex"        -> FilterType.REGEX;
-            case "sender"       -> FilterType.SENDER;
-            case "indicator"    -> FilterType.INDICATOR;
             default             -> null;
         };
     }
