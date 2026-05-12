@@ -10,16 +10,18 @@ public class ChatTab {
 
     public final String name;
     public final TabType type;
+    public TabVisibility visibility;
     public final List<ChatHudLine.Visible> messages = new ArrayList<>();
-    public int scrolledLines = 0;
     public int unreadCount = 0;
-    /** Only used when type == FILTERED. */
     public final FilterRuleSet filterRules = new FilterRuleSet();
-    /** Only used when type == FILTERED. Shows messages matched by NO other filtered tab. */
     public boolean differenceMode = false;
+    public boolean showBadge = true;
+    public String  contextPrefix = "";
+    public boolean contextCommandMode = true;
 
-    public ChatTab(String name, TabType type) {
+    public ChatTab(String name, TabType type, TabVisibility visibility) {
         this.name = name;
         this.type = type;
+        this.visibility = visibility;
     }
 }

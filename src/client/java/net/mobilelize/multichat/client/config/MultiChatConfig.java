@@ -1,33 +1,38 @@
 package net.mobilelize.multichat.client.config;
 
 import net.mobilelize.fabriclib.config.LzConfig;
+import net.mobilelize.multichat.client.TabVisibility;
+import net.mobilelize.multichat.client.filter.FilterType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MultiChatConfig extends LzConfig {
 
     @Override
     public String directory() { return "config/multichat"; }
 
+    public String contextTabName = "";
+    public boolean leftPanelShowBadges = true;
     public boolean rightPanelEnabled = false;
     public boolean rightPanelShowOnlyWhenFocused = false;
-    public boolean showUnreadBadges = true;
+    public boolean rightPanelShowBadges = true;
 
-    /** Saved tab definitions for LEFT panel (ALL and VANILLA tabs are implicit, not stored). */
-    public TabConfig[] leftTabs = new TabConfig[0];
-    /** Saved tab definitions for RIGHT panel. */
-    public TabConfig[] rightTabs = new TabConfig[0];
+    public List<TabConfig> tabs = new ArrayList<>();
 
     public static class TabConfig {
         public String name = "";
         public boolean differenceMode = false;
-        public RuleConfig[] whitelist = new RuleConfig[0];
-        public RuleConfig[] blacklist = new RuleConfig[0];
+        public boolean showBadge = true;
+        public TabVisibility visibility = TabVisibility.BOTH;
+        public String contextPrefix = "";
+        public boolean contextCommandMode = true;
+        public List<RuleConfig> whitelist = new ArrayList<>();
+        public List<RuleConfig> blacklist = new ArrayList<>();
     }
 
     public static class RuleConfig {
-        /** "all", "keyword", "regex", "sender", "message_type" */
-        public String type = "keyword";
+        public FilterType type = FilterType.CONTAINS;
         public String value = "";
-        /** Only set when type == "message_type". */
-        public String messageType = "";
     }
 }

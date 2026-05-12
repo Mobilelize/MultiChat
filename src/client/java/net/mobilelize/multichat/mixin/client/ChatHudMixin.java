@@ -37,13 +37,12 @@ public class ChatHudMixin {
     )
     private void hookRenderHead(DrawContext context, int currentTick, int mouseX, int mouseY,
                                  boolean focused, CallbackInfo ci) {
-        ChatPanel left = ChatRenderer.PANELS.get(0);
-        boolean leftVanilla = left.enabled && left.getActiveTab().type == TabType.VANILLA;
+        ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
+        boolean leftVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
         if (!leftVanilla) {
             ci.cancel();
             ChatRenderer.render((ChatHud)(Object)this, context, currentTick, mouseX, mouseY, focused, false);
         }
-        // else: vanilla runs normally; hookRenderReturn will add tab bar + right panel
     }
 
     // ------------------------------------------------------------------
@@ -56,8 +55,8 @@ public class ChatHudMixin {
     )
     private void hookRenderReturn(DrawContext context, int currentTick, int mouseX, int mouseY,
                                    boolean focused, CallbackInfo ci) {
-        ChatPanel left = ChatRenderer.PANELS.get(0);
-        if (left.enabled && left.getActiveTab().type == TabType.VANILLA) {
+        ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
+        if (activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA) {
             ChatRenderer.render((ChatHud)(Object)this, context, currentTick, mouseX, mouseY, focused, true);
         }
     }
@@ -68,14 +67,14 @@ public class ChatHudMixin {
 
     @Inject(method = "resetScroll", at = @At("HEAD"))
     private void resetPanelScroll(CallbackInfo ci) {
-        ChatRenderer.PANELS.forEach(p -> p.tabs.forEach(t -> t.scrolledLines = 0));
+        ChatRenderer.LEFT.resetScrollPositions();
+        ChatRenderer.RIGHT.resetScrollPositions();
     }
 
     @Inject(method = "scroll", at = @At("HEAD"), cancellable = true)
     private void scrollPanel(int scroll, CallbackInfo ci) {
-        ChatPanel left = ChatRenderer.PANELS.get(0);
-        // If left is on VANILLA tab let vanilla handle scrolling
-        if (left.enabled && left.getActiveTab().type == TabType.VANILLA) return;
+        ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
+        if (activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA) return;
 
         ci.cancel();
 
@@ -89,10 +88,10 @@ public class ChatHudMixin {
 
         double rawChatX = ChatRenderer.lastMouseX / (double) scale - 4.0;
 
-        for (ChatPanel panel : ChatRenderer.PANELS) {
+        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
             if (!panel.enabled) continue;
             ChatTab active = panel.getActiveTab();
-            if (active.type == TabType.VANILLA) continue;
+            if (active == null || active.type == TabType.VANILLA) continue;
             if (active.messages.isEmpty()) continue;
 
             int xOffset       = panel.computeXOffset(windowWidth, scale, chatWidth);
@@ -101,7 +100,7 @@ public class ChatHudMixin {
             if (localChatX < -4.0 || localChatX > chatWidth) continue;
 
             int max = Math.max(0, active.messages.size() - self.getVisibleLineCount());
-            active.scrolledLines = MathHelper.clamp(active.scrolledLines + scroll, 0, max);
+            panel.setScrolledLines(active, MathHelper.clamp(panel.getScrolledLines(active) + scroll, 0, max));
             return;
         }
     }
@@ -116,11 +115,11 @@ public class ChatHudMixin {
     }
 
     // ------------------------------------------------------------------
-    // Route incoming messages → ALL tab of each enabled panel
+    // Route incoming messages globally
     // ------------------------------------------------------------------
 
     @Inject(method = "addVisibleMessage", at = @At("HEAD"))
-    private void routeToPanel(ChatHudLine message, CallbackInfo ci) {
+    private void routeGlobally(ChatHudLine message, CallbackInfo ci) {
         ChatHud self       = (ChatHud)(Object)this;
         ChatHudAccessor accessor = (ChatHudAccessor) self;
         MinecraftClient client = accessor.getClient();
@@ -132,10 +131,7 @@ public class ChatHudMixin {
         List<OrderedText> lines = ChatMessages.breakRenderedChatMessageLines(
                 message.content(), width, client.textRenderer);
 
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled) continue;
-            MessageRouter.routeLines(panel, message, lines);
-        }
+        MessageRouter.routeLines(message, lines);
     }
 
     // ------------------------------------------------------------------
@@ -160,12 +156,11 @@ public class ChatHudMixin {
         double chatY       = ((double) windowHeight - y - 40.0) / (scale * lineHeight);
         double rawChatX    = x / scale - 4.0;
 
-        for (int i = 0; i < ChatRenderer.PANELS.size(); i++) {
-            ChatPanel panel = ChatRenderer.PANELS.get(i);
+        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
             if (!panel.enabled) continue;
 
             ChatTab active = panel.getActiveTab();
-            if (active.type == TabType.VANILLA) continue;
+            if (active == null || active.type == TabType.VANILLA) continue;
             if (active.messages.isEmpty()) continue;
 
             int xOffset       = panel.computeXOffset(windowWidth, scale, chatWidth);
@@ -173,10 +168,11 @@ public class ChatHudMixin {
 
             if (localChatX < -4.0 || localChatX > chatWidth) continue;
 
+            int scrolledLines = panel.getScrolledLines(active);
             int maxLines = Math.min(self.getVisibleLineCount(), active.messages.size());
             if (chatY < 0.0 || chatY >= maxLines) continue;
 
-            int lineIdx = MathHelper.floor(chatY + active.scrolledLines);
+            int lineIdx = MathHelper.floor(chatY + scrolledLines);
             if (lineIdx < 0 || lineIdx >= active.messages.size()) continue;
 
             Style style = client.textRenderer.getTextHandler()

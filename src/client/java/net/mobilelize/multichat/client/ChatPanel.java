@@ -1,7 +1,10 @@
 package net.mobilelize.multichat.client;
 
-import java.util.ArrayList;
+import net.mobilelize.multichat.client.render.ChatRenderer;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ChatPanel {
 
@@ -9,30 +12,46 @@ public class ChatPanel {
 
     public final Anchor anchor;
     public final int margin;
-    public final List<ChatTab> tabs = new ArrayList<>();
     public int activeTab = 0;
     public boolean enabled;
     public boolean showOnlyWhenFocused;
+    public boolean showBadges = true;
+    public int tabScrollOffset = 0;
+    public int tabLastRendered = -1;
+    private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();
 
     public ChatPanel(Anchor anchor, int margin, boolean enabled, boolean showOnlyWhenFocused) {
         this.anchor = anchor;
         this.margin = margin;
         this.enabled = enabled;
         this.showOnlyWhenFocused = showOnlyWhenFocused;
+    }
 
-        tabs.add(new ChatTab("All", TabType.ALL));
-        if (anchor == Anchor.LEFT) {
-            tabs.add(new ChatTab("Vanilla", TabType.VANILLA));
-        }
+    public List<ChatTab> getVisibleTabs() {
+        return ChatRenderer.TABS.stream()
+            .filter(t -> t.visibility == TabVisibility.BOTH
+                      || (anchor == Anchor.LEFT  && t.visibility == TabVisibility.LEFT)
+                      || (anchor == Anchor.RIGHT && t.visibility == TabVisibility.RIGHT))
+            .toList();
     }
 
     public ChatTab getActiveTab() {
-        return tabs.get(activeTab);
+        List<ChatTab> visible = getVisibleTabs();
+        if (visible.isEmpty()) return null;
+        if (activeTab >= visible.size()) activeTab = 0;
+        return visible.get(activeTab);
     }
 
-    /** ALL tab is always at index 0. */
-    public ChatTab getAllTab() {
-        return tabs.get(0);
+    public int getScrolledLines(ChatTab tab) {
+        return scrollPositions.getOrDefault(tab, 0);
+    }
+
+    public void setScrolledLines(ChatTab tab, int lines) {
+        scrollPositions.put(tab, lines);
+    }
+
+    public void resetScrollPositions() {
+        scrollPositions.clear();
     }
 
     public int computeXOffset(int scaledWindowWidth, float scale, int chatWidth) {

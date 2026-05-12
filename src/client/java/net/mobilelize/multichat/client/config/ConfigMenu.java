@@ -16,21 +16,21 @@ public class ConfigMenu {
                 .setTitle(Text.literal("MultiChat"))
                 .setSavingRunnable(ConfigMenu::applyAndSave);
 
-        ConfigEntryBuilder entryBuilder = builder.entryBuilder();
+        ConfigEntryBuilder eb = builder.entryBuilder();
 
-        ConfigCategory general = builder.getOrCreateCategory(Text.literal("General"));
+        ConfigCategory leftPanel = builder.getOrCreateCategory(Text.literal("Left Panel"));
 
-        general.addEntry(entryBuilder.startBooleanToggle(
-                Text.literal("Show Unread Badges"),
-                MultichatClient.CONFIG.showUnreadBadges)
+        leftPanel.addEntry(eb.startBooleanToggle(
+                Text.literal("Show Badges"),
+                MultichatClient.CONFIG.leftPanelShowBadges)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Shows unread message counts on inactive tabs."))
-                .setSaveConsumer(v -> MultichatClient.CONFIG.showUnreadBadges = v)
+                .setTooltip(Text.literal("Show unread message counts on inactive tabs in the left panel."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelShowBadges = v)
                 .build());
 
-        ConfigCategory category = builder.getOrCreateCategory(Text.literal("Right Panel"));
+        ConfigCategory rightPanel = builder.getOrCreateCategory(Text.literal("Right Panel"));
 
-        category.addEntry(entryBuilder.startBooleanToggle(
+        rightPanel.addEntry(eb.startBooleanToggle(
                 Text.literal("Enable Right Panel"),
                 MultichatClient.CONFIG.rightPanelEnabled)
                 .setDefaultValue(false)
@@ -38,7 +38,7 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelEnabled = v)
                 .build());
 
-        category.addEntry(entryBuilder.startBooleanToggle(
+        rightPanel.addEntry(eb.startBooleanToggle(
                 Text.literal("Show Only In Chat"),
                 MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused)
                 .setDefaultValue(false)
@@ -46,12 +46,22 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused = v)
                 .build());
 
+        rightPanel.addEntry(eb.startBooleanToggle(
+                Text.literal("Show Badges"),
+                MultichatClient.CONFIG.rightPanelShowBadges)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Show unread message counts on inactive tabs in the right panel."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowBadges = v)
+                .build());
+
         return builder.build();
     }
 
     private static void applyAndSave() {
-        ChatRenderer.PANELS.get(1).enabled = MultichatClient.CONFIG.rightPanelEnabled;
-        ChatRenderer.PANELS.get(1).showOnlyWhenFocused = MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused;
+        ChatRenderer.LEFT.showBadges           = MultichatClient.CONFIG.leftPanelShowBadges;
+        ChatRenderer.RIGHT.enabled             = MultichatClient.CONFIG.rightPanelEnabled;
+        ChatRenderer.RIGHT.showOnlyWhenFocused = MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused;
+        ChatRenderer.RIGHT.showBadges          = MultichatClient.CONFIG.rightPanelShowBadges;
         MultichatClient.CONFIG.save();
     }
 }

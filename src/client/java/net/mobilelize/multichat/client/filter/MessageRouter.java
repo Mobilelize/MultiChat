@@ -1,13 +1,15 @@
 package net.mobilelize.multichat.client.filter;
 
 import net.minecraft.client.gui.hud.ChatHudLine;
+import net.minecraft.client.gui.hud.MessageIndicator;
 import net.minecraft.text.OrderedText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.multichat.client.TabVisibility;
+import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class MessageRouter {
 
@@ -15,54 +17,30 @@ public class MessageRouter {
     static final int CAP_FILTERED = 500;
 
     // ------------------------------------------------------------------
-    // Classification
-    // ------------------------------------------------------------------
-
-    public static MessageType classify(String text, ChatHudLine original) {
-        if (original.indicator() != null) return MessageType.PLAYER_CHAT;
-        return classifyText(text);
-    }
-
-    public static MessageType classify(String text, ChatHudLine.Visible firstLine) {
-        if (firstLine.indicator() != null) return MessageType.PLAYER_CHAT;
-        return classifyText(text);
-    }
-
-    private static MessageType classifyText(String text) {
-        if (text.contains("joined the game") || text.contains("left the game")) return MessageType.JOIN_LEAVE;
-        if (isDeath(text)) return MessageType.DEATH;
-        return MessageType.SYSTEM;
-    }
-
-    private static boolean isDeath(String text) {
-        return text.contains("was slain") || text.contains("died") || text.contains("drowned")
-            || text.contains("fell") || text.contains("burned") || text.contains("suffocated")
-            || text.contains("was killed") || text.contains("blew up") || text.contains("hit the ground")
-            || text.contains("was shot") || text.contains("was blown up") || text.contains("starved");
-    }
-
-    // ------------------------------------------------------------------
     // Real-time routing (called per incoming message)
     // ------------------------------------------------------------------
 
-    /**
-     * Routes an incoming message to all appropriate tabs in a panel.
-     * Mirrors vanilla's addVisibleMessage line ordering (k-reverse loop).
-     */
-    public static void routeLines(ChatPanel panel, ChatHudLine original, List<OrderedText> lines) {
+    public static void routeLines(ChatHudLine original, List<OrderedText> lines) {
         String fullText = original.content().getString();
-        MessageType msgType = classify(fullText, original);
+        MessageIndicator indicator = original.indicator();
 
         boolean matchedFiltered = false;
 
-        for (ChatTab tab : panel.tabs) {
+        ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
+        ChatTab rightActive = ChatRenderer.RIGHT.getActiveTab();
+        boolean leftDiff = leftActive != null && leftActive.type == TabType.FILTERED && leftActive.differenceMode;
+        boolean rightDiff = rightActive != null && rightActive.type == TabType.FILTERED && rightActive.differenceMode;
+        boolean activeDifference = leftDiff ^ rightDiff;
+
+        for (ChatTab tab : ChatRenderer.TABS) {
+            if (tab.visibility == TabVisibility.NONE) continue;
             switch (tab.type) {
-                case ALL -> addLines(panel, tab, original, lines);
+                case ALL -> addLines(tab, original, lines);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case FILTERED -> {
-                    if (tab.differenceMode) break;
-                    if (tab.filterRules.matches(fullText, msgType)) {
-                        addLines(panel, tab, original, lines);
+                    if (activeDifference && tab.differenceMode && (tab == leftActive || tab == rightActive)) break;
+                    if (tab.filterRules.matches(fullText, indicator)) {
+                        addLines(tab, original, lines);
                         matchedFiltered = true;
                     }
                 }
@@ -70,66 +48,74 @@ public class MessageRouter {
         }
 
         if (!matchedFiltered) {
-            for (ChatTab tab : panel.tabs) {
-                if (tab.type == TabType.FILTERED && tab.differenceMode) {
-                    addLines(panel, tab, original, lines);
-                }
+            if (!activeDifference) return;
+            if (leftActive != null && leftActive.filterRules.matches(fullText, indicator)) {
+                addLines(leftActive, original, lines);
+            }
+            if (rightActive != null && rightActive.filterRules.matches(fullText, indicator)) {
+                addLines(rightActive, original, lines);
             }
         }
     }
 
-    private static void addLines(ChatPanel panel, ChatTab tab, ChatHudLine original, List<OrderedText> lines) {
+    private static void addLines(ChatTab tab, ChatHudLine original, List<OrderedText> lines) {
         for (int j = 0; j < lines.size(); j++) {
             tab.messages.add(0, new ChatHudLine.Visible(
                 original.creationTick(), lines.get(j), original.indicator(), j == lines.size() - 1));
         }
         int cap = tab.type == TabType.ALL ? CAP_ALL : CAP_FILTERED;
         while (tab.messages.size() > cap) tab.messages.remove(tab.messages.size() - 1);
-        if (panel.tabs.indexOf(tab) != panel.activeTab) tab.unreadCount++;
+        if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
+    }
+
+    private static boolean isActiveInAnyPanel(ChatTab tab) {
+        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+            List<ChatTab> visible = panel.getVisibleTabs();
+            int idx = visible.indexOf(tab);
+            if (idx >= 0 && panel.activeTab == idx) return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------
     // Refilter (called on tab create or rule change)
     // ------------------------------------------------------------------
 
-    /**
-     * Clears and repopulates a FILTERED tab from the panel's ALL tab.
-     * Groups Visible lines by endOfEntry to reconstruct full message text.
-     */
-    public static void refilterTab(ChatPanel panel, ChatTab tab) {
+    public static void refilterTab(ChatTab tab) {
         if (tab.type != TabType.FILTERED) return;
         tab.messages.clear();
 
-        List<ChatHudLine.Visible> all = panel.getAllTab().messages;
-        if (all.isEmpty()) return;
+        ChatTab allTab = ChatRenderer.TABS.stream()
+            .filter(t -> t.type == TabType.ALL)
+            .findFirst().orElse(null);
+        if (allTab == null || allTab.messages.isEmpty()) return;
+        List<ChatHudLine.Visible> all = allTab.messages;
 
         List<ChatTab> otherFiltered = tab.differenceMode
-            ? panel.tabs.stream()
-                .filter(t -> t.type == TabType.FILTERED && !t.differenceMode && t != tab)
-                .collect(Collectors.toList())
+            ? ChatRenderer.TABS.stream()
+                .filter(t -> t.type == TabType.FILTERED && !t.differenceMode)
+                .toList()
             : null;
 
         int i = 0;
         while (i < all.size()) {
             int start = i;
-            // Scan to the endOfEntry line (marks last visible line of a message entry)
             while (i < all.size() && !all.get(i).endOfEntry()) i++;
-            if (i >= all.size()) break; // incomplete entry — skip
+            if (i >= all.size()) break;
             int end = i++;
 
-            // Concatenate lines to reconstruct full message text
             StringBuilder sb = new StringBuilder();
             for (int j = start; j <= end; j++) sb.append(all.get(j).content().toString());
             String fullText = sb.toString();
-            MessageType msgType = classify(fullText, all.get(start));
+            MessageIndicator indicator = all.get(start).indicator();
 
             boolean include;
             if (tab.differenceMode) {
                 boolean matchedOther = otherFiltered.stream()
-                    .anyMatch(ft -> ft.filterRules.matches(fullText, msgType));
+                    .anyMatch(ft -> ft.filterRules.matches(fullText, indicator));
                 include = !matchedOther;
             } else {
-                include = tab.filterRules.matches(fullText, msgType);
+                include = tab.filterRules.matches(fullText, indicator);
             }
 
             if (include) {

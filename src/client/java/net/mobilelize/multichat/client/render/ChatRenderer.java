@@ -12,6 +12,7 @@ import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
 import java.util.ArrayList;
@@ -19,32 +20,36 @@ import java.util.List;
 
 public class ChatRenderer {
 
-    public static final List<ChatPanel> PANELS = new ArrayList<>(List.of(
-        new ChatPanel(ChatPanel.Anchor.LEFT,  0, true,  false),
-        new ChatPanel(ChatPanel.Anchor.RIGHT, 0, false, false)
+    public static final ChatPanel LEFT  = new ChatPanel(ChatPanel.Anchor.LEFT,  0, true,  false);
+    public static final ChatPanel RIGHT = new ChatPanel(ChatPanel.Anchor.RIGHT, 0, false, false);
+
+    public static ChatTab contextTab = null;
+
+    public static final List<ChatTab> TABS = new ArrayList<>(List.of(
+        new ChatTab("All",     TabType.ALL,     TabVisibility.BOTH),
+        new ChatTab("Vanilla", TabType.VANILLA, TabVisibility.LEFT)
     ));
 
     public static int lastMouseX = 0;
 
     public static final int TAB_HEIGHT = 10;
+    public static final int ARROW_W    = 10;
 
-    public static String getTabLabel(ChatTab tab) {
-        boolean badges = MultichatClient.CONFIG != null && MultichatClient.CONFIG.showUnreadBadges;
-        if (badges && tab.unreadCount > 0) return tab.name + " [" + tab.unreadCount + "]";
+    public static String getTabLabel(ChatPanel panel, ChatTab tab) {
+        if (panel.showBadges && tab.showBadge && tab.unreadCount > 0)
+            return tab.name + " [" + tab.unreadCount + "]";
         return tab.name;
     }
 
     public static void resetForRefresh() {
-        PANELS.forEach(p -> p.tabs.forEach(t -> {
+        LEFT.resetScrollPositions();
+        RIGHT.resetScrollPositions();
+        TABS.forEach(t -> {
             t.messages.clear();
             t.unreadCount = 0;
-        }));
+        });
     }
 
-    /**
-     * Main render entry. Called when our system handles all rendering (LEFT tab != VANILLA).
-     * skipLeftMessages = true when vanilla rendered LEFT chat; we only add our tab bar + RIGHT panel.
-     */
     public static void render(ChatHud chat, DrawContext context, int currentTick,
                                int mouseX, int mouseY, boolean focused, boolean skipLeftMessages) {
         ChatHudAccessor accessor = (ChatHudAccessor) chat;
@@ -54,7 +59,8 @@ public class ChatRenderer {
 
         if (client.options.getChatVisibility().getValue() == ChatVisibility.HIDDEN) return;
 
-        boolean anyVisible = PANELS.stream().anyMatch(p -> p.enabled && (!p.showOnlyWhenFocused || focused));
+        boolean anyVisible = (LEFT.enabled  && (!LEFT.showOnlyWhenFocused  || focused))
+                          || (RIGHT.enabled && (!RIGHT.showOnlyWhenFocused || focused));
         if (!anyVisible) return;
 
         client.getProfiler().push("multichat");
@@ -73,18 +79,18 @@ public class ChatRenderer {
         boolean hasUnread    = accessor.getHasUnreadNewMessages();
         int topY             = MathHelper.floor((float)(windowHeight - 40) / scale);
 
-        for (int i = 0; i < PANELS.size(); i++) {
-            ChatPanel panel = PANELS.get(i);
+        for (ChatPanel panel : List.of(LEFT, RIGHT)) {
             if (!panel.enabled) continue;
             if (panel.showOnlyWhenFocused && !focused) continue;
 
             ChatTab activeTab = panel.getActiveTab();
+            if (activeTab == null) continue;
             int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
 
-            if (focused) renderTabBar(client, context, panel, xOffset, topY, scale);
+            if (focused) renderTabBar(client, context, panel, xOffset, topY, scale, chatWidth);
 
             if (activeTab.type == TabType.VANILLA) continue;
-            if (i == 0 && skipLeftMessages) continue;
+            if (panel == LEFT && skipLeftMessages) continue;
 
             List<ChatHudLine.Visible> msgs = activeTab.messages;
             if (msgs.isEmpty()) continue;
@@ -93,7 +99,7 @@ public class ChatRenderer {
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
 
             renderAt(client, context, currentTick, focused,
-                    msgs, msgs.size(), activeTab.scrolledLines, hasUnread,
+                    msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
                     lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset);
         }
@@ -102,28 +108,80 @@ public class ChatRenderer {
     }
 
     private static void renderTabBar(MinecraftClient client, DrawContext context,
-                                      ChatPanel panel, int xOffset, int topY, float scale) {
+                                      ChatPanel panel, int xOffset, int topY, float scale, int chatWidth) {
         context.getMatrices().push();
         context.getMatrices().scale(scale, scale, 1.0F);
         context.getMatrices().translate(4.0F + xOffset, 0.0F, 0.0F);
 
+        // Render space: x = -4 (left panel edge) to x = chatWidth + 4 (right panel edge)
+        List<ChatTab> visibleTabs = panel.getVisibleTabs();
+        panel.tabScrollOffset = MathHelper.clamp(panel.tabScrollOffset, 0, Math.max(0, visibleTabs.size() - 1));
+
+        boolean hasLeft = panel.tabScrollOffset > 0;
+        int tabsEnd = chatWidth + 4 - (hasLeft ? 0 : 0); // right edge, adjusted after we know right arrow
+
+        // Determine if right arrow needed: simulate tab layout
+        int simX = hasLeft ? -4 + ARROW_W : -4;
+        int simEnd = chatWidth + 4 - ARROW_W; // reserve right arrow space for check
+        boolean hasRight = false;
+        for (int i = panel.tabScrollOffset; i < visibleTabs.size(); i++) {
+            int tw = client.textRenderer.getWidth(getTabLabel(panel, visibleTabs.get(i))) + 8;
+            if (simX + tw > simEnd) { hasRight = true; break; }
+            simX += tw + 1;
+        }
+
+        int tabAreaEnd = chatWidth + 4 - (hasRight ? ARROW_W : 0);
+
+        // Left arrow
         int x = -4;
+        if (hasLeft) {
+            context.fill(x, topY, x + ARROW_W, topY + TAB_HEIGHT, 0x88444444);
+            context.drawTextWithShadow(client.textRenderer, "<", x + 2, topY + 1, 0xFFCCCCCC);
+            x += ARROW_W;
+        }
 
-        for (int i = 0; i < panel.tabs.size(); i++) {
-            ChatTab tab = panel.tabs.get(i);
+        // Tabs
+        int lastRendered = panel.tabScrollOffset - 1;
+        for (int i = panel.tabScrollOffset; i < visibleTabs.size(); i++) {
+            ChatTab tab = visibleTabs.get(i);
+            String label = getTabLabel(panel, tab);
+            int tabWidth = client.textRenderer.getWidth(label) + 8;
+            if (x + tabWidth > tabAreaEnd) break;
+
             boolean active = (i == panel.activeTab);
-
-            String label = getTabLabel(tab);
-            int labelWidth = client.textRenderer.getWidth(label);
-            int tabWidth   = labelWidth + 8;
-
-            int bgColor   = active ? 0xBB888888 : 0x88444444;
-            int textColor = active ? 0xFFFFFFFF : 0xFF999999;
-
-            context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, bgColor);
-            context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, textColor);
-
+            context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, active ? 0xBB888888 : 0x88444444);
+            context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, active ? 0xFFFFFFFF : 0xFF999999);
             x += tabWidth + 1;
+            lastRendered = i;
+        }
+        panel.tabLastRendered = lastRendered;
+
+        // Partial next tab in the gap before the right arrow
+        if (hasRight && lastRendered + 1 < visibleTabs.size()) {
+            int remaining = tabAreaEnd - x;
+            if (remaining > 4) {
+                ChatTab nextTab = visibleTabs.get(lastRendered + 1);
+                String label = getTabLabel(panel, nextTab);
+                int tabWidth = client.textRenderer.getWidth(label) + 8;
+                boolean active = (lastRendered + 1 == panel.activeTab);
+
+                int sx1 = Math.round((x + 4 + xOffset) * scale);
+                int sy1 = Math.round(topY * scale);
+                int sx2 = Math.round((tabAreaEnd + 4 + xOffset) * scale);
+                int sy2 = Math.round((topY + TAB_HEIGHT) * scale);
+
+                context.enableScissor(sx1, sy1, sx2, sy2);
+                context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, active ? 0xBB888888 : 0x88444444);
+                context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, active ? 0xFFFFFFFF : 0xFF999999);
+                context.disableScissor();
+            }
+        }
+
+        // Right arrow
+        if (hasRight) {
+            int ax = tabAreaEnd;
+            context.fill(ax, topY, ax + ARROW_W, topY + TAB_HEIGHT, 0x88444444);
+            context.drawTextWithShadow(client.textRenderer, ">", ax + 2, topY + 1, 0xFFCCCCCC);
         }
 
         context.getMatrices().pop();
@@ -222,8 +280,11 @@ public class ChatRenderer {
 
         if (localChatX < -4.0 || localChatX > chatWidth) return -1;
 
-        List<ChatHudLine.Visible> visibleMessages = panel.getActiveTab().messages;
-        int scrolledLines = panel.getActiveTab().scrolledLines;
+        ChatTab activeTab = panel.getActiveTab();
+        if (activeTab == null) return -1;
+
+        List<ChatHudLine.Visible> visibleMessages = activeTab.messages;
+        int scrolledLines = panel.getScrolledLines(activeTab);
         int maxLines = Math.min(visibleLineCount, visibleMessages.size());
 
         if (chatY < 0.0 || chatY >= maxLines) return -1;
