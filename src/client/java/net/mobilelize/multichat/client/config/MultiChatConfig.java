@@ -22,6 +22,18 @@ public class MultiChatConfig extends LzConfig {
     public boolean rightPanelShowBadges = true;
     public boolean rightPanelShowTabs   = true;
 
+    // General
+    public boolean showIndicators = true;
+
+    // Search
+    public boolean      searchKeybindEnabled      = true;
+    public int          searchKeybindKey          = 70;  // GLFW_KEY_F
+    public boolean      searchKeybindRequireCtrl  = true;
+    public boolean      searchDefaultRegex        = false;
+    public boolean      searchDefaultCase         = false;
+    public boolean      searchDefaultLive         = true;
+    public TabVisibility searchDefaultVisibility  = TabVisibility.BOTH;
+
     public List<TabConfig> tabs = new ArrayList<>();
 
     public static class TabConfig {

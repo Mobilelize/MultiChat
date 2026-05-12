@@ -4,8 +4,10 @@ import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 public class ConfigMenu {
@@ -17,6 +19,16 @@ public class ConfigMenu {
                 .setSavingRunnable(ConfigMenu::applyAndSave);
 
         ConfigEntryBuilder eb = builder.entryBuilder();
+
+        ConfigCategory general = builder.getOrCreateCategory(Text.literal("General"));
+
+        general.addEntry(eb.startBooleanToggle(
+                Text.literal("Show Indicators"),
+                MultichatClient.CONFIG.showIndicators)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Show the colored indicator bar and icon on the left of chat messages."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.showIndicators = v)
+                .build());
 
         ConfigCategory leftPanel = builder.getOrCreateCategory(Text.literal("Left Panel"));
 
@@ -68,6 +80,65 @@ public class ConfigMenu {
                 .setDefaultValue(true)
                 .setTooltip(Text.literal("Show the tab bar on the right panel."))
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowTabs = v)
+                .build());
+
+        ConfigCategory search = builder.getOrCreateCategory(Text.literal("Search"));
+
+        search.addEntry(eb.startBooleanToggle(
+                Text.literal("Enable Search Keybind"),
+                MultichatClient.CONFIG.searchKeybindEnabled)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("When disabled, the search keybind does nothing."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchKeybindEnabled = v)
+                .build());
+
+        search.addEntry(eb.startKeyCodeField(
+                Text.literal("Search Key"),
+                InputUtil.fromKeyCode(MultichatClient.CONFIG.searchKeybindKey, 0))
+                .setDefaultValue(InputUtil.fromKeyCode(70, 0))
+                .setAllowModifiers(false)
+                .setTooltip(Text.literal("Key to open search (combine with Require Ctrl for e.g. Ctrl+F)."))
+                .setKeySaveConsumer(key -> MultichatClient.CONFIG.searchKeybindKey = key.getCode())
+                .build());
+
+        search.addEntry(eb.startBooleanToggle(
+                Text.literal("Require Ctrl"),
+                MultichatClient.CONFIG.searchKeybindRequireCtrl)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("When on, Ctrl must be held with the search key. Off = single key only."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchKeybindRequireCtrl = v)
+                .build());
+
+        search.addEntry(eb.startBooleanToggle(
+                Text.literal("Default: Regex"),
+                MultichatClient.CONFIG.searchDefaultRegex)
+                .setDefaultValue(false)
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultRegex = v)
+                .build());
+
+        search.addEntry(eb.startBooleanToggle(
+                Text.literal("Default: Case Sensitive"),
+                MultichatClient.CONFIG.searchDefaultCase)
+                .setDefaultValue(false)
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultCase = v)
+                .build());
+
+        search.addEntry(eb.startBooleanToggle(
+                Text.literal("Default: Live Update"),
+                MultichatClient.CONFIG.searchDefaultLive)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("When on, new messages matching the query are added to the search tab in real-time."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultLive = v)
+                .build());
+
+        search.addEntry(eb.startEnumSelector(
+                Text.literal("Default: Visibility"),
+                TabVisibility.class,
+                MultichatClient.CONFIG.searchDefaultVisibility)
+                .setDefaultValue(TabVisibility.BOTH)
+                .setEnumNameProvider(v -> Text.literal(v.name()))
+                .setTooltip(Text.literal("Which panel the search tab appears in by default."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultVisibility = v)
                 .build());
 
         return builder.build();

@@ -25,6 +25,12 @@ public class ChatRenderer {
 
     public static ChatTab contextTab = null;
 
+    public static int                 currentTick        = 0;
+    public static java.util.Set<ChatHudLine.Visible> highlightLines     = new java.util.HashSet<>();
+    public static int                                highlightUntilTick = 0;
+    public static java.util.Set<ChatHudLine.Visible> copyHighlightLines = new java.util.HashSet<>();
+    public static int                                copyHighlightUntil = 0;
+
     public static final List<ChatTab> TABS = new ArrayList<>(List.of(
         new ChatTab("All",     TabType.ALL,     TabVisibility.BOTH),
         new ChatTab("Vanilla", TabType.VANILLA, TabVisibility.LEFT)
@@ -57,6 +63,7 @@ public class ChatRenderer {
         MinecraftClient client = accessor.getClient();
 
         lastMouseX = mouseX;
+        ChatRenderer.currentTick = currentTick;
 
         if (client.options.getChatVisibility().getValue() == ChatVisibility.HIDDEN) return;
 
@@ -223,13 +230,30 @@ public class ChatRenderer {
 
             context.fill(-4, lineBot, chatWidth + 4 + 4, lineTop, bgAlpha << 24);
 
-            MessageIndicator indicator = visible.indicator();
-            if (indicator != null) {
-                context.fill(-4, lineBot, -2, lineTop, indicator.indicatorColor() | (textAlpha << 24));
-                if (s == hoveredIndex && indicator.icon() != null) {
-                    int iconX = client.textRenderer.getWidth(visible.content()) + 4;
-                    int iconY = textY + 9 - indicator.icon().height - 1;
-                    indicator.icon().draw(context, iconX, iconY);
+            if (!ChatRenderer.highlightLines.isEmpty()
+                    && ChatRenderer.currentTick < ChatRenderer.highlightUntilTick
+                    && ChatRenderer.highlightLines.contains(visible)) {
+                int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
+                int hlAlpha = Math.min(120, remaining * 6);
+                context.fill(-4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x00FFAA00);
+            }
+            if (!ChatRenderer.copyHighlightLines.isEmpty()
+                    && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
+                    && ChatRenderer.copyHighlightLines.contains(visible)) {
+                int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
+                int hlAlpha = Math.min(120, remaining * 6);
+                context.fill(-4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x0055CC55);
+            }
+
+            if (MultichatClient.CONFIG.showIndicators) {
+                MessageIndicator indicator = visible.indicator();
+                if (indicator != null) {
+                    context.fill(-4, lineBot, -2, lineTop, indicator.indicatorColor() | (textAlpha << 24));
+                    if (s == hoveredIndex && indicator.icon() != null) {
+                        int iconX = client.textRenderer.getWidth(visible.content()) + 4;
+                        int iconY = textY + 9 - indicator.icon().height - 1;
+                        indicator.icon().draw(context, iconX, iconY);
+                    }
                 }
             }
 

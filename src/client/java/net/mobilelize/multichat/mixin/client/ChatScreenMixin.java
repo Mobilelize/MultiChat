@@ -2,12 +2,17 @@ package net.mobilelize.multichat.mixin.client;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.util.math.MathHelper;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.ContextMenu;
+import net.mobilelize.multichat.client.MessageContextMenu;
+import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.search.SearchOverlay;
 
 import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class ChatScreenMixin {
 
     // ------------------------------------------------------------------
-    // Render — status bar + context menu overlay
+    // Render — status bar + context menu overlays
     // ------------------------------------------------------------------
 
     @Shadow public abstract String normalize(String chatText);
@@ -38,15 +43,33 @@ public abstract class ChatScreenMixin {
         }
 
         ContextMenu.render(context, client, mouseX, mouseY);
+        MessageContextMenu.render(context, client, mouseX, mouseY);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"))
     private void onRemoved(CallbackInfo ci) {
         ContextMenu.close();
+        MessageContextMenu.close();
     }
 
     // ------------------------------------------------------------------
-    // Mouse click — tabs (left), context menu open (right), menu dismiss
+    // Key press — search keybind
+    // ------------------------------------------------------------------
+
+    @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
+    private void onKeyPressed(int keyCode, int scanCode, int modifiers,
+                               CallbackInfoReturnable<Boolean> cir) {
+        if (MultichatClient.CONFIG.searchKeybindEnabled
+                && keyCode == MultichatClient.CONFIG.searchKeybindKey
+                && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (modifiers & 2) != 0)) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            client.setScreen(new SearchOverlay(client.currentScreen, null));
+            cir.setReturnValue(true);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Mouse click — tabs, context menus
     // ------------------------------------------------------------------
 
     @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"), cancellable = true)
@@ -54,22 +77,48 @@ public abstract class ChatScreenMixin {
                                  CallbackInfoReturnable<Boolean> cir) {
         MinecraftClient client = MinecraftClient.getInstance();
 
-        // Left-click: check if context menu should consume it
+        // Dispatch any open context menu first.
         if (button == 0 && ContextMenu.isOpen()) {
-            boolean consumed = ContextMenu.handleClick((int) mouseX, (int) mouseY, client);
-            cir.setReturnValue(consumed);
+            cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY, client));
+            return;
+        }
+        if (button == 0 && MessageContextMenu.isOpen()) {
+            cir.setReturnValue(MessageContextMenu.handleClick((int) mouseX, (int) mouseY, client));
             return;
         }
 
-        var chat     = client.inGameHud.getChatHud();
-        float scale  = (float) chat.getChatScale();
-        int chatWidth   = MathHelper.ceil((float) chat.getWidth() / scale);
+        var chat         = client.inGameHud.getChatHud();
+        float scale      = (float) chat.getChatScale();
+        int chatWidth    = MathHelper.ceil((float) chat.getWidth() / scale);
         int windowHeight = client.getWindow().getScaledHeight();
         int windowWidth  = client.getWindow().getScaledWidth();
-        int topY = MathHelper.floor((float)(windowHeight - 40) / scale);
+        int topY         = MathHelper.floor((float)(windowHeight - 40) / scale);
 
         double tabBarScreenTop = topY * (double) scale;
         double tabBarScreenBot = (topY + ChatRenderer.TAB_HEIGHT) * (double) scale;
+
+        // Right-click in message area → message context menu
+        if (button == 1 && mouseY < tabBarScreenTop) {
+            double ls = (Double) client.options.getChatLineSpacing().getValue();
+            int lineH = (int)(9.0 * (ls + 1.0));
+            for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+                if (!panel.enabled) continue;
+                ChatTab active = panel.getActiveTab();
+                if (active == null) continue;
+
+                int xOff = panel.computeXOffset(windowWidth, scale, chatWidth);
+                int hIdx = ChatRenderer.computeHoveredIndex(
+                    panel, client, (int) mouseX, (int) mouseY,
+                    chat.getVisibleLineCount(), windowHeight, scale, lineH, chatWidth, xOff, true);
+                if (hIdx < 0) continue;
+
+                ContextMenu.close();
+                ChatHudLine.Visible clicked = active.messages.get(hIdx);
+                MessageContextMenu.open(clicked, panel, (int) mouseX, (int) mouseY);
+                cir.setReturnValue(true);
+                return;
+            }
+        }
 
         if (mouseY < tabBarScreenTop || mouseY > tabBarScreenBot) return;
 
@@ -129,6 +178,7 @@ public abstract class ChatScreenMixin {
                         panel.activeTab = i;
                         tab.unreadCount = 0;
                     } else if (button == 1) {
+                        MessageContextMenu.close();
                         ContextMenu.open(panel, tab, (int) mouseX, (int) mouseY);
                     }
                     cir.setReturnValue(true);

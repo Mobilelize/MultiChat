@@ -87,22 +87,37 @@ public class TabListScreen extends Screen {
             int btnY1 = y + 3, btnY2 = y + ROW_HEIGHT - 3;
             int textY = y + (ROW_HEIGHT - 8) / 2;
 
-            boolean builtin = tab.type != TabType.FILTERED;
+            int rowBg  = switch (tab.type) {
+                case FILTERED -> 0x55FFFFFF;
+                case SEARCH   -> 0x4400FFAA;
+                default       -> 0x44AAAAFF;
+            };
+            int rowBdr = switch (tab.type) {
+                case FILTERED -> 0x88AAAAAA;
+                case SEARCH   -> 0x8800CC88;
+                default       -> 0x886688CC;
+            };
+            ctx.fill(lx, rowY1, lx + 260, rowY2, rowBg);
+            ctx.drawBorder(lx, rowY1, 260, rowY2 - rowY1, rowBdr);
 
-            ctx.fill(lx, rowY1, lx + 260, rowY2, builtin ? 0x44AAAAFF : 0x55FFFFFF);
-            ctx.drawBorder(lx, rowY1, 260, rowY2 - rowY1, builtin ? 0x886688CC : 0x88AAAAAA);
-
+            int nameColor = switch (tab.type) {
+                case FILTERED -> 0xFFFFFF;
+                case SEARCH   -> 0xAAFFDD;
+                default       -> 0xAADDFF;
+            };
             ctx.drawTextWithShadow(textRenderer,
-                Text.literal(tab.name + " §7[" + tab.visibility.name().toLowerCase() + "]"),
-                lx + 6, textY, builtin ? 0xAADDFF : 0xFFFFFF);
+                Text.literal(tab.name + " ").append(Text.literal("[" + tab.visibility.name().toLowerCase() + "]").formatted(net.minecraft.util.Formatting.GRAY)),
+                lx + 6, textY, nameColor);
 
-            boolean hoverEdit   = mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            boolean hoverRemove = !builtin && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            boolean canEdit   = tab.type == TabType.FILTERED;
+            boolean canRemove = tab.type == TabType.FILTERED || tab.type == TabType.SEARCH;
+            boolean hoverEdit   = canEdit   && mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            boolean hoverRemove = canRemove && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
-            ctx.fill(lx + 186, btnY1, lx + 228, btnY2, hoverEdit ? 0xAA888888 : 0x66555555);
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("Edit"), lx + 207, textY, 0xFFFFFF);
+            ctx.fill(lx + 186, btnY1, lx + 228, btnY2, canEdit ? (hoverEdit ? 0xAA888888 : 0x66555555) : 0x33333333);
+            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("Edit"), lx + 207, textY, canEdit ? 0xFFFFFF : 0x555555);
 
-            if (!builtin) {
+            if (canRemove) {
                 ctx.fill(lx + 231, btnY1, lx + 259, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
                 ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("X"), lx + 245, textY, 0xFFFFFF);
             }
@@ -161,12 +176,12 @@ public class TabListScreen extends Screen {
         ChatTab tab = tabs.get(idx);
 
         if (mx >= lx + 186 && mx < lx + 228) {
-            client.setScreen(TabEditScreen.create(this, tab));
+            if (tab.type == TabType.FILTERED) client.setScreen(TabEditScreen.create(this, tab));
             return true;
         }
-        if (tab.type == TabType.FILTERED && mx >= lx + 231 && mx < lx + 259) {
+        if ((tab.type == TabType.FILTERED || tab.type == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
             ChatRenderer.TABS.remove(tab);
-            MultichatClient.saveTabsToConfig();
+            if (tab.type == TabType.FILTERED) MultichatClient.saveTabsToConfig();
             clearAndInit();
             return true;
         }

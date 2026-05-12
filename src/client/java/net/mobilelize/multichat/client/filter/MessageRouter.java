@@ -8,6 +8,7 @@ import net.minecraft.text.Text;
 import java.util.ArrayList;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -44,6 +45,23 @@ public class MessageRouter {
                         addLines(tab, original, lines);
                         matchedFiltered = true;
                     }
+                }
+                case SEARCH -> {
+                    SearchTab st = (SearchTab) tab;
+                    if (!st.liveUpdate) break;
+                    if (!st.matchesText(fullText)) break;
+                    if (st.sourceTab != null && !st.sourceTab.filterRules.matches(fullText, indicator)) break;
+                    if (!st.matchesTime(original.creationTick())) break;
+                    // Reuse the same Visible objects the ALL tab just prepended so
+                    // click-to-jump works via reference equality.
+                    ChatTab allTab = ChatRenderer.TABS.stream()
+                        .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
+                    if (allTab == null) break;
+                    for (int j = lines.size() - 1; j >= 0; j--)
+                        tab.messages.add(0, allTab.messages.get(j));
+                    if (tab.messageCap > 0)
+                        while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
+                    if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
                 }
             }
         }
@@ -109,6 +127,45 @@ public class MessageRouter {
     // ------------------------------------------------------------------
     // Refilter (called on tab create or rule change)
     // ------------------------------------------------------------------
+
+    public static void refilterSearch(SearchTab tab) {
+        tab.messages.clear();
+        tab.resetCollapse();
+
+        List<ChatHudLine.Visible> source;
+        if (tab.sourceTab != null) {
+            source = tab.sourceTab.messages;
+        } else {
+            ChatTab allTab = ChatRenderer.TABS.stream()
+                .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
+            if (allTab == null) return;
+            source = allTab.messages;
+        }
+        if (source.isEmpty()) return;
+
+        // Forward scan: endOfEntry=true is at the lowest index of each message group
+        // (because addLines prepends, so last visual line is prepended last → index 0 of the group).
+        // Scan groups: [endOfEntry_line, non_endOfEntry_lines…] until next endOfEntry.
+        // Text order: reverse the group (last element = first visual line → read first).
+        int i = 0;
+        while (i < source.size()) {
+            if (!source.get(i).endOfEntry()) { i++; continue; }
+            int groupStart = i++;
+            while (i < source.size() && !source.get(i).endOfEntry()) i++;
+            int groupEnd = i - 1;
+
+            StringBuilder sb = new StringBuilder();
+            for (int j = groupEnd; j >= groupStart; j--)
+                source.get(j).content().accept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
+
+            int addedTick = source.get(groupStart).addedTime();
+
+            if (tab.matchesText(sb.toString()) && tab.matchesTime(addedTick)) {
+                for (int j = groupStart; j <= groupEnd; j++)
+                    tab.messages.add(tab.messages.size(), source.get(j));
+            }
+        }
+    }
 
     public static void refilterTab(ChatTab tab) {
         if (tab.type != TabType.FILTERED) return;
