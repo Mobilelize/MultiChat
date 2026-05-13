@@ -16,6 +16,7 @@ import net.mobilelize.multichat.client.filter.FilterType;
 import net.mobilelize.multichat.client.filter.IndicatorFilter;
 import net.mobilelize.multichat.client.filter.WhitelistMode;
 import net.mobilelize.multichat.client.filter.MessageRouter;
+import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,13 +44,27 @@ public class TabEditScreen {
         ConfigBuilder builder = ConfigBuilder.create()
             .setParentScreen(parent)
             .setTitle(Text.literal("Edit Tab: " + tab.name))
-            .setSavingRunnable(() -> {
-                MessageRouter.refilterTab(tab);
-                MultichatClient.saveTabsToConfig();
-            });
+            .setSavingRunnable(MultichatClient::saveTabsToConfig);
 
         ConfigEntryBuilder eb  = builder.entryBuilder();
         ConfigCategory     cat = builder.getOrCreateCategory(Text.literal("Settings"));
+
+        if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
+            cat.addEntry(eb.startStrField(Text.literal("Name"), tab.name)
+                .setDefaultValue(tab.name)
+                .setErrorSupplier(v -> {
+                    if (v.trim().isEmpty()) return Optional.of(Text.literal("Name cannot be empty."));
+                    if (tab.apiId == null) {
+                        boolean clash = ChatRenderer.TABS.stream()
+                            .filter(t -> t != tab && t.type == TabType.FILTERED)
+                            .anyMatch(t -> t.name.equalsIgnoreCase(v.trim()));
+                        if (clash) return Optional.of(Text.literal("A tab with that name already exists."));
+                    }
+                    return Optional.empty();
+                })
+                .setSaveConsumer(v -> tab.name = v.trim())
+                .build());
+        }
 
         cat.addEntry(eb.startEnumSelector(Text.literal("Visibility"), TabVisibility.class, tab.visibility)
             .setDefaultValue(tab.type == TabType.FILTERED ? TabVisibility.BOTH : tab.visibility)
@@ -81,6 +96,12 @@ public class TabEditScreen {
         if (tab.type != TabType.FILTERED && tab.type != TabType.API) return builder.build();
 
         if (tab.type == TabType.FILTERED) {
+            cat.addEntry(eb.startBooleanToggle(Text.literal("Refilter on Save"), false)
+                .setDefaultValue(false)
+                .setTooltip(Text.literal("When ON, saving will rescan all messages and rebuild this tab."))
+                .setSaveConsumer(v -> { if (v) MessageRouter.refilterTab(tab); })
+                .build());
+
             cat.addEntry(eb.startBooleanToggle(Text.literal("Difference Mode"), tab.differenceMode)
                 .setDefaultValue(false)
                 .setTooltip(Text.literal("Show only messages that don't match any other filtered tab."))
@@ -100,19 +121,17 @@ public class TabEditScreen {
             .setSaveConsumer(v -> tab.tabColor = v & 0xFFFFFF)
             .build());
 
-        if (tab.type == TabType.FILTERED) {
-            cat.addEntry(eb.startStrField(Text.literal("Context Prefix"), tab.contextPrefix)
-                .setDefaultValue("")
-                .setTooltip(Text.literal("Prefix prepended when this tab's context is active. E.g. 'msg Fred'."))
-                .setSaveConsumer(v -> tab.contextPrefix = v.trim())
-                .build());
+        cat.addEntry(eb.startStrField(Text.literal("Context Prefix"), tab.contextPrefix)
+            .setDefaultValue("")
+            .setTooltip(Text.literal("Prefix prepended when this tab's context is active. E.g. 'msg Fred'."))
+            .setSaveConsumer(v -> tab.contextPrefix = v.trim())
+            .build());
 
-            cat.addEntry(eb.startBooleanToggle(Text.literal("Context Command Mode"), tab.contextCommandMode)
-                .setDefaultValue(true)
-                .setTooltip(Text.literal("ON: sent as command. OFF: sent as chat text."))
-                .setSaveConsumer(v -> tab.contextCommandMode = v)
-                .build());
-        }
+        cat.addEntry(eb.startBooleanToggle(Text.literal("Context Command Mode"), tab.contextCommandMode)
+            .setDefaultValue(true)
+            .setTooltip(Text.literal("ON: sent as command. OFF: sent as chat text."))
+            .setSaveConsumer(v -> tab.contextCommandMode = v)
+            .build());
 
         cat.addEntry(eb.startEnumSelector(Text.literal("Whitelist Mode"), WhitelistMode.class, tab.filterRules.whitelistMode)
             .setDefaultValue(WhitelistMode.ANY)

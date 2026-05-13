@@ -75,7 +75,8 @@ public abstract class ChatScreenMixin {
         }
 
         ChatTab ctxTab = ChatRenderer.contextTab;
-        if (ctxTab != null && !ctxTab.contextPrefix.isEmpty()) {
+        if (ctxTab != null && !ctxTab.contextPrefix.isEmpty()
+                && net.mobilelize.multichat.client.MultichatClient.CONFIG.showContextDisplay) {
             String status = "▶ Tab: " + ctxTab.name + " [" + ctxTab.contextPrefix + "]";
             int screenH = context.getScaledWindowHeight();
             context.drawTextWithShadow(client.textRenderer, status, 4, screenH - 26, 0xDEDEDE);

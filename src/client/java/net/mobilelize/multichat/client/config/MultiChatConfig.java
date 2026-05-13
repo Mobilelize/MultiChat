@@ -29,6 +29,7 @@ public class MultiChatConfig extends LzConfig {
     public String  timestampFormat         = "&d[&6HH&d:&6mm&d:&6ss&d]";
     public boolean arrowKeySwitchTabs      = true;
     public boolean arrowKeyCtrlForRight    = true;
+    public boolean showContextDisplay      = true;
 
     // Search
     public boolean      searchKeybindEnabled      = true;
@@ -60,9 +61,12 @@ public class MultiChatConfig extends LzConfig {
 
     public static class ApiTabConfig {
         public String id = "";
+        public String displayName = "";
         public TabVisibility visibility = TabVisibility.BOTH;
         public int color = 0;
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
+        public String contextPrefix = "";
+        public boolean contextCommandMode = true;
         public List<RuleConfig> whitelist = new ArrayList<>();
         public List<RuleConfig> blacklist = new ArrayList<>();
     }

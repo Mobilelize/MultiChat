@@ -40,6 +40,7 @@ public class MessageContextMenu {
         list.add("Search for this");
         ChatTab active = panel.getActiveTab();
         if (active != null && active.type != TabType.ALL) list.add("Jump to All");
+        if (active != null && active.type != TabType.ALL) list.add("Delete message");
         return list.toArray(new String[0]);
     }
 
@@ -94,6 +95,7 @@ public class MessageContextMenu {
                 client.setScreen(new SearchOverlay(client.currentScreen, null, text));
             }
             case "Jump to All" -> jumpToAll(client);
+            case "Delete message" -> deleteMessage(sourcePanel);
         }
         return true;
     }
@@ -150,6 +152,20 @@ public class MessageContextMenu {
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
+
+    private static void deleteMessage(ChatPanel panel) {
+        ChatTab active = panel.getActiveTab();
+        if (active == null || active.type == TabType.ALL) return;
+        List<ChatHudLine.Visible> msgs = active.messages;
+        int idx = msgs.indexOf(line);
+        if (idx < 0) return;
+        int groupStart = idx;
+        while (groupStart > 0 && !msgs.get(groupStart).endOfEntry()) groupStart--;
+        int groupEnd = groupStart + 1;
+        while (groupEnd < msgs.size() && !msgs.get(groupEnd).endOfEntry()) groupEnd++;
+        groupEnd--;
+        for (int i = groupEnd; i >= groupStart; i--) msgs.remove(i);
+    }
 
     private static void flashGreen(ChatHudLine.Visible target, ChatPanel panel) {
         ChatTab active = panel.getActiveTab();

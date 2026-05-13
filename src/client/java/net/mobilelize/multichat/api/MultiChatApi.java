@@ -87,6 +87,9 @@ public final class MultiChatApi {
         return MultichatClient.CONFIG;
     }
 
+    /** Clears the active context tab (no prefix applied to outgoing messages). */
+    public static void clearContext() { ChatRenderer.contextTab = null; }
+
     public static ChatPanel getLeftPanel()  { return ChatRenderer.LEFT; }
     public static ChatPanel getRightPanel() { return ChatRenderer.RIGHT; }
 }

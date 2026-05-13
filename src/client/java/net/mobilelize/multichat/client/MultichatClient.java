@@ -62,12 +62,15 @@ public class MultichatClient implements ClientModInitializer {
         for (ChatTab tab : ChatRenderer.TABS) {
             if (tab.type != TabType.API || tab.apiId == null) continue;
             ApiTabConfig atc = new ApiTabConfig();
-            atc.id            = tab.apiId;
-            atc.visibility    = tab.visibility;
-            atc.color         = tab.tabColor;
-            atc.whitelistMode = tab.filterRules.whitelistMode;
-            atc.whitelist     = serializeRules(tab.filterRules.whitelist);
-            atc.blacklist     = serializeRules(tab.filterRules.blacklist);
+            atc.id                = tab.apiId;
+            atc.displayName       = tab.name;
+            atc.visibility        = tab.visibility;
+            atc.color             = tab.tabColor;
+            atc.whitelistMode     = tab.filterRules.whitelistMode;
+            atc.contextPrefix     = tab.contextPrefix;
+            atc.contextCommandMode = tab.contextCommandMode;
+            atc.whitelist         = serializeRules(tab.filterRules.whitelist);
+            atc.blacklist         = serializeRules(tab.filterRules.blacklist);
             apiOut.add(atc);
         }
         CONFIG.apiTabs = apiOut;

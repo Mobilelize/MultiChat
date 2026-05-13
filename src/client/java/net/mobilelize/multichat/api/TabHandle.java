@@ -43,6 +43,13 @@ public class TabHandle {
         sendMessage(Text.literal(message));
     }
 
+    public void setAsContext()   { ChatRenderer.contextTab = tab; }
+    public void clearContext()   { if (ChatRenderer.contextTab == tab) ChatRenderer.contextTab = null; }
+
+    public void setContextPrefix(String prefix)      { tab.contextPrefix = prefix != null ? prefix : ""; }
+    public void setContextCommandMode(boolean asCmd) { tab.contextCommandMode = asCmd; }
+    public String getContextPrefix()                 { return tab.contextPrefix; }
+
     public String getId()    { return fullId; }
     public ChatTab getTab()  { return tab; }
 

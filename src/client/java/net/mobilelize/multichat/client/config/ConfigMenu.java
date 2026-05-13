@@ -55,6 +55,14 @@ public class ConfigMenu {
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
+                Text.literal("Show Context Display"),
+                MultichatClient.CONFIG.showContextDisplay)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Show the active context tab indicator above the chat input bar."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.showContextDisplay = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
                 Text.literal("Arrow Keys Switch Tabs"),
                 MultichatClient.CONFIG.arrowKeySwitchTabs)
                 .setDefaultValue(true)

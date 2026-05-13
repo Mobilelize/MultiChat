@@ -61,7 +61,7 @@ public class TabListScreen extends Screen {
     private void addTab() {
         String name = nameField.getText().trim();
         if (name.isEmpty()) return;
-        if (ChatRenderer.TABS.stream().anyMatch(t -> t.name.equalsIgnoreCase(name))) return;
+        if (ChatRenderer.TABS.stream().anyMatch(t -> t.type == TabType.FILTERED && t.name.equalsIgnoreCase(name))) return;
         ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, TabVisibility.BOTH));
         MultichatClient.saveTabsToConfig();
         clearAndInit();
@@ -179,7 +179,8 @@ public class TabListScreen extends Screen {
         ChatTab tab = tabs.get(idx);
 
         if (mx >= lx + 186 && mx < lx + 228) {
-            if (tab.type == TabType.FILTERED) client.setScreen(TabEditScreen.create(this, tab));
+            if (tab.type == TabType.FILTERED || tab.type == TabType.API)
+                client.setScreen(TabEditScreen.create(this, tab));
             return true;
         }
         if ((tab.type == TabType.FILTERED || tab.type == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {

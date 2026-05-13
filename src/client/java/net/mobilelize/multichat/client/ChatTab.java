@@ -9,7 +9,7 @@ import java.util.List;
 
 public class ChatTab {
 
-    public final String name;
+    public String name;
     public final TabType type;
     public TabVisibility visibility;
     public final List<ChatHudLine.Visible> messages = new ArrayList<>();

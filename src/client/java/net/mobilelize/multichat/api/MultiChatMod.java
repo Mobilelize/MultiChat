@@ -34,6 +34,18 @@ public class MultiChatMod {
      * @param visibility  default panel visibility
      * @param color       default tab color (0 = default gray)
      */
+    public TabHandle registerTab(String name, String displayName) {
+        return registerTab(name, displayName, TabVisibility.BOTH, 0);
+    }
+
+    public TabHandle registerTab(String name, String displayName, TabVisibility visibility) {
+        return registerTab(name, displayName, visibility, 0);
+    }
+
+    public TabHandle registerTab(String name, String displayName, int color) {
+        return registerTab(name, displayName, TabVisibility.BOTH, color);
+    }
+
     public TabHandle registerTab(String name, String displayName, TabVisibility visibility, int color) {
         if (handles.containsKey(name)) return handles.get(name);
 
@@ -41,13 +53,17 @@ public class MultiChatMod {
 
         ApiTabConfig saved = findSaved(fullId);
 
-        ChatTab tab = new ChatTab(displayName, TabType.API,
+        String resolvedName = (saved != null && saved.displayName != null && !saved.displayName.isEmpty())
+            ? saved.displayName : displayName;
+        ChatTab tab = new ChatTab(resolvedName, TabType.API,
             saved != null ? saved.visibility : visibility);
         tab.apiId    = fullId;
         tab.tabColor = saved != null ? saved.color : (color & 0xFFFFFF);
 
         if (saved != null) {
             tab.filterRules.whitelistMode = saved.whitelistMode != null ? saved.whitelistMode : WhitelistMode.ANY;
+            tab.contextPrefix      = saved.contextPrefix != null ? saved.contextPrefix : "";
+            tab.contextCommandMode = saved.contextCommandMode;
             for (RuleConfig rc : saved.whitelist)
                 if (rc.type != null) tab.filterRules.whitelist.add(
                     new FilterRule(rc.type, rc.value, rc.indicator != null ? rc.indicator : IndicatorFilter.ANY));
@@ -74,6 +90,11 @@ public class MultiChatMod {
 
     public TabHandle getTab(String name) {
         return handles.get(name);
+    }
+
+    /** All full tab IDs ({@code "modid:name"}) registered by this mod. */
+    public java.util.List<String> getTabIds() {
+        return handles.values().stream().map(TabHandle::getId).toList();
     }
 
     public String getModId() { return modId; }
