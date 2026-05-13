@@ -79,6 +79,7 @@ public class MessageRouter {
 
     private static void addLines(ChatTab tab, ChatHudLine original, List<OrderedText> lines) {
         String text = original.content().getString();
+        boolean stamp = tab.showTimestamps;
 
         if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText) && tab.collapseLastLines != null) {
             // Remove previous collapsed message
@@ -86,27 +87,35 @@ public class MessageRouter {
                 tab.messages.remove(0);
 
             tab.collapseRepeat++;
-            tab.collapseLastTick = original.creationTick();
+            tab.collapseLastTick  = original.creationTick();
+            tab.collapseLastLines = new ArrayList<>(lines); // update to new lines so color follows latest repeat
 
-            // Re-add original lines with updated count suffix on last line
+            // Re-wrap with updated timestamp (or use raw lines), then append count suffix
+            List<OrderedText> base = stamp
+                ? ChatRenderer.stampedLines(tab.collapseLastTick, original.content(), original.indicator(), lines)
+                : new ArrayList<>(tab.collapseLastLines);
             OrderedText suffix = Text.literal(" (x" + tab.collapseRepeat + ")").formatted(net.minecraft.util.Formatting.DARK_GRAY).asOrderedText();
-            List<OrderedText> updated = new ArrayList<>(tab.collapseLastLines);
+            List<OrderedText> updated = new ArrayList<>(base);
             int last = updated.size() - 1;
             updated.set(last, OrderedText.concat(updated.get(last), suffix));
 
+            tab.collapseLineCount = updated.size();
             for (int j = 0; j < updated.size(); j++)
                 tab.messages.add(0, new ChatHudLine.Visible(
                     tab.collapseLastTick, updated.get(j), original.indicator(), j == updated.size() - 1));
         } else {
             tab.collapseLastText  = text;
             tab.collapseRepeat    = 1;
-            tab.collapseLineCount = lines.size();
             tab.collapseLastTick  = original.creationTick();
             tab.collapseLastLines = new ArrayList<>(lines);
 
-            for (int j = 0; j < lines.size(); j++)
+            List<OrderedText> active = stamp
+                ? ChatRenderer.stampedLines(original.creationTick(), original.content(), original.indicator(), lines)
+                : lines;
+            tab.collapseLineCount = active.size();
+            for (int j = 0; j < active.size(); j++)
                 tab.messages.add(0, new ChatHudLine.Visible(
-                    original.creationTick(), lines.get(j), original.indicator(), j == lines.size() - 1));
+                    original.creationTick(), active.get(j), original.indicator(), j == active.size() - 1));
         }
 
         if (tab.messageCap > 0) {

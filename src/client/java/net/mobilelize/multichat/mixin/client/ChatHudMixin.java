@@ -140,7 +140,13 @@ public class ChatHudMixin {
 
     @Inject(method = "getTextStyleAt", at = @At("RETURN"), cancellable = true)
     private void getTextStyleAtAllPanels(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
-        if (cir.getReturnValue() != null) return;
+        // Vanilla reads its own visibleMessages regardless of active tab.
+        // Only trust vanilla's result when the left panel is actually on the VANILLA tab.
+        ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
+        boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled
+            && leftActive.type == TabType.VANILLA;
+        if (cir.getReturnValue() != null && leftIsVanilla) return;
+        // If vanilla found something but we're not on VANILLA tab, discard it and check our panels.
 
         ChatHud self        = (ChatHud)(Object)this;
         ChatHudAccessor acc = (ChatHudAccessor) self;

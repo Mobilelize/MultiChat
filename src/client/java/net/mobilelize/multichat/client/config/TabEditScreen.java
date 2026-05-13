@@ -58,6 +58,12 @@ public class TabEditScreen {
             .build());
 
         if (tab.type == TabType.FILTERED) {
+            cat.addEntry(eb.startBooleanToggle(Text.literal("Show Timestamps"), tab.showTimestamps)
+                .setDefaultValue(false)
+                .setTooltip(Text.literal("Prepend a timestamp to each message. Format configured in Settings."))
+                .setSaveConsumer(v -> tab.showTimestamps = v)
+                .build());
+
             cat.addEntry(eb.startBooleanToggle(Text.literal("Collapse Repeating"), tab.collapseRepeating)
                 .setDefaultValue(false)
                 .setTooltip(Text.literal("Stack identical messages with a counter instead of repeating lines."))

@@ -6,6 +6,7 @@ import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.util.math.MathHelper;
 import net.mobilelize.multichat.client.ChatPanel;
+import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.ContextMenu;
 import net.mobilelize.multichat.client.MessageContextMenu;
@@ -35,6 +36,40 @@ public abstract class ChatScreenMixin {
     private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
 
+        // Drive selection drag/release via GLFW button poll (mouseDragged/mouseReleased
+        // are on a parent interface not injectable from ChatScreen).
+        if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
+            long handle = client.getWindow().getHandle();
+            boolean held = org.lwjgl.glfw.GLFW.glfwGetMouseButton(handle,
+                org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            if (held) {
+                ChatPanel selPanel = ChatSelection.getPanel();
+                if (selPanel != null && selPanel.enabled) {
+                    var chat = client.inGameHud.getChatHud();
+                    float scale      = (float) chat.getChatScale();
+                    int chatWidth    = MathHelper.ceil((float) chat.getWidth() / scale);
+                    int windowHeight = client.getWindow().getScaledHeight();
+                    int windowWidth  = client.getWindow().getScaledWidth();
+                    double ls        = (Double) client.options.getChatLineSpacing().getValue();
+                    int lineH        = (int)(9.0 * (ls + 1.0));
+                    int xOff         = selPanel.computeXOffset(windowWidth, scale, chatWidth);
+                    ChatTab active   = selPanel.getActiveTab();
+                    if (active != null && !active.messages.isEmpty()) {
+                        int idx = ChatSelection.hitLine(selPanel, mouseX, mouseY,
+                            chat.getVisibleLineCount(), scale, lineH, windowHeight, chatWidth, xOff);
+                        if (idx >= 0) {
+                            float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
+                            int charIdx  = ChatSelection.charIndexAtX(client.textRenderer,
+                                active.messages.get(idx).content(), localX);
+                            ChatSelection.extend(selPanel, idx, charIdx);
+                        }
+                    }
+                }
+            } else {
+                ChatSelection.endDrag();
+            }
+        }
+
         ChatTab ctxTab = ChatRenderer.contextTab;
         if (ctxTab != null && !ctxTab.contextPrefix.isEmpty()) {
             String status = "▶ Tab: " + ctxTab.name + " [" + ctxTab.contextPrefix + "]";
@@ -50,6 +85,7 @@ public abstract class ChatScreenMixin {
     private void onRemoved(CallbackInfo ci) {
         ContextMenu.close();
         MessageContextMenu.close();
+        ChatSelection.clear();
     }
 
     // ------------------------------------------------------------------
@@ -59,11 +95,25 @@ public abstract class ChatScreenMixin {
     @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
     private void onKeyPressed(int keyCode, int scanCode, int modifiers,
                                CallbackInfoReturnable<Boolean> cir) {
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        // Ctrl+C: copy selection
+        if (MultichatClient.CONFIG.selectionEnabled
+                && keyCode == 67 && (modifiers & 2) != 0 && ChatSelection.hasSelection()) {
+            String text = ChatSelection.getSelectedText();
+            if (!text.isEmpty()) {
+                client.keyboard.setClipboard(text);
+                cir.setReturnValue(true);
+                return;
+            }
+        }
+
         if (MultichatClient.CONFIG.searchKeybindEnabled
                 && keyCode == MultichatClient.CONFIG.searchKeybindKey
                 && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (modifiers & 2) != 0)) {
-            MinecraftClient client = MinecraftClient.getInstance();
-            client.setScreen(new SearchOverlay(client.currentScreen, null));
+            String selText = ChatSelection.hasSelection()
+                ? ChatSelection.getSelectedText().replace('\n', ' ').trim() : "";
+            client.setScreen(new SearchOverlay(client.currentScreen, null, selText));
             cir.setReturnValue(true);
         }
     }
@@ -87,6 +137,9 @@ public abstract class ChatScreenMixin {
             return;
         }
 
+        // Clear selection on any left-click (will restart below if in message area)
+        if (button == 0) ChatSelection.clear();
+
         var chat         = client.inGameHud.getChatHud();
         float scale      = (float) chat.getChatScale();
         int chatWidth    = MathHelper.ceil((float) chat.getWidth() / scale);
@@ -97,10 +150,11 @@ public abstract class ChatScreenMixin {
         double tabBarScreenTop = topY * (double) scale;
         double tabBarScreenBot = (topY + ChatRenderer.TAB_HEIGHT) * (double) scale;
 
+        double ls = (Double) client.options.getChatLineSpacing().getValue();
+        int lineH = (int)(9.0 * (ls + 1.0));
+
         // Right-click in message area → message context menu
         if (button == 1 && mouseY < tabBarScreenTop) {
-            double ls = (Double) client.options.getChatLineSpacing().getValue();
-            int lineH = (int)(9.0 * (ls + 1.0));
             for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
                 if (!panel.enabled) continue;
                 ChatTab active = panel.getActiveTab();
@@ -115,6 +169,36 @@ public abstract class ChatScreenMixin {
                 ContextMenu.close();
                 ChatHudLine.Visible clicked = active.messages.get(hIdx);
                 MessageContextMenu.open(clicked, panel, (int) mouseX, (int) mouseY);
+                cir.setReturnValue(true);
+                return;
+            }
+        }
+
+        // Left-click in message area → start selection
+        if (MultichatClient.CONFIG.selectionEnabled && button == 0 && mouseY < tabBarScreenTop) {
+            for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+                if (!panel.enabled) continue;
+                ChatTab active = panel.getActiveTab();
+                if (active == null || active.messages.isEmpty()) continue;
+
+                int xOff = panel.computeXOffset(windowWidth, scale, chatWidth);
+                int exactIdx = ChatSelection.hitLine(panel, mouseX, mouseY,
+                    chat.getVisibleLineCount(), scale, lineH, windowHeight, chatWidth, xOff);
+                if (exactIdx < 0) continue;
+
+                // Don't intercept link clicks — let vanilla open URLs
+                // (skip this guard when Ctrl is held and the setting is enabled)
+                boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
+                    && net.minecraft.client.gui.screen.Screen.hasControlDown();
+                if (!ctrlSkip) {
+                    var style = chat.getTextStyleAt(mouseX, mouseY);
+                    if (style != null && style.getClickEvent() != null) break;
+                }
+
+                float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
+                int charIdx  = ChatSelection.charIndexAtX(client.textRenderer,
+                    active.messages.get(exactIdx).content(), localX);
+                ChatSelection.start(panel, exactIdx, charIdx);
                 cir.setReturnValue(true);
                 return;
             }
@@ -190,6 +274,7 @@ public abstract class ChatScreenMixin {
             }
         }
     }
+
 
     // ------------------------------------------------------------------
     // Send message — apply context prefix

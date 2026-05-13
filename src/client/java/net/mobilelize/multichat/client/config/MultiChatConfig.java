@@ -23,7 +23,10 @@ public class MultiChatConfig extends LzConfig {
     public boolean rightPanelShowTabs   = true;
 
     // General
-    public boolean showIndicators = true;
+    public boolean showIndicators          = true;
+    public boolean selectionEnabled        = true;
+    public boolean selectionCtrlSkipsClicks = true;
+    public String  timestampFormat         = "&d[&6HH&d:&6mm&d:&6ss&d]";
 
     // Search
     public boolean      searchKeybindEnabled      = true;
@@ -40,6 +43,7 @@ public class MultiChatConfig extends LzConfig {
         public String name = "";
         public boolean differenceMode    = false;
         public boolean showBadge         = true;
+        public boolean showTimestamps    = false;
         public boolean collapseRepeating = false;
         public int     messageCap        = 0;
         public TabVisibility visibility = TabVisibility.BOTH;

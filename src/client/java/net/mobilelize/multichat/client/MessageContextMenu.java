@@ -6,6 +6,7 @@ import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.util.math.MathHelper;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchOverlay;
+import net.mobilelize.multichat.client.ChatSelection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,7 +88,9 @@ public class MessageContextMenu {
                 flashGreen(line, sourcePanel);
             }
             case "Search for this" -> {
-                String text = extractFullMessage(line, sourcePanel).trim();
+                String text = ChatSelection.hasSelection()
+                    ? ChatSelection.getSelectedText().replace('\n', ' ').trim()
+                    : extractFullMessage(line, sourcePanel).trim();
                 client.setScreen(new SearchOverlay(client.currentScreen, null, text));
             }
             case "Jump to All" -> jumpToAll(client);

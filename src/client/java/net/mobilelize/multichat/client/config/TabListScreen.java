@@ -44,7 +44,7 @@ public class TabListScreen extends Screen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
         nameField = new TextFieldWidget(textRenderer, width / 2 - 100, height - 50, 158, 20, Text.empty());
-        nameField.setPlaceholder(Text.literal("New tab name..."));
+        nameField.setPlaceholder(Text.literal("New tab name...").formatted(net.minecraft.util.Formatting.DARK_GRAY));
         this.addSelectableChild(nameField);
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Add"), btn -> addTab())

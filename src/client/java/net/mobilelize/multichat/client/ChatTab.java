@@ -17,6 +17,7 @@ public class ChatTab {
     public final FilterRuleSet filterRules = new FilterRuleSet();
     public boolean differenceMode    = false;
     public boolean showBadge         = true;
+    public boolean showTimestamps    = false;
     public boolean collapseRepeating = false;
     public int     messageCap        = 0;
     public String  contextPrefix     = "";

@@ -14,6 +14,7 @@ import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.filter.FilterRule;
 import net.mobilelize.multichat.client.filter.FilterType;
+import net.mobilelize.multichat.client.config.TabListScreen;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
@@ -27,6 +28,11 @@ public class MultiChatCommand {
     public static void register() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             var root = literal("multichat")
+                .executes(ctx -> {
+                    var client = ctx.getSource().getClient();
+                    client.send(() -> client.setScreen(new TabListScreen(null)));
+                    return 1;
+                })
                 .then(literal("tab")
                     .then(literal("add")
                         .then(argument("name", StringArgumentType.word())
@@ -68,7 +74,7 @@ public class MultiChatCommand {
                         .executes(MultiChatCommand::filterClear)))));
 
             dispatcher.register(root);
-            dispatcher.register(literal("mc").redirect(root.build()));
+            //dispatcher.register(literal("mc").redirect(root.build()));
         });
     }
 

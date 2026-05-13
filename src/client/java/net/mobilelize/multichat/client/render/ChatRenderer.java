@@ -6,9 +6,13 @@ import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.minecraft.network.message.ChatVisibility;
+import net.minecraft.client.util.ChatMessages;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
+import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
@@ -30,6 +34,9 @@ public class ChatRenderer {
     public static int                                highlightUntilTick = 0;
     public static java.util.Set<ChatHudLine.Visible> copyHighlightLines = new java.util.HashSet<>();
     public static int                                copyHighlightUntil = 0;
+
+    private static long wallTimeStart = -1;
+    private static int  tickStart     = 0;
 
     public static final List<ChatTab> TABS = new ArrayList<>(List.of(
         new ChatTab("All",     TabType.ALL,     TabVisibility.BOTH),
@@ -64,6 +71,7 @@ public class ChatRenderer {
 
         lastMouseX = mouseX;
         ChatRenderer.currentTick = currentTick;
+        if (wallTimeStart < 0) { wallTimeStart = System.currentTimeMillis(); tickStart = currentTick; }
 
         if (client.options.getChatVisibility().getValue() == ChatVisibility.HIDDEN) return;
 
@@ -109,7 +117,7 @@ public class ChatRenderer {
             renderAt(client, context, currentTick, focused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
-                    lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset);
+                    lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset, panel);
         }
 
         client.getProfiler().pop();
@@ -202,7 +210,7 @@ public class ChatRenderer {
                                   int chatWidth, int topY, float scale,
                                   double chatOpacity, double bgOpacity,
                                   int lineHeight, int textOffset, int visibleLineCount,
-                                  int hoveredIndex, int xOffset) {
+                                  int hoveredIndex, int xOffset, ChatPanel panel) {
         context.getMatrices().push();
         context.getMatrices().scale(scale, scale, 1.0F);
         context.getMatrices().translate(4.0F + xOffset, 0.0F, 0.0F);
@@ -243,6 +251,12 @@ public class ChatRenderer {
                 int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
                 context.fill(-4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x0055CC55);
+            }
+
+            if (MultichatClient.CONFIG.selectionEnabled) {
+                int[] selRect = ChatSelection.lineHighlight(client.textRenderer, visible, s, panel);
+                if (selRect != null)
+                    context.fill(selRect[0], lineBot, selRect[1], lineTop, 0x7744AAFF);
             }
 
             if (MultichatClient.CONFIG.showIndicators) {
@@ -322,6 +336,73 @@ public class ChatRenderer {
             lineIdx--;
         }
         return -1;
+    }
+
+    public static List<OrderedText> stampedLines(int creationTick, Text originalContent,
+                                                   net.minecraft.client.gui.hud.MessageIndicator indicator,
+                                                   List<OrderedText> fallback) {
+        if (wallTimeStart < 0) return fallback;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) return fallback;
+        net.minecraft.client.gui.hud.ChatHud chat = client.inGameHud.getChatHud();
+        int baseWidth = MathHelper.floor((double) chat.getWidth() / chat.getChatScale());
+        int width = baseWidth - (indicator != null && indicator.icon() != null
+            ? indicator.icon().width + 4 + 2 : 0);
+        String ts = formatTimestamp(MultichatClient.CONFIG.timestampFormat, getWallTime(creationTick));
+        Text combined = Text.empty().append(LzText.format(ts + " ").mc()).append(originalContent);
+        return ChatMessages.breakRenderedChatMessageLines(combined, width, client.textRenderer);
+    }
+
+    private static java.time.LocalTime getWallTime(int addedTick) {
+        long millis = wallTimeStart + (long)(addedTick - tickStart) * 50L;
+        return java.time.Instant.ofEpochMilli(millis)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalTime();
+    }
+
+    // Formats a time using a pattern that may contain &X color codes interspersed.
+    static String formatTimestamp(String fmtWithCodes, java.time.LocalTime time) {
+        // Strip &X codes, recording their positions in the pure string.
+        StringBuilder pure = new StringBuilder();
+        java.util.List<int[]> inserts = new ArrayList<>();
+        for (int i = 0; i < fmtWithCodes.length(); i++) {
+            if (fmtWithCodes.charAt(i) == '&' && i + 1 < fmtWithCodes.length()) {
+                inserts.add(new int[]{pure.length(), fmtWithCodes.charAt(++i)});
+            } else {
+                pure.append(fmtWithCodes.charAt(i));
+            }
+        }
+
+        // Escape non-letter chars as quoted literals so DTF emits them verbatim.
+        // '[' and ']' are optional-section markers in DTF — must be quoted to appear.
+        StringBuilder pat = new StringBuilder();
+        boolean quoted = false;
+        for (char c : pure.toString().toCharArray()) {
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+                if (quoted) { pat.append('\''); quoted = false; }
+                pat.append(c);
+            } else {
+                if (!quoted) { pat.append('\''); quoted = true; }
+                if (c == '\'') pat.append('\'');
+                pat.append(c);
+            }
+        }
+        if (quoted) pat.append('\'');
+
+        String formatted;
+        try {
+            formatted = java.time.format.DateTimeFormatter.ofPattern(pat.toString()).format(time);
+        } catch (Exception e) { return "??"; }
+
+        // Reinsert &X codes at their original positions in the formatted string.
+        StringBuilder result = new StringBuilder(formatted);
+        int offset = 0;
+        for (int[] ins : inserts) {
+            int pos = Math.min(ins[0] + offset, result.length());
+            result.insert(pos, "&" + (char) ins[1]);
+            offset += 2;
+        }
+        return result.toString();
     }
 
     private static double getOpacityMultiplier(int age) {

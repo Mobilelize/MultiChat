@@ -30,6 +30,30 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.showIndicators = v)
                 .build());
 
+        general.addEntry(eb.startBooleanToggle(
+                Text.literal("Enable Text Selection"),
+                MultichatClient.CONFIG.selectionEnabled)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Click and drag in chat to select text. Ctrl+C to copy."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionEnabled = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
+                Text.literal("Ctrl Skips Click Events"),
+                MultichatClient.CONFIG.selectionCtrlSkipsClicks)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("When Ctrl is held, clicking on links or commands starts selection instead of activating the click."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionCtrlSkipsClicks = v)
+                .build());
+
+        general.addEntry(eb.startStrField(
+                Text.literal("Timestamp Format"),
+                MultichatClient.CONFIG.timestampFormat)
+                .setDefaultValue("&d[&6HH&d:&6mm&d:&6ss&d]")
+                .setTooltip(Text.literal("Java DateTimeFormatter pattern. Supports color codes (e.g. &7[HH:mm:ss]&r)."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.timestampFormat = v)
+                .build());
+
         ConfigCategory leftPanel = builder.getOrCreateCategory(Text.literal("Left Panel"));
 
         leftPanel.addEntry(eb.startBooleanToggle(
