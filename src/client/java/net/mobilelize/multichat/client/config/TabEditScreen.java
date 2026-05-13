@@ -57,7 +57,7 @@ public class TabEditScreen {
             .setSaveConsumer(v -> tab.visibility = v)
             .build());
 
-        if (tab.type == TabType.FILTERED) {
+        if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
             cat.addEntry(eb.startBooleanToggle(Text.literal("Show Timestamps"), tab.showTimestamps)
                 .setDefaultValue(false)
                 .setTooltip(Text.literal("Prepend a timestamp to each message. Format configured in Settings."))
@@ -78,13 +78,15 @@ public class TabEditScreen {
                 .build());
         }
 
-        if (tab.type != TabType.FILTERED) return builder.build();
+        if (tab.type != TabType.FILTERED && tab.type != TabType.API) return builder.build();
 
-        cat.addEntry(eb.startBooleanToggle(Text.literal("Difference Mode"), tab.differenceMode)
-            .setDefaultValue(false)
-            .setTooltip(Text.literal("Show only messages that don't match any other filtered tab."))
-            .setSaveConsumer(v -> tab.differenceMode = v)
-            .build());
+        if (tab.type == TabType.FILTERED) {
+            cat.addEntry(eb.startBooleanToggle(Text.literal("Difference Mode"), tab.differenceMode)
+                .setDefaultValue(false)
+                .setTooltip(Text.literal("Show only messages that don't match any other filtered tab."))
+                .setSaveConsumer(v -> tab.differenceMode = v)
+                .build());
+        }
 
         cat.addEntry(eb.startBooleanToggle(Text.literal("Show Badge"), tab.showBadge)
             .setDefaultValue(true)
@@ -92,17 +94,25 @@ public class TabEditScreen {
             .setSaveConsumer(v -> tab.showBadge = v)
             .build());
 
-        cat.addEntry(eb.startStrField(Text.literal("Context Prefix"), tab.contextPrefix)
-            .setDefaultValue("")
-            .setTooltip(Text.literal("Prefix prepended when this tab's context is active. E.g. 'msg Fred'."))
-            .setSaveConsumer(v -> tab.contextPrefix = v.trim())
+        cat.addEntry(eb.startColorField(Text.literal("Tab Color"), tab.tabColor)
+            .setDefaultValue(0)
+            .setTooltip(Text.literal("Custom color for this tab. Set to 000000 (black) to use the default gray."))
+            .setSaveConsumer(v -> tab.tabColor = v & 0xFFFFFF)
             .build());
 
-        cat.addEntry(eb.startBooleanToggle(Text.literal("Context Command Mode"), tab.contextCommandMode)
-            .setDefaultValue(true)
-            .setTooltip(Text.literal("ON: sent as command. OFF: sent as chat text."))
-            .setSaveConsumer(v -> tab.contextCommandMode = v)
-            .build());
+        if (tab.type == TabType.FILTERED) {
+            cat.addEntry(eb.startStrField(Text.literal("Context Prefix"), tab.contextPrefix)
+                .setDefaultValue("")
+                .setTooltip(Text.literal("Prefix prepended when this tab's context is active. E.g. 'msg Fred'."))
+                .setSaveConsumer(v -> tab.contextPrefix = v.trim())
+                .build());
+
+            cat.addEntry(eb.startBooleanToggle(Text.literal("Context Command Mode"), tab.contextCommandMode)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("ON: sent as command. OFF: sent as chat text."))
+                .setSaveConsumer(v -> tab.contextCommandMode = v)
+                .build());
+        }
 
         cat.addEntry(eb.startEnumSelector(Text.literal("Whitelist Mode"), WhitelistMode.class, tab.filterRules.whitelistMode)
             .setDefaultValue(WhitelistMode.ANY)

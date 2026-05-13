@@ -15,9 +15,11 @@ public class ChatTab {
     public final List<ChatHudLine.Visible> messages = new ArrayList<>();
     public int unreadCount = 0;
     public final FilterRuleSet filterRules = new FilterRuleSet();
+    public String  apiId             = null;
     public boolean differenceMode    = false;
     public boolean showBadge         = true;
     public boolean showTimestamps    = false;
+    public int     tabColor          = 0;
     public boolean collapseRepeating = false;
     public int     messageCap        = 0;
     public String  contextPrefix     = "";

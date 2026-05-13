@@ -6,6 +6,8 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
+import net.mobilelize.multichat.api.MessageAddedToTabCallback;
+import net.mobilelize.multichat.api.MessageReceivedCallback;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.SearchTab;
@@ -23,6 +25,8 @@ public class MessageRouter {
     // ------------------------------------------------------------------
 
     public static void routeLines(ChatHudLine original, List<OrderedText> lines) {
+        if (MessageReceivedCallback.EVENT.invoker().onMessageReceived(original.content())) return;
+
         String fullText = original.content().getString();
         MessageIndicator indicator = original.indicator();
 
@@ -45,6 +49,10 @@ public class MessageRouter {
                         addLines(tab, original, lines);
                         matchedFiltered = true;
                     }
+                }
+                case API -> {
+                    if (!tab.filterRules.isEmpty() && tab.filterRules.matches(fullText, indicator))
+                        addLines(tab, original, lines);
                 }
                 case SEARCH -> {
                     SearchTab st = (SearchTab) tab;
@@ -122,6 +130,8 @@ public class MessageRouter {
             while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
         }
         if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
+        if (!tab.messages.isEmpty())
+            MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.get(0));
     }
 
     private static boolean isActiveInAnyPanel(ChatTab tab) {
@@ -177,7 +187,7 @@ public class MessageRouter {
     }
 
     public static void refilterTab(ChatTab tab) {
-        if (tab.type != TabType.FILTERED) return;
+        if (tab.type != TabType.FILTERED && tab.type != TabType.API) return;
         tab.messages.clear();
         tab.resetCollapse();
 

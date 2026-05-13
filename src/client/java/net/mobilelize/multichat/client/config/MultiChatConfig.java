@@ -27,6 +27,8 @@ public class MultiChatConfig extends LzConfig {
     public boolean selectionEnabled        = true;
     public boolean selectionCtrlSkipsClicks = true;
     public String  timestampFormat         = "&d[&6HH&d:&6mm&d:&6ss&d]";
+    public boolean arrowKeySwitchTabs      = true;
+    public boolean arrowKeyCtrlForRight    = true;
 
     // Search
     public boolean      searchKeybindEnabled      = true;
@@ -37,19 +39,30 @@ public class MultiChatConfig extends LzConfig {
     public boolean      searchDefaultLive         = true;
     public TabVisibility searchDefaultVisibility  = TabVisibility.BOTH;
 
-    public List<TabConfig> tabs = new ArrayList<>();
+    public List<TabConfig>    tabs    = new ArrayList<>();
+    public List<ApiTabConfig> apiTabs = new ArrayList<>();
 
     public static class TabConfig {
         public String name = "";
         public boolean differenceMode    = false;
         public boolean showBadge         = true;
         public boolean showTimestamps    = false;
+        public int     tabColor          = 0;
         public boolean collapseRepeating = false;
         public int     messageCap        = 0;
         public TabVisibility visibility = TabVisibility.BOTH;
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
         public String contextPrefix = "";
         public boolean contextCommandMode = true;
+        public List<RuleConfig> whitelist = new ArrayList<>();
+        public List<RuleConfig> blacklist = new ArrayList<>();
+    }
+
+    public static class ApiTabConfig {
+        public String id = "";
+        public TabVisibility visibility = TabVisibility.BOTH;
+        public int color = 0;
+        public WhitelistMode whitelistMode = WhitelistMode.ANY;
         public List<RuleConfig> whitelist = new ArrayList<>();
         public List<RuleConfig> blacklist = new ArrayList<>();
     }

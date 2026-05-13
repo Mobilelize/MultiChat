@@ -54,6 +54,22 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.timestampFormat = v)
                 .build());
 
+        general.addEntry(eb.startBooleanToggle(
+                Text.literal("Arrow Keys Switch Tabs"),
+                MultichatClient.CONFIG.arrowKeySwitchTabs)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Left/Right arrow keys switch tabs on the left panel when chat input is empty."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeySwitchTabs = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
+                Text.literal("Ctrl+Arrow Switches Right Panel"),
+                MultichatClient.CONFIG.arrowKeyCtrlForRight)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("When Ctrl is held, arrow keys switch tabs on the right panel instead."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeyCtrlForRight = v)
+                .build());
+
         ConfigCategory leftPanel = builder.getOrCreateCategory(Text.literal("Left Panel"));
 
         leftPanel.addEntry(eb.startBooleanToggle(

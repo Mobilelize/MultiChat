@@ -165,8 +165,8 @@ public class ChatRenderer {
             if (x + tabWidth > tabAreaEnd) break;
 
             boolean active = (i == panel.activeTab);
-            context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, active ? 0xBB888888 : 0x88444444);
-            context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, active ? 0xFFFFFFFF : 0xFF999999);
+            context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(tab, active));
+            context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, tabFgColor(tab, active));
             x += tabWidth + 1;
             lastRendered = i;
         }
@@ -187,8 +187,8 @@ public class ChatRenderer {
                 int sy2 = Math.round((topY + TAB_HEIGHT) * scale);
 
                 context.enableScissor(sx1, sy1, sx2, sy2);
-                context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, active ? 0xBB888888 : 0x88444444);
-                context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, active ? 0xFFFFFFFF : 0xFF999999);
+                context.fill(x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(nextTab, active));
+                context.drawTextWithShadow(client.textRenderer, label, x + 4, topY + 1, tabFgColor(nextTab, active));
                 context.disableScissor();
             }
         }
@@ -201,6 +201,21 @@ public class ChatRenderer {
         }
 
         context.getMatrices().pop();
+    }
+
+    private static int tabBgColor(ChatTab tab, boolean active) {
+        if (tab.tabColor == 0) return active ? 0xBB888888 : 0x88444444;
+        return active ? (0xCC000000 | (tab.tabColor & 0xFFFFFF)) : (0x55000000 | (tab.tabColor & 0xFFFFFF));
+    }
+
+    private static int tabFgColor(ChatTab tab, boolean active) {
+        if (tab.tabColor == 0) return active ? 0xFFFFFFFF : 0xFF999999;
+        if (active) return 0xFFFFFFFF;
+        int rgb = tab.tabColor & 0xFFFFFF;
+        int r = ((rgb >> 16) & 0xFF) * 3 / 5;
+        int g = ((rgb >> 8)  & 0xFF) * 3 / 5;
+        int b = ( rgb        & 0xFF) * 3 / 5;
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     private static void renderAt(MinecraftClient client, DrawContext context,

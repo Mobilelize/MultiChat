@@ -90,11 +90,13 @@ public class TabListScreen extends Screen {
             int rowBg  = switch (tab.type) {
                 case FILTERED -> 0x55FFFFFF;
                 case SEARCH   -> 0x4400FFAA;
+                case API      -> 0x44FF9900;
                 default       -> 0x44AAAAFF;
             };
             int rowBdr = switch (tab.type) {
                 case FILTERED -> 0x88AAAAAA;
                 case SEARCH   -> 0x8800CC88;
+                case API      -> 0x88CC6600;
                 default       -> 0x886688CC;
             };
             ctx.fill(lx, rowY1, lx + 260, rowY2, rowBg);
@@ -103,13 +105,14 @@ public class TabListScreen extends Screen {
             int nameColor = switch (tab.type) {
                 case FILTERED -> 0xFFFFFF;
                 case SEARCH   -> 0xAAFFDD;
+                case API      -> 0xFFCC88;
                 default       -> 0xAADDFF;
             };
             ctx.drawTextWithShadow(textRenderer,
                 Text.literal(tab.name + " ").append(Text.literal("[" + tab.visibility.name().toLowerCase() + "]").formatted(net.minecraft.util.Formatting.GRAY)),
                 lx + 6, textY, nameColor);
 
-            boolean canEdit   = tab.type == TabType.FILTERED;
+            boolean canEdit   = tab.type == TabType.FILTERED || tab.type == TabType.API;
             boolean canRemove = tab.type == TabType.FILTERED || tab.type == TabType.SEARCH;
             boolean hoverEdit   = canEdit   && mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverRemove = canRemove && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;

@@ -4,7 +4,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.util.math.MathHelper;
+import net.mobilelize.multichat.api.MessageSentCallback;
+import net.mobilelize.multichat.api.TabChangedCallback;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
@@ -31,6 +34,7 @@ public abstract class ChatScreenMixin {
     // ------------------------------------------------------------------
 
     @Shadow public abstract String normalize(String chatText);
+    @Shadow private TextFieldWidget chatField;
 
     @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("RETURN"))
     private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
@@ -114,6 +118,29 @@ public abstract class ChatScreenMixin {
             String selText = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replace('\n', ' ').trim() : "";
             client.setScreen(new SearchOverlay(client.currentScreen, null, selText));
+            cir.setReturnValue(true);
+            return;
+        }
+
+        // Arrow keys — switch tabs (only when chat input is empty)
+        if (MultichatClient.CONFIG.arrowKeySwitchTabs
+                && (keyCode == 262 || keyCode == 263)
+                && chatField.getText().isEmpty()) {
+            boolean goRight = keyCode == 262;
+            boolean ctrlHeld = (modifiers & 2) != 0;
+            ChatPanel panel = (MultichatClient.CONFIG.arrowKeyCtrlForRight && ctrlHeld)
+                ? ChatRenderer.RIGHT : ChatRenderer.LEFT;
+            if (panel.enabled) {
+                List<ChatTab> visible = panel.getVisibleTabs();
+                if (visible.size() > 1) {
+                    panel.activeTab = goRight
+                        ? (panel.activeTab + 1) % visible.size()
+                        : (panel.activeTab - 1 + visible.size()) % visible.size();
+                    ChatTab nowActive = panel.getActiveTab();
+                    nowActive.unreadCount = 0;
+                    TabChangedCallback.EVENT.invoker().onTabChanged(panel, nowActive);
+                }
+            }
             cir.setReturnValue(true);
         }
     }
@@ -261,6 +288,7 @@ public abstract class ChatScreenMixin {
                     if (button == 0) {
                         panel.activeTab = i;
                         tab.unreadCount = 0;
+                        TabChangedCallback.EVENT.invoker().onTabChanged(panel, tab);
                     } else if (button == 1) {
                         MessageContextMenu.close();
                         ContextMenu.open(panel, tab, (int) mouseX, (int) mouseY);
@@ -284,6 +312,11 @@ public abstract class ChatScreenMixin {
     private void interceptSendMessage(String chatText, boolean addToHistory, CallbackInfo ci) {
         String text = normalize(chatText);
         if (text.isEmpty() || text.startsWith("/")) return;
+
+        if (MessageSentCallback.EVENT.invoker().onMessageSent(text)) {
+            ci.cancel();
+            return;
+        }
 
         ChatTab ctxTab = ChatRenderer.contextTab;
         if (ctxTab == null || ctxTab.contextPrefix.isEmpty()) return;

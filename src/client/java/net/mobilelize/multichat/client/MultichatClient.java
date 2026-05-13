@@ -4,6 +4,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
+import net.mobilelize.multichat.client.config.MultiChatConfig.ApiTabConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.TabConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.RuleConfig;
 import net.mobilelize.multichat.client.filter.FilterRule;
@@ -44,6 +45,7 @@ public class MultichatClient implements ClientModInitializer {
             tc.differenceMode = tab.differenceMode;
             tc.showBadge      = tab.showBadge;
             tc.showTimestamps = tab.showTimestamps;
+            tc.tabColor       = tab.tabColor;
             tc.visibility     = tab.visibility;
             tc.collapseRepeating  = tab.collapseRepeating;
             tc.messageCap         = tab.messageCap;
@@ -55,6 +57,21 @@ public class MultichatClient implements ClientModInitializer {
             out.add(tc);
         }
         CONFIG.tabs = out;
+
+        List<ApiTabConfig> apiOut = new ArrayList<>();
+        for (ChatTab tab : ChatRenderer.TABS) {
+            if (tab.type != TabType.API || tab.apiId == null) continue;
+            ApiTabConfig atc = new ApiTabConfig();
+            atc.id            = tab.apiId;
+            atc.visibility    = tab.visibility;
+            atc.color         = tab.tabColor;
+            atc.whitelistMode = tab.filterRules.whitelistMode;
+            atc.whitelist     = serializeRules(tab.filterRules.whitelist);
+            atc.blacklist     = serializeRules(tab.filterRules.blacklist);
+            apiOut.add(atc);
+        }
+        CONFIG.apiTabs = apiOut;
+
         CONFIG.contextTabName = ChatRenderer.contextTab != null ? ChatRenderer.contextTab.name : "";
         CONFIG.save();
     }
@@ -67,6 +84,7 @@ public class MultichatClient implements ClientModInitializer {
             tab.differenceMode      = tc.differenceMode;
             tab.showBadge           = tc.showBadge;
             tab.showTimestamps      = tc.showTimestamps;
+            tab.tabColor            = tc.tabColor;
             tab.collapseRepeating           = tc.collapseRepeating;
             tab.messageCap                  = tc.messageCap;
             tab.filterRules.whitelistMode   = tc.whitelistMode != null ? tc.whitelistMode : net.mobilelize.multichat.client.filter.WhitelistMode.ANY;
