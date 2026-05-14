@@ -175,23 +175,22 @@ public abstract class ChatScreenMixin {
         int windowWidth  = client.getWindow().getScaledWidth();
         int topY         = MathHelper.floor((float)(windowHeight - 40) / scale);
 
-        double tabBarScreenTop = topY * (double) scale;
-        double tabBarScreenBot = (topY + ChatRenderer.TAB_HEIGHT) * (double) scale;
-
         double ls = (Double) client.options.getChatLineSpacing().getValue();
         int lineH = (int)(9.0 * (ls + 1.0));
+        int visibleLineCount = chat.getVisibleLineCount();
 
         // Right-click in message area → message context menu
-        if (button == 1 && mouseY < tabBarScreenTop) {
+        if (button == 1) {
             for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
                 if (!panel.enabled) continue;
+                if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLineCount)) continue;
                 ChatTab active = panel.getActiveTab();
                 if (active == null) continue;
 
                 int xOff = panel.computeXOffset(windowWidth, scale, chatWidth);
                 int hIdx = ChatRenderer.computeHoveredIndex(
                     panel, client, (int) mouseX, (int) mouseY,
-                    chat.getVisibleLineCount(), windowHeight, scale, lineH, chatWidth, xOff, true);
+                    visibleLineCount, windowHeight, scale, lineH, chatWidth, xOff, true);
                 if (hIdx < 0) continue;
 
                 ContextMenu.close();
@@ -203,19 +202,18 @@ public abstract class ChatScreenMixin {
         }
 
         // Left-click in message area → start selection
-        if (MultichatClient.CONFIG.selectionEnabled && button == 0 && mouseY < tabBarScreenTop) {
+        if (MultichatClient.CONFIG.selectionEnabled && button == 0) {
             for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
                 if (!panel.enabled) continue;
+                if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLineCount)) continue;
                 ChatTab active = panel.getActiveTab();
                 if (active == null || active.messages.isEmpty()) continue;
 
                 int xOff = panel.computeXOffset(windowWidth, scale, chatWidth);
                 int exactIdx = ChatSelection.hitLine(panel, mouseX, mouseY,
-                    chat.getVisibleLineCount(), scale, lineH, windowHeight, chatWidth, xOff);
+                    visibleLineCount, scale, lineH, windowHeight, chatWidth, xOff);
                 if (exactIdx < 0) continue;
 
-                // Don't intercept link clicks — let vanilla open URLs
-                // (skip this guard when Ctrl is held and the setting is enabled)
                 boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
                     && net.minecraft.client.gui.screen.Screen.hasControlDown();
                 if (!ctrlSkip) {
@@ -232,10 +230,14 @@ public abstract class ChatScreenMixin {
             }
         }
 
-        if (mouseY < tabBarScreenTop || mouseY > tabBarScreenBot) return;
-
+        // Tab bar clicks — per-panel Y range
         for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
-            if (!panel.enabled) continue;
+            if (!panel.enabled || !panel.showTabs) continue;
+
+            int tabY = ChatRenderer.getTabBarY(panel, topY, visibleLineCount, lineH);
+            double panelTabBarScreenTop = tabY * (double) scale;
+            double panelTabBarScreenBot = (tabY + ChatRenderer.TAB_HEIGHT) * (double) scale;
+            if (mouseY < panelTabBarScreenTop || mouseY > panelTabBarScreenBot) continue;
 
             int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
             List<ChatTab> visibleTabs = panel.getVisibleTabs();
@@ -302,6 +304,17 @@ public abstract class ChatScreenMixin {
                 renderX += tabWidth + 1;
             }
         }
+    }
+
+    private static boolean isMouseInMessageArea(ChatPanel panel, double mouseY,
+            int topY, float scale, int lineH, int visibleLineCount) {
+        if (!panel.showTabs) return mouseY < topY * (double) scale;
+        int tabY = ChatRenderer.getTabBarY(panel, topY, visibleLineCount, lineH);
+        if (panel.tabsAtTop) {
+            double tabBarBot = (tabY + ChatRenderer.TAB_HEIGHT) * (double) scale;
+            return mouseY > tabBarBot && mouseY < topY * (double) scale;
+        }
+        return mouseY < tabY * (double) scale;
     }
 
 

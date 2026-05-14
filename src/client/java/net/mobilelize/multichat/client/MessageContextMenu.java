@@ -20,7 +20,8 @@ public class MessageContextMenu {
     private static int                anchorX, anchorY;
     private static ChatHudLine.Visible line;
     private static ChatPanel          sourcePanel;
-    private static String[]           items;
+    private static List<String>        items;
+    private static int                drawnX, drawnY;
 
     public static void open(ChatHudLine.Visible clicked, ChatPanel panel, int x, int y) {
         open        = true;
@@ -34,33 +35,36 @@ public class MessageContextMenu {
     public static void close()        { open = false; }
     public static boolean isOpen()    { return open; }
 
-    private static String[] buildItems(ChatPanel panel) {
+    private static List<String> buildItems(ChatPanel panel) {
         List<String> list = new ArrayList<>();
         list.add("Copy");
         list.add("Search for this");
         ChatTab active = panel.getActiveTab();
         if (active != null && active.type != TabType.ALL) list.add("Jump to All");
         if (active != null && active.type != TabType.ALL) list.add("Delete message");
-        return list.toArray(new String[0]);
+        return list;
     }
 
     public static void render(DrawContext ctx, MinecraftClient client, int mouseX, int mouseY) {
         if (!open) return;
         int menuW = menuWidth(client);
-        int menuH = items.length * ITEM_H + PADDING;
-        int mx    = anchorX;
+        int menuH = items.size() * ITEM_H + PADDING;
+        int mx    = (anchorX + menuW > ctx.getScaledWindowWidth()) ? anchorX - menuW : anchorX;
         int my    = anchorY - menuH;
+        if (my < 0) my = anchorY;
+        drawnX = mx;
+        drawnY = my;
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(0, 0, 400);
         ctx.fill(mx, my, mx + menuW, my + menuH, 0xDD111111);
         ctx.drawBorder(mx, my, menuW, menuH, 0xFF666666);
-        for (int i = 0; i < items.length; i++) {
+        for (int i = 0; i < items.size(); i++) {
             int iy = my + PADDING / 2 + i * ITEM_H;
             boolean hovered = mouseX >= mx && mouseX < mx + menuW
                            && mouseY >= iy && mouseY < iy + ITEM_H;
             if (hovered) ctx.fill(mx + 1, iy, mx + menuW - 1, iy + ITEM_H, 0x44FFFFFF);
-            ctx.drawTextWithShadow(client.textRenderer, items[i], mx + PADDING, iy + 1, 0xFFEEEEEE);
+            ctx.drawTextWithShadow(client.textRenderer, items.get(i), mx + PADDING, iy + 1, 0xFFEEEEEE);
         }
         ctx.getMatrices().pop();
     }
@@ -68,9 +72,9 @@ public class MessageContextMenu {
     public static boolean handleClick(int mouseX, int mouseY, MinecraftClient client) {
         if (!open) return false;
         int menuW = menuWidth(client);
-        int menuH = items.length * ITEM_H + PADDING;
-        int mx    = anchorX;
-        int my    = anchorY - menuH;
+        int menuH = items.size() * ITEM_H + PADDING;
+        int mx    = drawnX;
+        int my    = drawnY;
 
         if (mouseX < mx || mouseX > mx + menuW || mouseY < my || mouseY > my + menuH) {
             close();
@@ -80,9 +84,9 @@ public class MessageContextMenu {
         int relY    = mouseY - my - PADDING / 2;
         int itemIdx = relY / ITEM_H;
         close();
-        if (itemIdx < 0 || itemIdx >= items.length) return true;
+        if (itemIdx < 0 || itemIdx >= items.size()) return true;
 
-        switch (items[itemIdx]) {
+        switch (items.get(itemIdx)) {
             case "Copy" -> {
                 String text = extractFullMessage(line, sourcePanel);
                 client.keyboard.setClipboard(text);

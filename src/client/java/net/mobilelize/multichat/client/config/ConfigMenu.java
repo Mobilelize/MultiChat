@@ -89,6 +89,14 @@ public class ConfigMenu {
                 .build());
 
         leftPanel.addEntry(eb.startBooleanToggle(
+                Text.literal("Tabs at Top"),
+                MultichatClient.CONFIG.leftPanelTabsAtTop)
+                .setDefaultValue(false)
+                .setTooltip(Text.literal("Show the tab bar above messages instead of below them."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelTabsAtTop = v)
+                .build());
+
+        leftPanel.addEntry(eb.startBooleanToggle(
                 Text.literal("Show Badges"),
                 MultichatClient.CONFIG.leftPanelShowBadges)
                 .setDefaultValue(true)
@@ -128,6 +136,14 @@ public class ConfigMenu {
                 .setDefaultValue(true)
                 .setTooltip(Text.literal("Show the tab bar on the right panel."))
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowTabs = v)
+                .build());
+
+        rightPanel.addEntry(eb.startBooleanToggle(
+                Text.literal("Tabs at Top"),
+                MultichatClient.CONFIG.rightPanelTabsAtTop)
+                .setDefaultValue(false)
+                .setTooltip(Text.literal("Show the tab bar above messages instead of below them."))
+                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelTabsAtTop = v)
                 .build());
 
         ConfigCategory search = builder.getOrCreateCategory(Text.literal("Search"));
@@ -195,10 +211,12 @@ public class ConfigMenu {
     private static void applyAndSave() {
         ChatRenderer.LEFT.showBadges           = MultichatClient.CONFIG.leftPanelShowBadges;
         ChatRenderer.LEFT.showTabs             = MultichatClient.CONFIG.leftPanelShowTabs;
+        ChatRenderer.LEFT.tabsAtTop            = MultichatClient.CONFIG.leftPanelTabsAtTop;
         ChatRenderer.RIGHT.enabled             = MultichatClient.CONFIG.rightPanelEnabled;
         ChatRenderer.RIGHT.showOnlyWhenFocused = MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused;
         ChatRenderer.RIGHT.showBadges          = MultichatClient.CONFIG.rightPanelShowBadges;
         ChatRenderer.RIGHT.showTabs            = MultichatClient.CONFIG.rightPanelShowTabs;
+        ChatRenderer.RIGHT.tabsAtTop           = MultichatClient.CONFIG.rightPanelTabsAtTop;
         MultichatClient.CONFIG.save();
     }
 }

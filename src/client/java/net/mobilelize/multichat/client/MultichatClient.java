@@ -23,10 +23,12 @@ public class MultichatClient implements ClientModInitializer {
 
         ChatRenderer.LEFT.showBadges           = CONFIG.leftPanelShowBadges;
         ChatRenderer.LEFT.showTabs             = CONFIG.leftPanelShowTabs;
+        ChatRenderer.LEFT.tabsAtTop            = CONFIG.leftPanelTabsAtTop;
         ChatRenderer.RIGHT.enabled             = CONFIG.rightPanelEnabled;
         ChatRenderer.RIGHT.showOnlyWhenFocused = CONFIG.rightPanelShowOnlyWhenFocused;
         ChatRenderer.RIGHT.showBadges          = CONFIG.rightPanelShowBadges;
         ChatRenderer.RIGHT.showTabs            = CONFIG.rightPanelShowTabs;
+        ChatRenderer.RIGHT.tabsAtTop           = CONFIG.rightPanelTabsAtTop;
 
         restoreTabsFromConfig();
         MultiChatCommand.register();

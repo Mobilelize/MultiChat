@@ -48,6 +48,10 @@ public class ChatRenderer {
     public static final int TAB_HEIGHT = 10;
     public static final int ARROW_W    = 10;
 
+    public static int getTabBarY(ChatPanel panel, int topY, int visibleLineCount, int lineHeight) {
+        return panel.tabsAtTop ? topY - visibleLineCount * lineHeight - TAB_HEIGHT : topY;
+    }
+
     public static String getTabLabel(ChatPanel panel, ChatTab tab) {
         if (panel.showBadges && tab.showBadge && tab.unreadCount > 0)
             return tab.name + " [" + tab.unreadCount + "]";
@@ -103,7 +107,8 @@ public class ChatRenderer {
             if (activeTab == null) continue;
             int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
 
-            if (focused && panel.showTabs) renderTabBar(client, context, panel, xOffset, topY, scale, chatWidth);
+            int tabY = getTabBarY(panel, topY, visibleLineCount, lineHeight);
+            if (focused && panel.showTabs) renderTabBar(client, context, panel, xOffset, tabY, scale, chatWidth);
 
             if (activeTab.type == TabType.VANILLA) continue;
             if (panel == LEFT && skipLeftMessages) continue;

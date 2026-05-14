@@ -21,6 +21,8 @@ public class MultiChatConfig extends LzConfig {
     public boolean rightPanelShowOnlyWhenFocused = false;
     public boolean rightPanelShowBadges = true;
     public boolean rightPanelShowTabs   = true;
+    public boolean leftPanelTabsAtTop   = false;
+    public boolean rightPanelTabsAtTop  = false;
 
     // General
     public boolean showIndicators          = true;

@@ -18,7 +18,8 @@ public class ContextMenu {
     private static boolean  anchorRight;
     private static ChatPanel panel;
     private static ChatTab   tab;
-    private static String[]  items;
+    private static List<String> items;
+    private static int       drawnX, drawnY;
 
     public static void open(ChatPanel p, ChatTab t, int x, int y) {
         open        = true;
@@ -33,7 +34,7 @@ public class ContextMenu {
     public static void close() { open = false; }
     public static boolean isOpen() { return open; }
 
-    private static String[] buildItems(ChatTab t) {
+    private static List<String> buildItems(ChatTab t) {
         List<String> list = new ArrayList<>();
         if (t.type != TabType.SEARCH) list.add("Toggle Context");
         list.add("Clear Messages");
@@ -41,24 +42,27 @@ public class ContextMenu {
         if (t.type != TabType.SEARCH) list.add("Toggle Badge");
         if (t.type == TabType.ALL || t.type == TabType.FILTERED) list.add("Search in tab…");
         if (t.type == TabType.SEARCH) list.add("Close Search");
-        return list.toArray(new String[0]);
+        return list;
     }
 
     private static int computeX(int menuW) {
         return anchorRight ? anchorX - menuW : anchorX;
     }
 
-    private static int computeY(int menuH) {
-        return anchorY - menuH;
+    private static int computeY(int menuH, int screenH) {
+        int my = anchorY - menuH;
+        return my < 0 ? anchorY : my;
     }
 
     public static void render(DrawContext context, MinecraftClient client, int mouseX, int mouseY) {
         if (!open) return;
 
         int menuW = menuWidth(client);
-        int menuH = items.length * ITEM_H + PADDING;
+        int menuH = items.size() * ITEM_H + PADDING;
         int mx    = computeX(menuW);
-        int my    = computeY(menuH);
+        int my    = computeY(menuH, context.getScaledWindowHeight());
+        drawnX = mx;
+        drawnY = my;
 
         context.getMatrices().push();
         context.getMatrices().translate(0, 0, 400);
@@ -66,12 +70,12 @@ public class ContextMenu {
         context.fill(mx, my, mx + menuW, my + menuH, 0xDD111111);
         context.drawBorder(mx, my, menuW, menuH, 0xFF666666);
 
-        for (int i = 0; i < items.length; i++) {
+        for (int i = 0; i < items.size(); i++) {
             int iy = my + PADDING / 2 + i * ITEM_H;
             boolean hovered = mouseX >= mx && mouseX < mx + menuW
                            && mouseY >= iy && mouseY < iy + ITEM_H;
             if (hovered) context.fill(mx + 1, iy, mx + menuW - 1, iy + ITEM_H, 0x44FFFFFF);
-            context.drawTextWithShadow(client.textRenderer, items[i], mx + PADDING, iy + 1, 0xFFEEEEEE);
+            context.drawTextWithShadow(client.textRenderer, items.get(i), mx + PADDING, iy + 1, 0xFFEEEEEE);
         }
 
         context.getMatrices().pop();
@@ -82,9 +86,9 @@ public class ContextMenu {
         if (!open) return false;
 
         int menuW = menuWidth(client);
-        int menuH = items.length * ITEM_H + PADDING;
-        int mx    = computeX(menuW);
-        int my    = computeY(menuH);
+        int menuH = items.size() * ITEM_H + PADDING;
+        int mx    = drawnX;
+        int my    = drawnY;
 
         if (mouseX < mx || mouseX > mx + menuW || mouseY < my || mouseY > my + menuH) {
             close();
@@ -94,9 +98,9 @@ public class ContextMenu {
         int relY    = mouseY - my - PADDING / 2;
         int itemIdx = relY / ITEM_H;
         close();
-        if (itemIdx < 0 || itemIdx >= items.length) return true;
+        if (itemIdx < 0 || itemIdx >= items.size()) return true;
 
-        String item = items[itemIdx];
+        String item = items.get(itemIdx);
         switch (item) {
             case "Toggle Context" -> {
                 ChatRenderer.contextTab = (ChatRenderer.contextTab == tab) ? null : tab;
