@@ -82,7 +82,7 @@ public abstract class ChatScreenMixin {
             LzDraw.drawText(context, status, 4, screenH - 26, 0xDEDEDE);
         }
 
-        ContextMenu.render(context, mouseX, mouseY);
+        ContextMenu.render(context);
         MessageContextMenu.render(context, mouseX, mouseY);
     }
 

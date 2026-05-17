@@ -91,8 +91,10 @@ public class MessageRouter {
         boolean stamp = tab.showTimestamps;
         LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(original.indicator());
 
+        int netLinesAdded;
         if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText) && tab.collapseLastLines != null) {
-            for (int i = 0; i < tab.collapseLineCount && !tab.messages.isEmpty(); i++)
+            int oldCount = tab.collapseLineCount;
+            for (int i = 0; i < oldCount && !tab.messages.isEmpty(); i++)
                 tab.messages.remove(0);
 
             tab.collapseRepeat++;
@@ -112,6 +114,7 @@ public class MessageRouter {
             for (int j = 0; j < updated.size(); j++)
                 tab.messages.add(0, LzChatLine.create(
                     tab.collapseLastTick, updated.get(j), indicator, j == updated.size() - 1));
+            netLinesAdded = updated.size() - oldCount;
         } else {
             tab.collapseLastText  = text;
             tab.collapseRepeat    = 1;
@@ -125,6 +128,14 @@ public class MessageRouter {
             for (int j = 0; j < active.size(); j++)
                 tab.messages.add(0, LzChatLine.create(
                     original.creationTick(), active.get(j), indicator, j == active.size() - 1));
+            netLinesAdded = active.size();
+        }
+
+        if (netLinesAdded != 0) {
+            for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+                int scrolled = panel.getScrolledLines(tab);
+                if (scrolled > 0) panel.setScrolledLines(tab, scrolled + netLinesAdded);
+            }
         }
 
         if (tab.messageCap > 0) {

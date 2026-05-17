@@ -55,7 +55,7 @@ public class ContextMenu {
         return my < 0 ? anchorY : my;
     }
 
-    public static void render(DrawContext context, int mouseX, int mouseY) {
+    public static void render(DrawContext context) {
         if (!open) return;
 
         int menuW = menuWidth();
@@ -64,6 +64,11 @@ public class ContextMenu {
         int my    = computeY(menuH, LzDraw.scaledHeight(context));
         drawnX = mx;
         drawnY = my;
+
+        var mc = LzClient.mc();
+        double scale = mc.getWindow().getScaleFactor();
+        int mouseX = (int)(mc.mouse.getX() / scale);
+        int mouseY = (int)(mc.mouse.getY() / scale);
 
         LzDraw.pushMatrix(context);
         context.getMatrices().translate(0, 0, 400); // z-layer above chat

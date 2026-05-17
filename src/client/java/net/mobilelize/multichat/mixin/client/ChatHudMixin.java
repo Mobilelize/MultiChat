@@ -14,6 +14,8 @@ import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.ContextMenu;
+import net.mobilelize.multichat.client.MessageContextMenu;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -137,6 +139,11 @@ public class ChatHudMixin {
     // ------------------------------------------------------------------
     // Click / style hit-test for all panels
     // ------------------------------------------------------------------
+
+    @Inject(method = "getTextStyleAt", at = @At("HEAD"), cancellable = true)
+    private void suppressTextStyleWhenMenuOpen(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
+        if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); }
+    }
 
     @Inject(method = "getTextStyleAt", at = @At("RETURN"), cancellable = true)
     private void getTextStyleAtAllPanels(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
