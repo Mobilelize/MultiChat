@@ -16,7 +16,10 @@ import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.ContextMenu;
 import net.mobilelize.multichat.client.MessageContextMenu;
+import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.fabriclib.client.LzChatLine;
+import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import org.jetbrains.annotations.Nullable;
@@ -134,6 +137,66 @@ public class ChatHudMixin {
         List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(message.content()), width);
 
         MessageRouter.routeLines(message, lines);
+    }
+
+    // ------------------------------------------------------------------
+    // Indicator hover tooltip — use our panels instead of vanilla messages
+    // ------------------------------------------------------------------
+
+    @Inject(method = "getIndicatorAt", at = @At("HEAD"), cancellable = true)
+    private void getIndicatorAt(double mouseX, double mouseY,
+                                 CallbackInfoReturnable<@Nullable MessageIndicator> cir) {
+        if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); return; }
+
+        ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
+        if (leftActive != null && ChatRenderer.LEFT.enabled && leftActive.type == TabType.VANILLA) return;
+        if (!MultichatClient.CONFIG.showIndicators) { cir.setReturnValue(null); return; }
+
+        float scale          = (float) LzChat.chatScale();
+        int chatWidth        = LzMath.ceil((float) LzChat.chatWidth() / scale);
+        int windowWidth      = LzClient.scaledWindowWidth();
+        int windowHeight     = LzClient.scaledWindowHeight();
+        int lineHeight       = (int)(9.0 * (LzOptions.chatLineSpacing() + 1.0));
+        int visibleLineCount = LzChat.visibleLineCount();
+
+        // toChatLineY — same for all panels
+        double chatLineY = ((double) windowHeight - mouseY - 40.0) / (scale * lineHeight);
+
+        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+            if (!panel.enabled) continue;
+            ChatTab active = panel.getActiveTab();
+            if (active == null || active.type == TabType.VANILLA || active.messages.isEmpty()) continue;
+
+            int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
+
+            // toChatLineX — panel-local
+            double chatLineX = mouseX / scale - 4.0 - xOffset;
+            if (chatLineX < -4.0) continue; // outside this panel's left edge
+
+            // getMessageLineIndex equivalent (Y bounds)
+            int maxLines = Math.min(visibleLineCount, active.messages.size());
+            if (chatLineY < 0.0 || chatLineY >= maxLines) continue;
+            int lineIdx = LzMath.floor(chatLineY + panel.getScrolledLines(active));
+            if (lineIdx < 0 || lineIdx >= active.messages.size()) continue;
+
+            // getMessageIndex: walk back to endOfEntry
+            while (lineIdx >= 0 && !active.messages.get(lineIdx).endOfEntry()) lineIdx--;
+            if (lineIdx < 0) continue;
+
+            LzChatLine line = active.messages.get(lineIdx);
+            LzMessageIndicator indicator = line.indicator();
+            if (indicator == null) { cir.setReturnValue(null); return; }
+
+            // isXInsideIndicatorIcon equivalent
+            if (chatLineX < 0.0) { cir.setReturnValue(indicator.mc()); return; } // over color strip
+            if (!indicator.hasIcon()) { cir.setReturnValue(null); return; }
+            int indicatorX = LzDraw.textWidth(line.content()) + 4; // getIndicatorX equivalent
+            int iconW = indicator.mc().icon() != null ? indicator.mc().icon().width : 0;
+            cir.setReturnValue(chatLineX >= indicatorX && chatLineX <= indicatorX + iconW ? indicator.mc() : null);
+            return;
+        }
+
+        cir.setReturnValue(null);
     }
 
     // ------------------------------------------------------------------
