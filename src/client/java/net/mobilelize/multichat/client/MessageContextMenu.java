@@ -46,7 +46,7 @@ public class MessageContextMenu {
         return list;
     }
 
-    public static void render(DrawContext ctx, int mouseX, int mouseY) {
+    public static void render(DrawContext ctx) {
         if (!open) return;
         int menuW = menuWidth();
         int menuH = items.size() * ITEM_H + PADDING;
@@ -55,6 +55,11 @@ public class MessageContextMenu {
         if (my < 0) my = anchorY;
         drawnX = mx;
         drawnY = my;
+
+        var mc = LzClient.mc();
+        double scale = mc.getWindow().getScaleFactor();
+        int mouseX = (int)(mc.mouse.getX() / scale);
+        int mouseY = (int)(mc.mouse.getY() / scale);
 
         LzDraw.pushMatrix(ctx);
         ctx.getMatrices().translate(0, 0, 400);

@@ -77,13 +77,13 @@ public abstract class ChatScreenMixin {
         ChatTab ctxTab = ChatRenderer.contextTab;
         if (ctxTab != null && !ctxTab.contextPrefix.isEmpty()
                 && MultichatClient.CONFIG.showContextDisplay) {
-            String status = "▶ Tab: " + ctxTab.name + " [" + ctxTab.contextPrefix + "]";
+            String status = ctxTab.name + " ▶ " + (ctxTab.contextCommandMode ? "/" : "") + ctxTab.contextPrefix + " <message>";
             int screenH = LzDraw.scaledHeight(context);
             LzDraw.drawText(context, status, 4, screenH - 26, 0xDEDEDE);
         }
 
         ContextMenu.render(context);
-        MessageContextMenu.render(context, mouseX, mouseY);
+        MessageContextMenu.render(context);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"))
