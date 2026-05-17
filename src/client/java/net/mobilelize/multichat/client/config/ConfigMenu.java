@@ -173,11 +173,13 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchKeybindRequireCtrl = v)
                 .build());
 
-        search.addEntry(eb.startBooleanToggle(
-                LzText.literal("Default: Regex").mc(),
-                MultichatClient.CONFIG.searchDefaultRegex)
-                .setDefaultValue(false)
-                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultRegex = v)
+        search.addEntry(eb.startEnumSelector(
+                LzText.literal("Default: Search Mode").mc(),
+                net.mobilelize.multichat.client.search.SearchMode.class,
+                MultichatClient.CONFIG.searchDefaultMode)
+                .setDefaultValue(net.mobilelize.multichat.client.search.SearchMode.CONTAINS)
+                .setEnumNameProvider(v -> LzText.literal(v.name()).mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultMode = v)
                 .build());
 
         search.addEntry(eb.startBooleanToggle(

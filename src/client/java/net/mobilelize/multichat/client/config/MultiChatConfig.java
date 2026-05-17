@@ -5,6 +5,7 @@ import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.filter.FilterType;
 import net.mobilelize.multichat.client.filter.IndicatorFilter;
 import net.mobilelize.multichat.client.filter.WhitelistMode;
+import net.mobilelize.multichat.client.search.SearchMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +38,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean      searchKeybindEnabled      = true;
     public int          searchKeybindKey          = 70;  // GLFW_KEY_F
     public boolean      searchKeybindRequireCtrl  = true;
-    public boolean      searchDefaultRegex        = false;
+    public SearchMode   searchDefaultMode         = SearchMode.CONTAINS;
     public boolean      searchDefaultCase         = false;
     public boolean      searchDefaultLive         = true;
     public TabVisibility searchDefaultVisibility  = TabVisibility.BOTH;

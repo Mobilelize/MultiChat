@@ -35,7 +35,7 @@ public class SearchOverlay extends LzScreen {
     private TextFieldWidget fromField;
     private TextFieldWidget toField;
 
-    private boolean      useRegex;
+    private SearchMode   searchMode;
     private boolean      caseSensitive;
     private TabVisibility visibility;
     private boolean      liveUpdate;
@@ -49,7 +49,7 @@ public class SearchOverlay extends LzScreen {
         this.parent        = parent;
         this.sourceTab     = sourceTab;
         this.initialQuery  = initialQuery;
-        this.useRegex      = MultichatClient.CONFIG.searchDefaultRegex;
+        this.searchMode    = MultichatClient.CONFIG.searchDefaultMode;
         this.caseSensitive = MultichatClient.CONFIG.searchDefaultCase;
         this.liveUpdate    = MultichatClient.CONFIG.searchDefaultLive;
         this.visibility    = MultichatClient.CONFIG.searchDefaultVisibility;
@@ -82,8 +82,8 @@ public class SearchOverlay extends LzScreen {
         toField.setMaxLength(32);
 
         addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Regex: " + (useRegex ? "ON" : "OFF")).mc(),
-                b -> { useRegex = !useRegex; b.setMessage(LzText.literal("Regex: " + (useRegex ? "ON" : "OFF")).mc()); })
+                LzText.literal("Mode: " + searchMode.name()).mc(),
+                b -> { searchMode = cycleMode(); b.setMessage(LzText.literal("Mode: " + searchMode.name()).mc()); })
             .dimensions(fx, top + 58, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
@@ -108,6 +108,14 @@ public class SearchOverlay extends LzScreen {
             .dimensions(cx + 6, top + 112, 100, 20).build());
     }
 
+    private SearchMode cycleMode() {
+        return switch (searchMode) {
+            case CONTAINS -> SearchMode.WORD;
+            case WORD     -> SearchMode.REGEX;
+            case REGEX    -> SearchMode.CONTAINS;
+        };
+    }
+
     private TabVisibility cycleVis() {
         return switch (visibility) {
             case BOTH  -> TabVisibility.LEFT;
@@ -127,7 +135,7 @@ public class SearchOverlay extends LzScreen {
 
         ChatRenderer.TABS.removeIf(t -> t.type == net.mobilelize.multichat.client.TabType.SEARCH);
 
-        SearchTab tab = new SearchTab(name, query, useRegex, caseSensitive,
+        SearchTab tab = new SearchTab(name, query, searchMode, caseSensitive,
             fromTicks, toTicks, sourceTab, liveUpdate, visibility);
         ChatRenderer.TABS.add(tab);
         MessageRouter.refilterSearch(tab);
