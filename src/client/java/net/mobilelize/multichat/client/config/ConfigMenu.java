@@ -5,7 +5,7 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -15,193 +15,193 @@ public class ConfigMenu {
     public static Screen create(Screen parent) {
         ConfigBuilder builder = ConfigBuilder.create()
                 .setParentScreen(parent)
-                .setTitle(Text.literal("MultiChat"))
+                .setTitle(LzText.literal("MultiChat").mc())
                 .setSavingRunnable(ConfigMenu::applyAndSave);
 
         ConfigEntryBuilder eb = builder.entryBuilder();
 
-        ConfigCategory general = builder.getOrCreateCategory(Text.literal("General"));
+        ConfigCategory general = builder.getOrCreateCategory(LzText.literal("General").mc());
 
         general.addEntry(eb.startBooleanToggle(
-                Text.literal("Show Indicators"),
+                LzText.literal("Show Indicators").mc(),
                 MultichatClient.CONFIG.showIndicators)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Show the colored indicator bar and icon on the left of chat messages."))
+                .setTooltip(LzText.literal("Show the colored indicator bar and icon on the left of chat messages.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.showIndicators = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                Text.literal("Enable Text Selection"),
+                LzText.literal("Enable Text Selection").mc(),
                 MultichatClient.CONFIG.selectionEnabled)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Click and drag in chat to select text. Ctrl+C to copy."))
+                .setTooltip(LzText.literal("Click and drag in chat to select text. Ctrl+C to copy.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.selectionEnabled = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                Text.literal("Ctrl Skips Click Events"),
+                LzText.literal("Ctrl Skips Click Events").mc(),
                 MultichatClient.CONFIG.selectionCtrlSkipsClicks)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("When Ctrl is held, clicking on links or commands starts selection instead of activating the click."))
+                .setTooltip(LzText.literal("When Ctrl is held, clicking on links or commands starts selection instead of activating the click.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.selectionCtrlSkipsClicks = v)
                 .build());
 
         general.addEntry(eb.startStrField(
-                Text.literal("Timestamp Format"),
+                LzText.literal("Timestamp Format").mc(),
                 MultichatClient.CONFIG.timestampFormat)
                 .setDefaultValue("&d[&6HH&d:&6mm&d:&6ss&d]")
-                .setTooltip(Text.literal("Java DateTimeFormatter pattern. Supports color codes (e.g. &7[HH:mm:ss]&r)."))
+                .setTooltip(LzText.literal("Java DateTimeFormatter pattern. Supports color codes (e.g. &7[HH:mm:ss]&r).").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.timestampFormat = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                Text.literal("Show Context Display"),
+                LzText.literal("Show Context Display").mc(),
                 MultichatClient.CONFIG.showContextDisplay)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Show the active context tab indicator above the chat input bar."))
+                .setTooltip(LzText.literal("Show the active context tab indicator above the chat input bar.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.showContextDisplay = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                Text.literal("Arrow Keys Switch Tabs"),
+                LzText.literal("Arrow Keys Switch Tabs").mc(),
                 MultichatClient.CONFIG.arrowKeySwitchTabs)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Left/Right arrow keys switch tabs on the left panel when chat input is empty."))
+                .setTooltip(LzText.literal("Left/Right arrow keys switch tabs on the left panel when chat input is empty.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeySwitchTabs = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                Text.literal("Ctrl+Arrow Switches Right Panel"),
+                LzText.literal("Ctrl+Arrow Switches Right Panel").mc(),
                 MultichatClient.CONFIG.arrowKeyCtrlForRight)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("When Ctrl is held, arrow keys switch tabs on the right panel instead."))
+                .setTooltip(LzText.literal("When Ctrl is held, arrow keys switch tabs on the right panel instead.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeyCtrlForRight = v)
                 .build());
 
-        ConfigCategory leftPanel = builder.getOrCreateCategory(Text.literal("Left Panel"));
+        ConfigCategory leftPanel = builder.getOrCreateCategory(LzText.literal("Left Panel").mc());
 
         leftPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Show Tabs"),
+                LzText.literal("Show Tabs").mc(),
                 MultichatClient.CONFIG.leftPanelShowTabs)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Show the tab bar on the left panel."))
+                .setTooltip(LzText.literal("Show the tab bar on the left panel.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelShowTabs = v)
                 .build());
 
         leftPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Tabs at Top"),
+                LzText.literal("Tabs at Top").mc(),
                 MultichatClient.CONFIG.leftPanelTabsAtTop)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Show the tab bar above messages instead of below them."))
+                .setTooltip(LzText.literal("Show the tab bar above messages instead of below them.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelTabsAtTop = v)
                 .build());
 
         leftPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Show Badges"),
+                LzText.literal("Show Badges").mc(),
                 MultichatClient.CONFIG.leftPanelShowBadges)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Show unread message counts on inactive tabs in the left panel."))
+                .setTooltip(LzText.literal("Show unread message counts on inactive tabs in the left panel.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelShowBadges = v)
                 .build());
 
-        ConfigCategory rightPanel = builder.getOrCreateCategory(Text.literal("Right Panel"));
+        ConfigCategory rightPanel = builder.getOrCreateCategory(LzText.literal("Right Panel").mc());
 
         rightPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Enable Right Panel"),
+                LzText.literal("Enable Right Panel").mc(),
                 MultichatClient.CONFIG.rightPanelEnabled)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Shows a second chat panel on the right side of the screen."))
+                .setTooltip(LzText.literal("Shows a second chat panel on the right side of the screen.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelEnabled = v)
                 .build());
 
         rightPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Show Only In Chat"),
+                LzText.literal("Show Only In Chat").mc(),
                 MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Right panel only renders when the chat screen is open."))
+                .setTooltip(LzText.literal("Right panel only renders when the chat screen is open.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused = v)
                 .build());
 
         rightPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Show Badges"),
+                LzText.literal("Show Badges").mc(),
                 MultichatClient.CONFIG.rightPanelShowBadges)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Show unread message counts on inactive tabs in the right panel."))
+                .setTooltip(LzText.literal("Show unread message counts on inactive tabs in the right panel.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowBadges = v)
                 .build());
 
         rightPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Show Tabs"),
+                LzText.literal("Show Tabs").mc(),
                 MultichatClient.CONFIG.rightPanelShowTabs)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("Show the tab bar on the right panel."))
+                .setTooltip(LzText.literal("Show the tab bar on the right panel.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowTabs = v)
                 .build());
 
         rightPanel.addEntry(eb.startBooleanToggle(
-                Text.literal("Tabs at Top"),
+                LzText.literal("Tabs at Top").mc(),
                 MultichatClient.CONFIG.rightPanelTabsAtTop)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Show the tab bar above messages instead of below them."))
+                .setTooltip(LzText.literal("Show the tab bar above messages instead of below them.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelTabsAtTop = v)
                 .build());
 
-        ConfigCategory search = builder.getOrCreateCategory(Text.literal("Search"));
+        ConfigCategory search = builder.getOrCreateCategory(LzText.literal("Search").mc());
 
         search.addEntry(eb.startBooleanToggle(
-                Text.literal("Enable Search Keybind"),
+                LzText.literal("Enable Search Keybind").mc(),
                 MultichatClient.CONFIG.searchKeybindEnabled)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("When disabled, the search keybind does nothing."))
+                .setTooltip(LzText.literal("When disabled, the search keybind does nothing.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchKeybindEnabled = v)
                 .build());
 
         search.addEntry(eb.startKeyCodeField(
-                Text.literal("Search Key"),
+                LzText.literal("Search Key").mc(),
                 InputUtil.fromKeyCode(MultichatClient.CONFIG.searchKeybindKey, 0))
                 .setDefaultValue(InputUtil.fromKeyCode(70, 0))
                 .setAllowModifiers(false)
-                .setTooltip(Text.literal("Key to open search (combine with Require Ctrl for e.g. Ctrl+F)."))
+                .setTooltip(LzText.literal("Key to open search (combine with Require Ctrl for e.g. Ctrl+F).").mc())
                 .setKeySaveConsumer(key -> MultichatClient.CONFIG.searchKeybindKey = key.getCode())
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
-                Text.literal("Require Ctrl"),
+                LzText.literal("Require Ctrl").mc(),
                 MultichatClient.CONFIG.searchKeybindRequireCtrl)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("When on, Ctrl must be held with the search key. Off = single key only."))
+                .setTooltip(LzText.literal("When on, Ctrl must be held with the search key. Off = single key only.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchKeybindRequireCtrl = v)
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
-                Text.literal("Default: Regex"),
+                LzText.literal("Default: Regex").mc(),
                 MultichatClient.CONFIG.searchDefaultRegex)
                 .setDefaultValue(false)
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultRegex = v)
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
-                Text.literal("Default: Case Sensitive"),
+                LzText.literal("Default: Case Sensitive").mc(),
                 MultichatClient.CONFIG.searchDefaultCase)
                 .setDefaultValue(false)
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultCase = v)
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
-                Text.literal("Default: Live Update"),
+                LzText.literal("Default: Live Update").mc(),
                 MultichatClient.CONFIG.searchDefaultLive)
                 .setDefaultValue(true)
-                .setTooltip(Text.literal("When on, new messages matching the query are added to the search tab in real-time."))
+                .setTooltip(LzText.literal("When on, new messages matching the query are added to the search tab in real-time.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultLive = v)
                 .build());
 
         search.addEntry(eb.startEnumSelector(
-                Text.literal("Default: Visibility"),
+                LzText.literal("Default: Visibility").mc(),
                 TabVisibility.class,
                 MultichatClient.CONFIG.searchDefaultVisibility)
                 .setDefaultValue(TabVisibility.BOTH)
-                .setEnumNameProvider(v -> Text.literal(v.name()))
-                .setTooltip(Text.literal("Which panel the search tab appears in by default."))
+                .setEnumNameProvider(v -> LzText.literal(v.name()).mc())
+                .setTooltip(LzText.literal("Which panel the search tab appears in by default.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultVisibility = v)
                 .build());
 

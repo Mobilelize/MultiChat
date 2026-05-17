@@ -2,10 +2,12 @@ package net.mobilelize.multichat.client.filter;
 
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-
-import java.util.ArrayList;
+import net.mobilelize.fabriclib.client.LzChatLine;
+import net.mobilelize.fabriclib.client.LzMessageIndicator;
+import net.mobilelize.fabriclib.text.LzFormatting;
+import net.mobilelize.fabriclib.text.LzOrderedText;
+import net.mobilelize.fabriclib.text.LzStyle;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.MessageAddedToTabCallback;
 import net.mobilelize.multichat.api.MessageReceivedCallback;
 import net.mobilelize.multichat.client.ChatPanel;
@@ -15,6 +17,7 @@ import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MessageRouter {
@@ -24,8 +27,8 @@ public class MessageRouter {
     // Real-time routing (called per incoming message)
     // ------------------------------------------------------------------
 
-    public static void routeLines(ChatHudLine original, List<OrderedText> lines) {
-        if (MessageReceivedCallback.EVENT.invoker().onMessageReceived(original.content())) return;
+    public static void routeLines(ChatHudLine original, List<LzOrderedText> lines) {
+        if (MessageReceivedCallback.EVENT.invoker().onMessageReceived(LzText.wrapMc(original.content()))) return;
 
         String fullText = original.content().getString();
         MessageIndicator indicator = original.indicator();
@@ -60,8 +63,6 @@ public class MessageRouter {
                     if (!st.matchesText(fullText)) break;
                     if (st.sourceTab != null && !st.sourceTab.filterRules.matches(fullText, indicator)) break;
                     if (!st.matchesTime(original.creationTick())) break;
-                    // Reuse the same Visible objects the ALL tab just prepended so
-                    // click-to-jump works via reference equality.
                     ChatTab allTab = ChatRenderer.TABS.stream()
                         .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
                     if (allTab == null) break;
@@ -85,45 +86,45 @@ public class MessageRouter {
         }
     }
 
-    private static void addLines(ChatTab tab, ChatHudLine original, List<OrderedText> lines) {
+    private static void addLines(ChatTab tab, ChatHudLine original, List<LzOrderedText> lines) {
         String text = original.content().getString();
         boolean stamp = tab.showTimestamps;
+        LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(original.indicator());
 
         if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText) && tab.collapseLastLines != null) {
-            // Remove previous collapsed message
             for (int i = 0; i < tab.collapseLineCount && !tab.messages.isEmpty(); i++)
                 tab.messages.remove(0);
 
             tab.collapseRepeat++;
             tab.collapseLastTick  = original.creationTick();
-            tab.collapseLastLines = new ArrayList<>(lines); // update to new lines so color follows latest repeat
+            tab.collapseLastLines = new ArrayList<>(lines);
 
-            // Re-wrap with updated timestamp (or use raw lines), then append count suffix
-            List<OrderedText> base = stamp
-                ? ChatRenderer.stampedLines(tab.collapseLastTick, original.content(), original.indicator(), lines)
+            List<LzOrderedText> base = stamp
+                ? ChatRenderer.stampedLines(tab.collapseLastTick, LzText.wrapMc(original.content()), original.indicator(), lines)
                 : new ArrayList<>(tab.collapseLastLines);
-            OrderedText suffix = Text.literal(" (x" + tab.collapseRepeat + ")").formatted(net.minecraft.util.Formatting.DARK_GRAY).asOrderedText();
-            List<OrderedText> updated = new ArrayList<>(base);
+            LzOrderedText suffix = LzText.literal(" (x" + tab.collapseRepeat + ")")
+                .withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).ordered();
+            List<LzOrderedText> updated = new ArrayList<>(base);
             int last = updated.size() - 1;
-            updated.set(last, OrderedText.concat(updated.get(last), suffix));
+            updated.set(last, LzOrderedText.concat(updated.get(last), suffix));
 
             tab.collapseLineCount = updated.size();
             for (int j = 0; j < updated.size(); j++)
-                tab.messages.add(0, new ChatHudLine.Visible(
-                    tab.collapseLastTick, updated.get(j), original.indicator(), j == updated.size() - 1));
+                tab.messages.add(0, LzChatLine.create(
+                    tab.collapseLastTick, updated.get(j), indicator, j == updated.size() - 1));
         } else {
             tab.collapseLastText  = text;
             tab.collapseRepeat    = 1;
             tab.collapseLastTick  = original.creationTick();
             tab.collapseLastLines = new ArrayList<>(lines);
 
-            List<OrderedText> active = stamp
-                ? ChatRenderer.stampedLines(original.creationTick(), original.content(), original.indicator(), lines)
+            List<LzOrderedText> active = stamp
+                ? ChatRenderer.stampedLines(original.creationTick(), LzText.wrapMc(original.content()), original.indicator(), lines)
                 : lines;
             tab.collapseLineCount = active.size();
             for (int j = 0; j < active.size(); j++)
-                tab.messages.add(0, new ChatHudLine.Visible(
-                    original.creationTick(), active.get(j), original.indicator(), j == active.size() - 1));
+                tab.messages.add(0, LzChatLine.create(
+                    original.creationTick(), active.get(j), indicator, j == active.size() - 1));
         }
 
         if (tab.messageCap > 0) {
@@ -151,7 +152,7 @@ public class MessageRouter {
         tab.messages.clear();
         tab.resetCollapse();
 
-        List<ChatHudLine.Visible> source;
+        List<LzChatLine> source;
         if (tab.sourceTab != null) {
             source = tab.sourceTab.messages;
         } else {
@@ -162,10 +163,6 @@ public class MessageRouter {
         }
         if (source.isEmpty()) return;
 
-        // Forward scan: endOfEntry=true is at the lowest index of each message group
-        // (because addLines prepends, so last visual line is prepended last → index 0 of the group).
-        // Scan groups: [endOfEntry_line, non_endOfEntry_lines…] until next endOfEntry.
-        // Text order: reverse the group (last element = first visual line → read first).
         int i = 0;
         while (i < source.size()) {
             if (!source.get(i).endOfEntry()) { i++; continue; }
@@ -196,7 +193,7 @@ public class MessageRouter {
             .filter(t -> t.type == TabType.ALL)
             .findFirst().orElse(null);
         if (allTab == null || allTab.messages.isEmpty()) return;
-        List<ChatHudLine.Visible> all = allTab.messages;
+        List<LzChatLine> all = allTab.messages;
 
         List<ChatTab> otherFiltered = tab.differenceMode
             ? ChatRenderer.TABS.stream()
@@ -212,9 +209,10 @@ public class MessageRouter {
             int end = i++;
 
             StringBuilder sb = new StringBuilder();
-            for (int j = start; j <= end; j++) sb.append(all.get(j).content().toString());
+            for (int j = start; j <= end; j++) sb.append(all.get(j).content().mc().toString());
             String fullText = sb.toString();
-            MessageIndicator indicator = all.get(start).indicator();
+            MessageIndicator indicator = all.get(start).indicator() != null
+                ? all.get(start).indicator().mc() : null;
 
             boolean include;
             if (tab.differenceMode) {

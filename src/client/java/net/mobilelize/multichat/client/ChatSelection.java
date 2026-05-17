@@ -1,13 +1,13 @@
 package net.mobilelize.multichat.client;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.ChatHudLine;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.mobilelize.fabriclib.client.LzChatLine;
+import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.text.LzMutableText;
+import net.mobilelize.fabriclib.text.LzOrderedText;
+import net.mobilelize.fabriclib.text.LzStyle;
+import net.mobilelize.fabriclib.text.LzText;
 
 import java.util.List;
 
@@ -52,27 +52,26 @@ public class ChatSelection {
     // Per-line highlight rect (called from renderAt, already in chat matrix)
     // -----------------------------------------------------------------------
 
-    public static int[] lineHighlight(TextRenderer tr, ChatHudLine.Visible line,
-                                      int lineIdx, ChatPanel panel) {
+    public static int[] lineHighlight(LzChatLine line, int lineIdx, ChatPanel panel) {
         if (!hasSelection() || selPanel != panel) return null;
         int[] n = norm();
         int tl = n[0], bl = n[1], tc = n[2], bc = n[3];
         if (lineIdx < bl || lineIdx > tl) return null;
 
-        OrderedText content = line.content();
+        LzOrderedText content = line.content();
         int x0, x1;
         if (tl == bl) {
-            x0 = (int) xOfChar(tr, content, tc);
-            x1 = (int) xOfChar(tr, content, bc);
+            x0 = (int) xOfChar(content, tc);
+            x1 = (int) xOfChar(content, bc);
         } else if (lineIdx == tl) {
-            x0 = (int) xOfChar(tr, content, tc);
-            x1 = tr.getWidth(content);
+            x0 = (int) xOfChar(content, tc);
+            x1 = LzDraw.textWidth(content);
         } else if (lineIdx == bl) {
             x0 = 0;
-            x1 = (int) xOfChar(tr, content, bc);
+            x1 = (int) xOfChar(content, bc);
         } else {
             x0 = 0;
-            x1 = tr.getWidth(content);
+            x1 = LzDraw.textWidth(content);
         }
 
         if (x1 <= x0) return null;
@@ -87,12 +86,11 @@ public class ChatSelection {
         if (!hasSelection() || selPanel == null) return "";
         ChatTab tab = selPanel.getActiveTab();
         if (tab == null) return "";
-        List<ChatHudLine.Visible> msgs = tab.messages;
+        List<LzChatLine> msgs = tab.messages;
         int[] n = norm();
         int tl = n[0], bl = n[1], tc = n[2], bc = n[3];
 
         StringBuilder sb = new StringBuilder();
-        // Iterate top→bottom (decreasing index = older→newer = visual top→bottom)
         for (int s = tl; s >= bl; s--) {
             if (s < 0 || s >= msgs.size()) continue;
             int cStart = (s == tl) ? tc : 0;
@@ -117,18 +115,18 @@ public class ChatSelection {
         ChatTab active = panel.getActiveTab();
         if (active == null) return -1;
         int scrolled = panel.getScrolledLines(active);
-        int idx = MathHelper.floor(chatY + scrolled);
+        int idx = LzMath.floor(chatY + scrolled);
         if (idx < 0 || idx >= active.messages.size()) return -1;
         if (idx >= visibleLineCount + scrolled) return -1;
         return idx;
     }
 
-    public static int charIndexAtX(TextRenderer tr, OrderedText text, float targetX) {
+    public static int charIndexAtX(LzOrderedText text, float targetX) {
         if (targetX <= 0f) return 0;
         int[]   count = {0};
         float[] cumX  = {0f};
         text.accept((idx, style, cp) -> {
-            float w = glyphWidth(tr, style, cp);
+            float w = glyphWidth(style, cp);
             if (cumX[0] + w * 0.5f >= targetX) return false;
             cumX[0] += w;
             count[0]++;
@@ -142,8 +140,6 @@ public class ChatSelection {
     // -----------------------------------------------------------------------
 
     private static int[] norm() {
-        // Returns [topLine, botLine, topChar, botChar]
-        // topLine = higher index = visually higher on screen
         if (anchorLine == cursorLine) {
             return new int[]{ anchorLine, anchorLine,
                 Math.min(anchorChar, cursorChar), Math.max(anchorChar, cursorChar) };
@@ -154,20 +150,20 @@ public class ChatSelection {
         }
     }
 
-    private static float xOfChar(TextRenderer tr, OrderedText text, int charIdx) {
+    private static float xOfChar(LzOrderedText text, int charIdx) {
         if (charIdx <= 0) return 0f;
         float[] x     = {0f};
         int[]   count = {0};
         text.accept((idx, style, cp) -> {
             if (count[0] >= charIdx) return false;
-            x[0] += glyphWidth(tr, style, cp);
+            x[0] += glyphWidth(style, cp);
             count[0]++;
             return true;
         });
         return x[0];
     }
 
-    private static void appendChars(StringBuilder sb, OrderedText text, int start, int end) {
+    private static void appendChars(StringBuilder sb, LzOrderedText text, int start, int end) {
         int[] count = {0};
         text.accept((idx, style, cp) -> {
             if (count[0] >= end) return false;
@@ -177,8 +173,8 @@ public class ChatSelection {
         });
     }
 
-    private static float glyphWidth(TextRenderer tr, Style style, int cp) {
-        MutableText t = Text.literal(new String(Character.toChars(cp))).setStyle(style);
-        return tr.getWidth(t);
+    private static float glyphWidth(Style style, int cp) {
+        LzMutableText t = LzText.literal(new String(Character.toChars(cp))).withStyle(new LzStyle(style));
+        return LzDraw.textWidth(t);
     }
 }

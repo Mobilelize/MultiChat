@@ -1,7 +1,7 @@
 package net.mobilelize.multichat.client;
 
-import net.minecraft.client.gui.hud.ChatHudLine;
-import net.minecraft.text.OrderedText;
+import net.mobilelize.fabriclib.client.LzChatLine;
+import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.multichat.client.filter.FilterRuleSet;
 
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ public class ChatTab {
     public String name;
     public final TabType type;
     public TabVisibility visibility;
-    public final List<ChatHudLine.Visible> messages = new ArrayList<>();
+    public final List<LzChatLine> messages = new ArrayList<>();
     public int unreadCount = 0;
     public final FilterRuleSet filterRules = new FilterRuleSet();
     public String  apiId             = null;
@@ -26,11 +26,11 @@ public class ChatTab {
     public boolean contextCommandMode = true;
 
     // Collapse tracking — reset whenever messages are cleared
-    public String            collapseLastText   = null;
-    public int               collapseRepeat     = 0;
-    public int               collapseLineCount  = 0;
-    public int               collapseLastTick   = 0;
-    public List<OrderedText> collapseLastLines  = null;
+    public String              collapseLastText   = null;
+    public int                 collapseRepeat     = 0;
+    public int                 collapseLineCount  = 0;
+    public int                 collapseLastTick   = 0;
+    public List<LzOrderedText> collapseLastLines  = null;
 
     public ChatTab(String name, TabType type, TabVisibility visibility) {
         this.name = name;

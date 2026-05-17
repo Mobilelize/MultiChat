@@ -1,11 +1,16 @@
 package net.mobilelize.multichat.mixin.client;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.mobilelize.fabriclib.client.LzChatLine;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.util.math.MathHelper;
+import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.input.LzKeys;
+import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzOptions;
+import net.mobilelize.fabriclib.network.LzConnection;
+import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.multichat.api.MessageSentCallback;
 import net.mobilelize.multichat.api.TabChangedCallback;
 import net.mobilelize.multichat.client.ChatPanel;
@@ -38,32 +43,27 @@ public abstract class ChatScreenMixin {
 
     @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("RETURN"))
     private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        MinecraftClient client = MinecraftClient.getInstance();
-
-        // Drive selection drag/release via GLFW button poll (mouseDragged/mouseReleased
-        // are on a parent interface not injectable from ChatScreen).
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
-            long handle = client.getWindow().getHandle();
+            long handle = LzClient.windowHandle();
             boolean held = org.lwjgl.glfw.GLFW.glfwGetMouseButton(handle,
                 org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
             if (held) {
                 ChatPanel selPanel = ChatSelection.getPanel();
                 if (selPanel != null && selPanel.enabled) {
-                    var chat = client.inGameHud.getChatHud();
-                    float scale      = (float) chat.getChatScale();
-                    int chatWidth    = MathHelper.ceil((float) chat.getWidth() / scale);
-                    int windowHeight = client.getWindow().getScaledHeight();
-                    int windowWidth  = client.getWindow().getScaledWidth();
-                    double ls        = (Double) client.options.getChatLineSpacing().getValue();
+                    float scale      = (float) LzChat.chatScale();
+                    int chatWidth    = LzMath.ceil((float) LzChat.chatWidth() / scale);
+                    int windowHeight = LzClient.scaledWindowHeight();
+                    int windowWidth  = LzClient.scaledWindowWidth();
+                    double ls        = LzOptions.chatLineSpacing();
                     int lineH        = (int)(9.0 * (ls + 1.0));
                     int xOff         = selPanel.computeXOffset(windowWidth, scale, chatWidth);
                     ChatTab active   = selPanel.getActiveTab();
                     if (active != null && !active.messages.isEmpty()) {
                         int idx = ChatSelection.hitLine(selPanel, mouseX, mouseY,
-                            chat.getVisibleLineCount(), scale, lineH, windowHeight, chatWidth, xOff);
+                            LzChat.visibleLineCount(), scale, lineH, windowHeight, chatWidth, xOff);
                         if (idx >= 0) {
                             float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
-                            int charIdx  = ChatSelection.charIndexAtX(client.textRenderer,
+                            int charIdx  = ChatSelection.charIndexAtX(
                                 active.messages.get(idx).content(), localX);
                             ChatSelection.extend(selPanel, idx, charIdx);
                         }
@@ -76,14 +76,14 @@ public abstract class ChatScreenMixin {
 
         ChatTab ctxTab = ChatRenderer.contextTab;
         if (ctxTab != null && !ctxTab.contextPrefix.isEmpty()
-                && net.mobilelize.multichat.client.MultichatClient.CONFIG.showContextDisplay) {
+                && MultichatClient.CONFIG.showContextDisplay) {
             String status = "▶ Tab: " + ctxTab.name + " [" + ctxTab.contextPrefix + "]";
-            int screenH = context.getScaledWindowHeight();
-            context.drawTextWithShadow(client.textRenderer, status, 4, screenH - 26, 0xDEDEDE);
+            int screenH = LzDraw.scaledHeight(context);
+            LzDraw.drawText(context, status, 4, screenH - 26, 0xDEDEDE);
         }
 
-        ContextMenu.render(context, client, mouseX, mouseY);
-        MessageContextMenu.render(context, client, mouseX, mouseY);
+        ContextMenu.render(context, mouseX, mouseY);
+        MessageContextMenu.render(context, mouseX, mouseY);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"))
@@ -100,14 +100,11 @@ public abstract class ChatScreenMixin {
     @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
     private void onKeyPressed(int keyCode, int scanCode, int modifiers,
                                CallbackInfoReturnable<Boolean> cir) {
-        MinecraftClient client = MinecraftClient.getInstance();
-
-        // Ctrl+C: copy selection
         if (MultichatClient.CONFIG.selectionEnabled
                 && keyCode == 67 && (modifiers & 2) != 0 && ChatSelection.hasSelection()) {
             String text = ChatSelection.getSelectedText();
             if (!text.isEmpty()) {
-                client.keyboard.setClipboard(text);
+                LzClient.setClipboard(text);
                 cir.setReturnValue(true);
                 return;
             }
@@ -118,12 +115,11 @@ public abstract class ChatScreenMixin {
                 && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (modifiers & 2) != 0)) {
             String selText = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replace('\n', ' ').trim() : "";
-            client.setScreen(new SearchOverlay(client.currentScreen, null, selText));
+            LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
             cir.setReturnValue(true);
             return;
         }
 
-        // Arrow keys — switch tabs (only when chat input is empty)
         if (MultichatClient.CONFIG.arrowKeySwitchTabs
                 && (keyCode == 262 || keyCode == 263)
                 && chatField.getText().isEmpty()) {
@@ -153,33 +149,27 @@ public abstract class ChatScreenMixin {
     @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(double mouseX, double mouseY, int button,
                                  CallbackInfoReturnable<Boolean> cir) {
-        MinecraftClient client = MinecraftClient.getInstance();
-
-        // Dispatch any open context menu first.
         if (button == 0 && ContextMenu.isOpen()) {
-            cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY, client));
+            cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY));
             return;
         }
         if (button == 0 && MessageContextMenu.isOpen()) {
-            cir.setReturnValue(MessageContextMenu.handleClick((int) mouseX, (int) mouseY, client));
+            cir.setReturnValue(MessageContextMenu.handleClick((int) mouseX, (int) mouseY));
             return;
         }
 
-        // Clear selection on any left-click (will restart below if in message area)
         if (button == 0) ChatSelection.clear();
 
-        var chat         = client.inGameHud.getChatHud();
-        float scale      = (float) chat.getChatScale();
-        int chatWidth    = MathHelper.ceil((float) chat.getWidth() / scale);
-        int windowHeight = client.getWindow().getScaledHeight();
-        int windowWidth  = client.getWindow().getScaledWidth();
-        int topY         = MathHelper.floor((float)(windowHeight - 40) / scale);
+        float scale      = (float) LzChat.chatScale();
+        int chatWidth    = LzMath.ceil((float) LzChat.chatWidth() / scale);
+        int windowHeight = LzClient.scaledWindowHeight();
+        int windowWidth  = LzClient.scaledWindowWidth();
+        int topY         = LzMath.floor((float)(windowHeight - 40) / scale);
 
-        double ls = (Double) client.options.getChatLineSpacing().getValue();
+        double ls = LzOptions.chatLineSpacing();
         int lineH = (int)(9.0 * (ls + 1.0));
-        int visibleLineCount = chat.getVisibleLineCount();
+        int visibleLineCount = LzChat.visibleLineCount();
 
-        // Right-click in message area → message context menu
         if (button == 1) {
             for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
                 if (!panel.enabled) continue;
@@ -189,19 +179,18 @@ public abstract class ChatScreenMixin {
 
                 int xOff = panel.computeXOffset(windowWidth, scale, chatWidth);
                 int hIdx = ChatRenderer.computeHoveredIndex(
-                    panel, client, (int) mouseX, (int) mouseY,
+                    panel, (int) mouseX, (int) mouseY,
                     visibleLineCount, windowHeight, scale, lineH, chatWidth, xOff, true);
                 if (hIdx < 0) continue;
 
                 ContextMenu.close();
-                ChatHudLine.Visible clicked = active.messages.get(hIdx);
+                LzChatLine clicked = active.messages.get(hIdx);
                 MessageContextMenu.open(clicked, panel, (int) mouseX, (int) mouseY);
                 cir.setReturnValue(true);
                 return;
             }
         }
 
-        // Left-click in message area → start selection
         if (MultichatClient.CONFIG.selectionEnabled && button == 0) {
             for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
                 if (!panel.enabled) continue;
@@ -215,14 +204,17 @@ public abstract class ChatScreenMixin {
                 if (exactIdx < 0) continue;
 
                 boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
-                    && net.minecraft.client.gui.screen.Screen.hasControlDown();
+                    && LzKeys.isCtrlDown();
                 if (!ctrlSkip) {
-                    var style = chat.getTextStyleAt(mouseX, mouseY);
-                    if (style != null && style.getClickEvent() != null) break;
+                    var chat = LzChat.chatHud();
+                    if (chat != null) {
+                        var style = chat.getTextStyleAt(mouseX, mouseY);
+                        if (style != null && style.getClickEvent() != null) break;
+                    }
                 }
 
                 float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
-                int charIdx  = ChatSelection.charIndexAtX(client.textRenderer,
+                int charIdx  = ChatSelection.charIndexAtX(
                     active.messages.get(exactIdx).content(), localX);
                 ChatSelection.start(panel, exactIdx, charIdx);
                 cir.setReturnValue(true);
@@ -230,7 +222,6 @@ public abstract class ChatScreenMixin {
             }
         }
 
-        // Tab bar clicks — per-panel Y range
         for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
             if (!panel.enabled || !panel.showTabs) continue;
 
@@ -250,7 +241,6 @@ public abstract class ChatScreenMixin {
 
             if (mouseX < panelLeftScreen || mouseX >= panelRightScreen) continue;
 
-            // Arrow clicks (left-click only)
             if (button == 0) {
                 if (hasLeft) {
                     double leftArrowEnd = (ChatRenderer.ARROW_W + xOffset) * (double) scale;
@@ -270,14 +260,13 @@ public abstract class ChatScreenMixin {
                 }
             }
 
-            // Tab hit-test (shared for left and right click)
             int renderX    = hasLeft ? ChatRenderer.ARROW_W - 4 : -4;
             int tabAreaEnd = chatWidth + 4 - (hasRight ? ChatRenderer.ARROW_W : 0);
 
             for (int i = panel.tabScrollOffset; i < visibleTabs.size(); i++) {
                 ChatTab tab = visibleTabs.get(i);
                 String label = ChatRenderer.getTabLabel(panel, tab);
-                int tabWidth = client.textRenderer.getWidth(label) + 8;
+                int tabWidth = LzDraw.textWidth(label) + 8;
 
                 boolean fits = renderX + tabWidth <= tabAreaEnd;
                 double screenStart = (renderX + 4 + xOffset) * (double) scale;
@@ -335,14 +324,13 @@ public abstract class ChatScreenMixin {
         ChatTab ctxTab = ChatRenderer.contextTab;
         if (ctxTab == null || ctxTab.contextPrefix.isEmpty()) return;
 
-        MinecraftClient client = MinecraftClient.getInstance();
         String full = ctxTab.contextPrefix + " " + text;
         ci.cancel();
-        if (addToHistory) client.inGameHud.getChatHud().addToMessageHistory(full);
+        if (addToHistory) LzChat.addToMessageHistory(full);
         if (ctxTab.contextCommandMode) {
-            client.getNetworkHandler().sendChatCommand(full);
+            LzConnection.sendChatCommand(full);
         } else {
-            client.getNetworkHandler().sendChatMessage(full);
+            LzConnection.sendChatMessage(full);
         }
     }
 }

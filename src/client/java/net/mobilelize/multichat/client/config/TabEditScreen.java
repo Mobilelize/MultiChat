@@ -6,7 +6,7 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.gui.entries.MultiElementListEntry;
 import me.shedaniel.clothconfig2.gui.entries.NestedListListEntry;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.TabVisibility;
@@ -43,22 +43,22 @@ public class TabEditScreen {
     public static Screen create(Screen parent, ChatTab tab) {
         ConfigBuilder builder = ConfigBuilder.create()
             .setParentScreen(parent)
-            .setTitle(Text.literal("Edit Tab: " + tab.name))
+            .setTitle(LzText.literal("Edit Tab: " + tab.name).mc())
             .setSavingRunnable(MultichatClient::saveTabsToConfig);
 
         ConfigEntryBuilder eb  = builder.entryBuilder();
-        ConfigCategory     cat = builder.getOrCreateCategory(Text.literal("Settings"));
+        ConfigCategory     cat = builder.getOrCreateCategory(LzText.literal("Settings").mc());
 
         if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
-            cat.addEntry(eb.startStrField(Text.literal("Name"), tab.name)
+            cat.addEntry(eb.startStrField(LzText.literal("Name").mc(), tab.name)
                 .setDefaultValue(tab.name)
                 .setErrorSupplier(v -> {
-                    if (v.trim().isEmpty()) return Optional.of(Text.literal("Name cannot be empty."));
+                    if (v.trim().isEmpty()) return Optional.of(LzText.literal("Name cannot be empty.").mc());
                     if (tab.apiId == null) {
                         boolean clash = ChatRenderer.TABS.stream()
                             .filter(t -> t != tab && t.type == TabType.FILTERED)
                             .anyMatch(t -> t.name.equalsIgnoreCase(v.trim()));
-                        if (clash) return Optional.of(Text.literal("A tab with that name already exists."));
+                        if (clash) return Optional.of(LzText.literal("A tab with that name already exists.").mc());
                     }
                     return Optional.empty();
                 })
@@ -66,29 +66,29 @@ public class TabEditScreen {
                 .build());
         }
 
-        cat.addEntry(eb.startEnumSelector(Text.literal("Visibility"), TabVisibility.class, tab.visibility)
+        cat.addEntry(eb.startEnumSelector(LzText.literal("Visibility").mc(), TabVisibility.class, tab.visibility)
             .setDefaultValue(tab.type == TabType.FILTERED ? TabVisibility.BOTH : tab.visibility)
-            .setTooltip(Text.literal("Which panel(s) show this tab."))
+            .setTooltip(LzText.literal("Which panel(s) show this tab.").mc())
             .setSaveConsumer(v -> tab.visibility = v)
             .build());
 
         if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
-            cat.addEntry(eb.startBooleanToggle(Text.literal("Show Timestamps"), tab.showTimestamps)
+            cat.addEntry(eb.startBooleanToggle(LzText.literal("Show Timestamps").mc(), tab.showTimestamps)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Prepend a timestamp to each message. Format configured in Settings."))
+                .setTooltip(LzText.literal("Prepend a timestamp to each message. Format configured in Settings.").mc())
                 .setSaveConsumer(v -> tab.showTimestamps = v)
                 .build());
 
-            cat.addEntry(eb.startBooleanToggle(Text.literal("Collapse Repeating"), tab.collapseRepeating)
+            cat.addEntry(eb.startBooleanToggle(LzText.literal("Collapse Repeating").mc(), tab.collapseRepeating)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Stack identical messages with a counter instead of repeating lines."))
+                .setTooltip(LzText.literal("Stack identical messages with a counter instead of repeating lines.").mc())
                 .setSaveConsumer(v -> tab.collapseRepeating = v)
                 .build());
 
-            cat.addEntry(eb.startIntField(Text.literal("Message Cap"), tab.messageCap)
+            cat.addEntry(eb.startIntField(LzText.literal("Message Cap").mc(), tab.messageCap)
                 .setDefaultValue(0)
                 .setMin(0)
-                .setTooltip(Text.literal("Max messages stored. 0 = unlimited."))
+                .setTooltip(LzText.literal("Max messages stored. 0 = unlimited.").mc())
                 .setSaveConsumer(v -> tab.messageCap = v)
                 .build());
         }
@@ -96,55 +96,55 @@ public class TabEditScreen {
         if (tab.type != TabType.FILTERED && tab.type != TabType.API) return builder.build();
 
         if (tab.type == TabType.FILTERED) {
-            cat.addEntry(eb.startBooleanToggle(Text.literal("Refilter on Save"), false)
+            cat.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("When ON, saving will rescan all messages and rebuild this tab."))
+                .setTooltip(LzText.literal("When ON, saving will rescan all messages and rebuild this tab.").mc())
                 .setSaveConsumer(v -> { if (v) MessageRouter.refilterTab(tab); })
                 .build());
 
-            cat.addEntry(eb.startBooleanToggle(Text.literal("Difference Mode"), tab.differenceMode)
+            cat.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Show only messages that don't match any other filtered tab."))
+                .setTooltip(LzText.literal("Show only messages that don't match any other filtered tab.").mc())
                 .setSaveConsumer(v -> tab.differenceMode = v)
                 .build());
         }
 
-        cat.addEntry(eb.startBooleanToggle(Text.literal("Show Badge"), tab.showBadge)
+        cat.addEntry(eb.startBooleanToggle(LzText.literal("Show Badge").mc(), tab.showBadge)
             .setDefaultValue(true)
-            .setTooltip(Text.literal("Show unread count badge on this tab."))
+            .setTooltip(LzText.literal("Show unread count badge on this tab.").mc())
             .setSaveConsumer(v -> tab.showBadge = v)
             .build());
 
-        cat.addEntry(eb.startColorField(Text.literal("Tab Color"), tab.tabColor)
+        cat.addEntry(eb.startColorField(LzText.literal("Tab Color").mc(), tab.tabColor)
             .setDefaultValue(0)
-            .setTooltip(Text.literal("Custom color for this tab. Set to 000000 (black) to use the default gray."))
+            .setTooltip(LzText.literal("Custom color for this tab. Set to 000000 (black) to use the default gray.").mc())
             .setSaveConsumer(v -> tab.tabColor = v & 0xFFFFFF)
             .build());
 
-        cat.addEntry(eb.startStrField(Text.literal("Context Prefix"), tab.contextPrefix)
+        cat.addEntry(eb.startStrField(LzText.literal("Context Prefix").mc(), tab.contextPrefix)
             .setDefaultValue("")
-            .setTooltip(Text.literal("Prefix prepended when this tab's context is active. E.g. 'msg Fred'."))
+            .setTooltip(LzText.literal("Prefix prepended when this tab's context is active. E.g. 'msg Fred'.").mc())
             .setSaveConsumer(v -> tab.contextPrefix = v.trim())
             .build());
 
-        cat.addEntry(eb.startBooleanToggle(Text.literal("Context Command Mode"), tab.contextCommandMode)
+        cat.addEntry(eb.startBooleanToggle(LzText.literal("Context Command Mode").mc(), tab.contextCommandMode)
             .setDefaultValue(true)
-            .setTooltip(Text.literal("ON: sent as command. OFF: sent as chat text."))
+            .setTooltip(LzText.literal("ON: sent as command. OFF: sent as chat text.").mc())
             .setSaveConsumer(v -> tab.contextCommandMode = v)
             .build());
 
-        cat.addEntry(eb.startEnumSelector(Text.literal("Whitelist Mode"), WhitelistMode.class, tab.filterRules.whitelistMode)
+        cat.addEntry(eb.startEnumSelector(LzText.literal("Whitelist Mode").mc(), WhitelistMode.class, tab.filterRules.whitelistMode)
             .setDefaultValue(WhitelistMode.ANY)
-            .setTooltip(Text.literal("ANY: message matches if any whitelist rule matches. ALL: message must match every whitelist rule."))
+            .setTooltip(LzText.literal("ANY: message matches if any whitelist rule matches. ALL: message must match every whitelist rule.").mc())
             .setSaveConsumer(v -> tab.filterRules.whitelistMode = v)
             .build());
 
-        cat.addEntry(buildRuleList(eb, Text.literal("Whitelist"), tab.filterRules.whitelist, list -> {
+        cat.addEntry(buildRuleList(eb, LzText.literal("Whitelist"), tab.filterRules.whitelist, list -> {
             tab.filterRules.whitelist.clear();
             list.forEach(mr -> tab.filterRules.whitelist.add(mr.toFilterRule()));
         }));
 
-        cat.addEntry(buildRuleList(eb, Text.literal("Blacklist"), tab.filterRules.blacklist, list -> {
+        cat.addEntry(buildRuleList(eb, LzText.literal("Blacklist"), tab.filterRules.blacklist, list -> {
             tab.filterRules.blacklist.clear();
             list.forEach(mr -> tab.filterRules.blacklist.add(mr.toFilterRule()));
         }));
@@ -153,37 +153,37 @@ public class TabEditScreen {
     }
 
     private static NestedListListEntry<MutableRule, MultiElementListEntry<MutableRule>> buildRuleList(
-            ConfigEntryBuilder eb, Text label, List<FilterRule> source, Consumer<List<MutableRule>> saveConsumer) {
+            ConfigEntryBuilder eb, LzText label, List<FilterRule> source, Consumer<List<MutableRule>> saveConsumer) {
 
         List<MutableRule> rules = source.stream()
             .map(r -> new MutableRule(r.type, r.value, r.indicator))
             .collect(Collectors.toCollection(ArrayList::new));
 
         return new NestedListListEntry<>(
-            label,
+            label.mc(),
             rules,
-            true,          // defaultExpanded
+            true,
             Optional::empty,
             saveConsumer,
-            ArrayList::new, // default (empty list)
+            ArrayList::new,
             eb.getResetButtonKey(),
-            true,          // deleteButtonEnabled
-            true,          // insertInFront
+            true,
+            true,
             (elem, nestedList) -> {
                 MutableRule rule = elem != null ? elem : new MutableRule(FilterType.CONTAINS, "", IndicatorFilter.ANY);
                 return new MultiElementListEntry<>(
-                    Text.literal("Rule"),
+                    LzText.literal("Rule").mc(),
                     rule,
                     List.of(
-                        eb.startEnumSelector(Text.literal("Type"), FilterType.class, rule.type)
+                        eb.startEnumSelector(LzText.literal("Type").mc(), FilterType.class, rule.type)
                             .setDefaultValue(FilterType.CONTAINS)
                             .setSaveConsumer(v -> rule.type = v)
                             .build(),
-                        eb.startStrField(Text.literal("Value"), rule.value)
+                        eb.startStrField(LzText.literal("Value").mc(), rule.value)
                             .setDefaultValue("")
                             .setSaveConsumer(v -> rule.value = v)
                             .build(),
-                        eb.startEnumSelector(Text.literal("Indicator"), IndicatorFilter.class, rule.indicator)
+                        eb.startEnumSelector(LzText.literal("Indicator").mc(), IndicatorFilter.class, rule.indicator)
                             .setDefaultValue(IndicatorFilter.ANY)
                             .setSaveConsumer(v -> rule.indicator = v)
                             .build()

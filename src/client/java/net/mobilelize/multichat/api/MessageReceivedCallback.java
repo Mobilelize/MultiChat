@@ -2,13 +2,13 @@ package net.mobilelize.multichat.api;
 
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
-import net.minecraft.text.Text;
+import net.mobilelize.fabriclib.text.LzText;
 
 @FunctionalInterface
 public interface MessageReceivedCallback {
 
     /** Return {@code true} to cancel routing for this message. */
-    boolean onMessageReceived(Text message);
+    boolean onMessageReceived(LzText message);
 
     Event<MessageReceivedCallback> EVENT = EventFactory.createArrayBacked(
         MessageReceivedCallback.class,

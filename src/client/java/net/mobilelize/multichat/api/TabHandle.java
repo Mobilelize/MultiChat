@@ -1,12 +1,9 @@
 package net.mobilelize.multichat.api;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.hud.ChatHudLine;
-import net.minecraft.client.util.ChatMessages;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.client.LzChatLine;
+import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -23,16 +20,14 @@ public class TabHandle {
         this.tab    = tab;
     }
 
-    public void sendMessage(Text message) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.inGameHud == null) return;
-        ChatHud chat = client.inGameHud.getChatHud();
-        float scale     = (float) chat.getChatScale();
-        int   chatWidth = MathHelper.ceil((float) chat.getWidth() / scale);
-        List<OrderedText> lines = ChatMessages.breakRenderedChatMessageLines(message, chatWidth, client.textRenderer);
-        int tick = client.inGameHud.getTicks();
+    public void sendMessage(LzText message) {
+        if (LzChat.chatHud() == null) return;
+        float scale     = (float) LzChat.chatScale();
+        int   chatWidth = LzMath.ceil((float) LzChat.chatWidth() / scale);
+        var lines = LzChat.breakLines(message, chatWidth);
+        int tick = LzChat.ticks();
         for (int j = 0; j < lines.size(); j++)
-            tab.messages.add(0, new ChatHudLine.Visible(tick, lines.get(j), null, j == lines.size() - 1));
+            tab.messages.add(0, LzChatLine.create(tick, lines.get(j), null, j == lines.size() - 1));
         if (tab.messageCap > 0)
             while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
         if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
@@ -40,7 +35,7 @@ public class TabHandle {
     }
 
     public void sendMessage(String message) {
-        sendMessage(Text.literal(message));
+        sendMessage(LzText.literal(message));
     }
 
     public void setAsContext()   { ChatRenderer.contextTab = tab; }

@@ -4,7 +4,12 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzScreen;
+import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.text.LzFormatting;
+import net.mobilelize.fabriclib.text.LzStyle;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
@@ -13,12 +18,11 @@ import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.List;
 
-public class TabListScreen extends Screen {
+public class TabListScreen extends LzScreen {
 
     private static final int LIST_TOP   = 32;
     private static final int ROW_HEIGHT = 22;
-
-    private static final int SB_W = 6;
+    private static final int SB_W       = 6;
 
     private final Screen parent;
     private TextFieldWidget nameField;
@@ -28,33 +32,31 @@ public class TabListScreen extends Screen {
     private int     scrollDragStartOff = 0;
 
     public TabListScreen(Screen parent) {
-        super(Text.literal("MultiChat — Tabs"));
+        super("MultiChat — Tabs");
         this.parent = parent;
     }
 
-    private List<ChatTab> allTabs() {
-        return ChatRenderer.TABS;
-    }
+    private List<ChatTab> allTabs() { return ChatRenderer.TABS; }
 
-    private int listBottom()  { return height - 62; }
-    private int maxScroll()   { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
+    private int listBottom() { return height - 62; }
+    private int maxScroll()  { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
     @Override
     protected void init() {
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
-        nameField = new TextFieldWidget(textRenderer, width / 2 - 100, height - 50, 158, 20, Text.empty());
-        nameField.setPlaceholder(Text.literal("New tab name...").formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        nameField = new TextFieldWidget(textRenderer, width / 2 - 100, height - 50, 158, 20, LzText.empty().mc());
+        nameField.setPlaceholder(LzText.literal("New tab name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         this.addSelectableChild(nameField);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Add"), btn -> addTab())
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Add").mc(), btn -> addTab())
             .dimensions(width / 2 + 62, height - 50, 40, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Settings"),
-                btn -> client.setScreen(ConfigMenu.create(this)))
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Settings").mc(),
+                btn -> LzClient.mc().setScreen(ConfigMenu.create(this)))
             .dimensions(width / 2 - 102, height - 26, 100, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), btn -> close())
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Done").mc(), btn -> close())
             .dimensions(width / 2 + 2, height - 26, 100, 20).build());
     }
 
@@ -70,10 +72,10 @@ public class TabListScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         super.render(ctx, mouseX, mouseY, delta);
-        ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, 0xFFFFFF);
         nameField.render(ctx, mouseX, mouseY, delta);
 
-        ctx.enableScissor(0, LIST_TOP, width, listBottom());
+        LzDraw.enableScissor(ctx, 0, LIST_TOP, width, listBottom());
 
         List<ChatTab> tabs = allTabs();
         int lx = width / 2 - 130;
@@ -87,7 +89,7 @@ public class TabListScreen extends Screen {
             int btnY1 = y + 3, btnY2 = y + ROW_HEIGHT - 3;
             int textY = y + (ROW_HEIGHT - 8) / 2;
 
-            int rowBg  = switch (tab.type) {
+            int rowBg = switch (tab.type) {
                 case FILTERED -> 0x55FFFFFF;
                 case SEARCH   -> 0x4400FFAA;
                 case API      -> 0x44FF9900;
@@ -99,8 +101,8 @@ public class TabListScreen extends Screen {
                 case API      -> 0x88CC6600;
                 default       -> 0x886688CC;
             };
-            ctx.fill(lx, rowY1, lx + 260, rowY2, rowBg);
-            ctx.drawBorder(lx, rowY1, 260, rowY2 - rowY1, rowBdr);
+            LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, rowBg);
+            LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2, rowBdr);
 
             int nameColor = switch (tab.type) {
                 case FILTERED -> 0xFFFFFF;
@@ -108,8 +110,11 @@ public class TabListScreen extends Screen {
                 case API      -> 0xFFCC88;
                 default       -> 0xAADDFF;
             };
-            ctx.drawTextWithShadow(textRenderer,
-                Text.literal(tab.name + " ").append(Text.literal("[" + tab.visibility.name().toLowerCase() + "]").formatted(net.minecraft.util.Formatting.GRAY)),
+            LzDraw.drawText(ctx,
+                LzText.empty()
+                    .append(LzText.literal(tab.name + " "))
+                    .append(LzText.literal("[" + tab.visibility.name().toLowerCase() + "]")
+                        .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY))),
                 lx + 6, textY, nameColor);
 
             boolean canEdit   = tab.type == TabType.FILTERED || tab.type == TabType.API;
@@ -117,18 +122,17 @@ public class TabListScreen extends Screen {
             boolean hoverEdit   = canEdit   && mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverRemove = canRemove && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
-            ctx.fill(lx + 186, btnY1, lx + 228, btnY2, canEdit ? (hoverEdit ? 0xAA888888 : 0x66555555) : 0x33333333);
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("Edit"), lx + 207, textY, canEdit ? 0xFFFFFF : 0x555555);
+            LzDraw.fill(ctx, lx + 186, btnY1, lx + 228, btnY2, canEdit ? (hoverEdit ? 0xAA888888 : 0x66555555) : 0x33333333);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 207, textY, canEdit ? 0xFFFFFF : 0x555555);
 
             if (canRemove) {
-                ctx.fill(lx + 231, btnY1, lx + 259, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
-                ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("X"), lx + 245, textY, 0xFFFFFF);
+                LzDraw.fill(ctx, lx + 231, btnY1, lx + 259, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
+                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 245, textY, 0xFFFFFF);
             }
         }
 
-        ctx.disableScissor();
+        LzDraw.disableScissor(ctx);
 
-        // Scrollbar
         int max = maxScroll();
         if (max > 0) {
             int sbX    = lx + 265;
@@ -137,8 +141,8 @@ public class TabListScreen extends Screen {
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
 
-            ctx.fill(sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
-            ctx.fill(sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
+            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
+            LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
                 scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
         }
     }
@@ -147,7 +151,8 @@ public class TabListScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
 
-        int lxSb = width / 2 - 130 + 265;
+        int lx   = width / 2 - 130;
+        int lxSb = lx + 265;
         int max  = maxScroll();
         if (button == 0 && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
             int trackH = listBottom() - LIST_TOP;
@@ -159,7 +164,6 @@ public class TabListScreen extends Screen {
                 scrollDragStartY   = (int) my;
                 scrollDragStartOff = scrollOffset;
             } else {
-                // Click on track: jump to position
                 int travel = trackH - thumbH;
                 if (travel > 0)
                     scrollOffset = Math.max(0, Math.min(max,
@@ -170,7 +174,6 @@ public class TabListScreen extends Screen {
 
         if (my < LIST_TOP || my >= listBottom()) return false;
 
-        int lx   = width / 2 - 130;
         int relY = (int)(my - LIST_TOP) + scrollOffset;
         int idx  = relY / ROW_HEIGHT;
         List<ChatTab> tabs = allTabs();
@@ -180,7 +183,7 @@ public class TabListScreen extends Screen {
 
         if (mx >= lx + 186 && mx < lx + 228) {
             if (tab.type == TabType.FILTERED || tab.type == TabType.API)
-                client.setScreen(TabEditScreen.create(this, tab));
+                LzClient.mc().setScreen(TabEditScreen.create(this, tab));
             return true;
         }
         if ((tab.type == TabType.FILTERED || tab.type == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
@@ -224,7 +227,5 @@ public class TabListScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        client.setScreen(parent);
-    }
+    public void close() { LzClient.mc().setScreen(parent); }
 }

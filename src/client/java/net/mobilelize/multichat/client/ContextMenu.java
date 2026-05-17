@@ -1,7 +1,8 @@
 package net.mobilelize.multichat.client;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
@@ -54,38 +55,38 @@ public class ContextMenu {
         return my < 0 ? anchorY : my;
     }
 
-    public static void render(DrawContext context, MinecraftClient client, int mouseX, int mouseY) {
+    public static void render(DrawContext context, int mouseX, int mouseY) {
         if (!open) return;
 
-        int menuW = menuWidth(client);
+        int menuW = menuWidth();
         int menuH = items.size() * ITEM_H + PADDING;
         int mx    = computeX(menuW);
-        int my    = computeY(menuH, context.getScaledWindowHeight());
+        int my    = computeY(menuH, LzDraw.scaledHeight(context));
         drawnX = mx;
         drawnY = my;
 
-        context.getMatrices().push();
-        context.getMatrices().translate(0, 0, 400);
+        LzDraw.pushMatrix(context);
+        context.getMatrices().translate(0, 0, 400); // z-layer above chat
 
-        context.fill(mx, my, mx + menuW, my + menuH, 0xDD111111);
-        context.drawBorder(mx, my, menuW, menuH, 0xFF666666);
+        LzDraw.fill(context, mx, my, mx + menuW, my + menuH, 0xDD111111);
+        LzDraw.drawBorder(context, mx, my, mx + menuW, my + menuH, 0xFF666666);
 
         for (int i = 0; i < items.size(); i++) {
             int iy = my + PADDING / 2 + i * ITEM_H;
             boolean hovered = mouseX >= mx && mouseX < mx + menuW
                            && mouseY >= iy && mouseY < iy + ITEM_H;
-            if (hovered) context.fill(mx + 1, iy, mx + menuW - 1, iy + ITEM_H, 0x44FFFFFF);
-            context.drawTextWithShadow(client.textRenderer, items.get(i), mx + PADDING, iy + 1, 0xFFEEEEEE);
+            if (hovered) LzDraw.fill(context, mx + 1, iy, mx + menuW - 1, iy + ITEM_H, 0x44FFFFFF);
+            LzDraw.drawText(context, items.get(i), mx + PADDING, iy + 1, 0xFFEEEEEE);
         }
 
-        context.getMatrices().pop();
+        LzDraw.popMatrix(context);
     }
 
     /** Returns true if the click was consumed (hit the menu or closed it). */
-    public static boolean handleClick(int mouseX, int mouseY, MinecraftClient client) {
+    public static boolean handleClick(int mouseX, int mouseY) {
         if (!open) return false;
 
-        int menuW = menuWidth(client);
+        int menuW = menuWidth();
         int menuH = items.size() * ITEM_H + PADDING;
         int mx    = drawnX;
         int my    = drawnY;
@@ -112,17 +113,15 @@ public class ContextMenu {
                 tab.showBadge = !tab.showBadge;
                 MultichatClient.saveTabsToConfig();
             }
-            case "Search in tab…" -> {
-                client.setScreen(new SearchOverlay(client.currentScreen, tab));
-            }
-            case "Close Search" -> ChatRenderer.TABS.remove(tab);
+            case "Search in tab…" -> LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), tab));
+            case "Close Search"   -> ChatRenderer.TABS.remove(tab);
         }
         return true;
     }
 
-    private static int menuWidth(MinecraftClient client) {
+    private static int menuWidth() {
         int max = 0;
-        for (String s : items) max = Math.max(max, client.textRenderer.getWidth(s));
+        for (String s : items) max = Math.max(max, LzDraw.textWidth(s));
         return max + PADDING * 2;
     }
 }

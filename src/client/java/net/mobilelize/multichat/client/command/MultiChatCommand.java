@@ -6,7 +6,8 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.text.Text;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
@@ -29,8 +30,7 @@ public class MultiChatCommand {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             var root = literal("multichat")
                 .executes(ctx -> {
-                    var client = ctx.getSource().getClient();
-                    client.send(() -> client.setScreen(new TabListScreen(null)));
+                    LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
                     return 1;
                 })
                 .then(literal("tab")
@@ -74,7 +74,6 @@ public class MultiChatCommand {
                         .executes(MultiChatCommand::filterClear)))));
 
             dispatcher.register(root);
-            //dispatcher.register(literal("mc").redirect(root.build()));
         });
     }
 
@@ -282,7 +281,7 @@ public class MultiChatCommand {
     }
 
     private static void feedback(CommandContext<FabricClientCommandSource> ctx, String msg) {
-        ctx.getSource().sendFeedback(Text.literal("[MultiChat] " + msg));
+        ctx.getSource().sendFeedback(LzText.literal("[MultiChat] " + msg).mc());
     }
 
     public static FilterType parseFilterType(String s) {

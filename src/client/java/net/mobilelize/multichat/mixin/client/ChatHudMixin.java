@@ -1,14 +1,17 @@
 package net.mobilelize.multichat.mixin.client;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.client.util.ChatMessages;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
-import net.minecraft.util.math.MathHelper;
+import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzOptions;
+import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.text.LzOrderedText;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.TabType;
@@ -80,11 +83,10 @@ public class ChatHudMixin {
 
         ChatHud self        = (ChatHud)(Object)this;
         ChatHudAccessor acc = (ChatHudAccessor) self;
-        MinecraftClient client = acc.getClient();
 
-        float scale     = (float) self.getChatScale();
-        int chatWidth   = MathHelper.ceil((float) self.getWidth() / scale);
-        int windowWidth = client.getWindow().getScaledWidth();
+        float scale     = (float) LzChat.chatScale();
+        int chatWidth   = LzMath.ceil((float) LzChat.chatWidth() / scale);
+        int windowWidth = LzClient.scaledWindowWidth();
 
         double rawChatX = ChatRenderer.lastMouseX / (double) scale - 4.0;
 
@@ -99,8 +101,8 @@ public class ChatHudMixin {
 
             if (localChatX < -4.0 || localChatX > chatWidth) continue;
 
-            int max = Math.max(0, active.messages.size() - self.getVisibleLineCount());
-            panel.setScrolledLines(active, MathHelper.clamp(panel.getScrolledLines(active) + scroll, 0, max));
+            int max = Math.max(0, active.messages.size() - LzChat.visibleLineCount());
+            panel.setScrolledLines(active, LzMath.clamp(panel.getScrolledLines(active) + scroll, 0, max));
             return;
         }
     }
@@ -121,15 +123,13 @@ public class ChatHudMixin {
     @Inject(method = "addVisibleMessage", at = @At("HEAD"))
     private void routeGlobally(ChatHudLine message, CallbackInfo ci) {
         ChatHud self       = (ChatHud)(Object)this;
-        ChatHudAccessor accessor = (ChatHudAccessor) self;
-        MinecraftClient client = accessor.getClient();
 
-        int baseWidth = MathHelper.floor((double) self.getWidth() / self.getChatScale());
+        float scale  = (float) LzChat.chatScale();
+        int baseWidth = LzMath.floor((double) LzChat.chatWidth() / scale);
         MessageIndicator indicator = message.indicator();
         int width = baseWidth - (indicator != null && indicator.icon() != null ? indicator.icon().width + 4 + 2 : 0);
 
-        List<OrderedText> lines = ChatMessages.breakRenderedChatMessageLines(
-                message.content(), width, client.textRenderer);
+        List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(message.content()), width);
 
         MessageRouter.routeLines(message, lines);
     }
@@ -140,24 +140,17 @@ public class ChatHudMixin {
 
     @Inject(method = "getTextStyleAt", at = @At("RETURN"), cancellable = true)
     private void getTextStyleAtAllPanels(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
-        // Vanilla reads its own visibleMessages regardless of active tab.
-        // Only trust vanilla's result when the left panel is actually on the VANILLA tab.
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
         boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled
             && leftActive.type == TabType.VANILLA;
         if (cir.getReturnValue() != null && leftIsVanilla) return;
-        // If vanilla found something but we're not on VANILLA tab, discard it and check our panels.
 
-        ChatHud self        = (ChatHud)(Object)this;
-        ChatHudAccessor acc = (ChatHudAccessor) self;
-        MinecraftClient client = acc.getClient();
+        float scale      = (float) LzChat.chatScale();
+        int chatWidth    = LzMath.ceil((float) LzChat.chatWidth() / scale);
+        int windowWidth  = LzClient.scaledWindowWidth();
+        int windowHeight = LzClient.scaledWindowHeight();
 
-        float scale      = (float) self.getChatScale();
-        int chatWidth    = MathHelper.ceil((float) self.getWidth() / scale);
-        int windowWidth  = client.getWindow().getScaledWidth();
-        int windowHeight = client.getWindow().getScaledHeight();
-
-        double lineSpacing = (Double) client.options.getChatLineSpacing().getValue();
+        double lineSpacing = LzOptions.chatLineSpacing();
         int lineHeight     = (int)(9.0 * (lineSpacing + 1.0));
         double chatY       = ((double) windowHeight - y - 40.0) / (scale * lineHeight);
         double rawChatX    = x / scale - 4.0;
@@ -175,14 +168,14 @@ public class ChatHudMixin {
             if (localChatX < -4.0 || localChatX > chatWidth) continue;
 
             int scrolledLines = panel.getScrolledLines(active);
-            int maxLines = Math.min(self.getVisibleLineCount(), active.messages.size());
+            int maxLines = Math.min(LzChat.visibleLineCount(), active.messages.size());
             if (chatY < 0.0 || chatY >= maxLines) continue;
 
-            int lineIdx = MathHelper.floor(chatY + scrolledLines);
+            int lineIdx = LzMath.floor(chatY + scrolledLines);
             if (lineIdx < 0 || lineIdx >= active.messages.size()) continue;
 
-            Style style = client.textRenderer.getTextHandler()
-                    .getStyleAt(active.messages.get(lineIdx).content(), MathHelper.floor(localChatX));
+            Style style = LzDraw.textHandler()
+                    .getStyleAt(active.messages.get(lineIdx).content().mc(), LzMath.floor(localChatX));
             if (style != null) {
                 cir.setReturnValue(style);
                 return;

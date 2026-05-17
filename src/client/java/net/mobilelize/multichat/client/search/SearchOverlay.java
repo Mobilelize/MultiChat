@@ -4,7 +4,12 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzScreen;
+import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.text.LzFormatting;
+import net.mobilelize.fabriclib.text.LzStyle;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
@@ -15,12 +20,12 @@ import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.List;
 
-public class SearchOverlay extends Screen {
+public class SearchOverlay extends LzScreen {
 
     private static final int W          = 314;
     private static final int H_BASE     = 178;
-    private static final int HEADER_STD = 22;   // no scope label
-    private static final int HEADER_SCP = 32;   // with scope label
+    private static final int HEADER_STD = 22;
+    private static final int HEADER_SCP = 32;
 
     private final Screen  parent;
     private final ChatTab sourceTab;
@@ -40,7 +45,7 @@ public class SearchOverlay extends Screen {
     }
 
     public SearchOverlay(Screen parent, ChatTab sourceTab, String initialQuery) {
-        super(Text.literal("Advanced Search"));
+        super("Advanced Search");
         this.parent        = parent;
         this.sourceTab     = sourceTab;
         this.initialQuery  = initialQuery;
@@ -62,44 +67,44 @@ public class SearchOverlay extends Screen {
         int half = (fw - 6) / 2;
         int btnW = (fw - 4) / 2;
 
-        queryField = addDrawableChild(new TextFieldWidget(textRenderer, fx, top, fw, 20, Text.empty()));
-        queryField.setPlaceholder(Text.literal("Search query…").formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        queryField = addDrawableChild(new TextFieldWidget(textRenderer, fx, top, fw, 20, LzText.empty().mc()));
+        queryField.setPlaceholder(LzText.literal("Search query…").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         queryField.setMaxLength(256);
         if (!initialQuery.isEmpty()) queryField.setText(initialQuery);
         this.setFocused(queryField);
 
-        fromField = addDrawableChild(new TextFieldWidget(textRenderer, fx, top + 30, half, 20, Text.empty()));
-        fromField.setPlaceholder(Text.literal("e.g. 10m").formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        fromField = addDrawableChild(new TextFieldWidget(textRenderer, fx, top + 30, half, 20, LzText.empty().mc()));
+        fromField.setPlaceholder(LzText.literal("e.g. 10m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         fromField.setMaxLength(32);
 
-        toField = addDrawableChild(new TextFieldWidget(textRenderer, fx + half + 6, top + 30, half, 20, Text.empty()));
-        toField.setPlaceholder(Text.literal("e.g. 5m").formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        toField = addDrawableChild(new TextFieldWidget(textRenderer, fx + half + 6, top + 30, half, 20, LzText.empty().mc()));
+        toField.setPlaceholder(LzText.literal("e.g. 5m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         toField.setMaxLength(32);
 
         addDrawableChild(ButtonWidget.builder(
-                Text.literal("Regex: " + (useRegex ? "ON" : "OFF")),
-                b -> { useRegex = !useRegex; b.setMessage(Text.literal("Regex: " + (useRegex ? "ON" : "OFF"))); })
+                LzText.literal("Regex: " + (useRegex ? "ON" : "OFF")).mc(),
+                b -> { useRegex = !useRegex; b.setMessage(LzText.literal("Regex: " + (useRegex ? "ON" : "OFF")).mc()); })
             .dimensions(fx, top + 58, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
-                Text.literal("Case: " + (caseSensitive ? "ON" : "OFF")),
-                b -> { caseSensitive = !caseSensitive; b.setMessage(Text.literal("Case: " + (caseSensitive ? "ON" : "OFF"))); })
+                LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF")).mc(),
+                b -> { caseSensitive = !caseSensitive; b.setMessage(LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF")).mc()); })
             .dimensions(fx + btnW + 4, top + 58, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
-                Text.literal("Vis: " + visibility.name()),
-                b -> { visibility = cycleVis(); b.setMessage(Text.literal("Vis: " + visibility.name())); })
+                LzText.literal("Vis: " + visibility.name()).mc(),
+                b -> { visibility = cycleVis(); b.setMessage(LzText.literal("Vis: " + visibility.name()).mc()); })
             .dimensions(fx, top + 84, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
-                Text.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")),
-                b -> { liveUpdate = !liveUpdate; b.setMessage(Text.literal("Live Update: " + (liveUpdate ? "ON" : "OFF"))); })
+                LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")).mc(),
+                b -> { liveUpdate = !liveUpdate; b.setMessage(LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")).mc()); })
             .dimensions(fx + btnW + 4, top + 84, btnW, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> close())
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> close())
             .dimensions(cx - 86, top + 112, 80, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Create Search"), b -> createSearch())
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Create Search").mc(), b -> createSearch())
             .dimensions(cx + 6, top + 112, 100, 20).build());
     }
 
@@ -138,7 +143,7 @@ public class SearchOverlay extends Screen {
 
     @Override
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, width, height, 0x88000000);
+        LzDraw.fill(ctx, 0, 0, width, height, 0x88000000);
 
         int H    = h();
         int cx   = width / 2;
@@ -149,18 +154,21 @@ public class SearchOverlay extends Screen {
         int fx   = cx - fw / 2;
         int half = (fw - 6) / 2;
 
-        ctx.fill(bx, by, bx + W, by + H, 0xEE111111);
-        ctx.drawBorder(bx, by, W, H, 0xFF666666);
-        ctx.drawCenteredTextWithShadow(textRenderer, title, cx, by + 7, 0xFFFFFF);
+        LzDraw.fill(ctx, bx, by, bx + W, by + H, 0xEE111111);
+        LzDraw.drawBorder(ctx, bx, by, bx + W, by + H, 0xFF666666);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), cx, by + 7, 0xFFFFFF);
 
         if (sourceTab != null) {
-            ctx.drawCenteredTextWithShadow(textRenderer,
-                Text.literal("Scope: ").formatted(net.minecraft.util.Formatting.GRAY).append(Text.literal(sourceTab.name).formatted(net.minecraft.util.Formatting.YELLOW)), cx, by + 16, 0xFFFFFF);
+            LzDraw.drawCenteredText(ctx,
+                LzText.empty()
+                    .append(LzText.literal("Scope: ").withStyle(LzStyle.ofFormatting(LzFormatting.GRAY)))
+                    .append(LzText.literal(sourceTab.name).withStyle(LzStyle.ofFormatting(LzFormatting.YELLOW))),
+                cx, by + 16, 0xFFFFFF);
         }
 
-        ctx.drawTextWithShadow(textRenderer, Text.literal("Query"), fx, top - 9, 0xAAAAAA);
-        ctx.drawTextWithShadow(textRenderer, Text.literal("From (older)"), fx, top + 21, 0xAAAAAA);
-        ctx.drawTextWithShadow(textRenderer, Text.literal("To (newer)"), fx + half + 6, top + 21, 0xAAAAAA);
+        LzDraw.drawText(ctx, "Query", fx, top - 9, 0xAAAAAA);
+        LzDraw.drawText(ctx, "From (older)", fx, top + 21, 0xAAAAAA);
+        LzDraw.drawText(ctx, "To (newer)", fx + half + 6, top + 21, 0xAAAAAA);
     }
 
     @Override
@@ -176,7 +184,7 @@ public class SearchOverlay extends Screen {
     }
 
     @Override
-    public void close() { client.setScreen(parent); }
+    public void close() { LzClient.mc().setScreen(parent); }
 
     @Override
     public boolean shouldPause() { return false; }
