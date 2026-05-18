@@ -82,9 +82,8 @@ public class ChatHudMixin {
     @Inject(method = "scroll", at = @At("HEAD"), cancellable = true)
     private void scrollPanel(int scroll, CallbackInfo ci) {
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
-        if (activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA) return;
-
-        ci.cancel();
+        boolean leftIsVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
+        if (!leftIsVanilla) ci.cancel();
 
         ChatHud self        = (ChatHud)(Object)this;
         ChatHudAccessor acc = (ChatHudAccessor) self;
@@ -104,8 +103,9 @@ public class ChatHudMixin {
             int xOffset       = panel.computeXOffset(windowWidth, scale, chatWidth);
             double localChatX = rawChatX - xOffset;
 
-            if (localChatX < -4.0 || localChatX > chatWidth) continue;
+            if (localChatX < -4.0 || localChatX > chatWidth + 8) continue;
 
+            ci.cancel(); // cancel vanilla scroll only when we're handling it
             int max = Math.max(0, active.messages.size() - LzChat.visibleLineCount());
             panel.setScrolledLines(active, LzMath.clamp(panel.getScrolledLines(active) + scroll, 0, max));
             return;
