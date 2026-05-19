@@ -11,6 +11,7 @@ import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.TabVisibility;
@@ -246,14 +247,14 @@ public class TabListScreen extends LzScreen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && swapPending) { // ESC cancels swap mode
+        if (keyCode == Keys.ESCAPE && swapPending) {
             swapPending = false;
             return true;
         }
         if (selectedIdx >= 0 && selectedIdx < allTabs().size()
                 && isMoveable(allTabs().get(selectedIdx))) {
-            if (keyCode == 265) { moveTab(selectedIdx, true);  return true; } // UP arrow
-            if (keyCode == 264) { moveTab(selectedIdx, false); return true; } // DOWN arrow
+            if (keyCode == Keys.UP)   { moveTab(selectedIdx, true);  return true; }
+            if (keyCode == Keys.DOWN) { moveTab(selectedIdx, false); return true; }
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }

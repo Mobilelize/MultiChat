@@ -17,6 +17,7 @@ import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.ContextMenu;
+import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MessageContextMenu;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
@@ -103,7 +104,7 @@ public abstract class ChatScreenMixin {
                                CallbackInfoReturnable<Boolean> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
         if (MultichatClient.CONFIG.selectionEnabled
-                && keyCode == 67 && (modifiers & 2) != 0 && ChatSelection.hasSelection()) {
+                && keyCode == Keys.C && (modifiers & 2) != 0 && ChatSelection.hasSelection()) {
             String text = ChatSelection.getSelectedText();
             if (!text.isEmpty()) {
                 LzClient.setClipboard(text);
@@ -123,9 +124,9 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.arrowKeySwitchTabs
-                && (keyCode == 262 || keyCode == 263)
+                && (keyCode == Keys.RIGHT || keyCode == Keys.LEFT)
                 && chatField.getText().isEmpty()) {
-            boolean goRight = keyCode == 262;
+            boolean goRight = keyCode == Keys.RIGHT;
             boolean ctrlHeld = (modifiers & 2) != 0;
             boolean wantRight = MultichatClient.CONFIG.arrowKeyCtrlForRight != ctrlHeld;
             ChatPanel panel = wantRight ? ChatRenderer.RIGHT : ChatRenderer.LEFT;

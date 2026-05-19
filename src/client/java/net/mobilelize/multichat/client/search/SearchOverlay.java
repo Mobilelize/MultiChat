@@ -12,6 +12,7 @@ import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabVisibility;
@@ -186,8 +187,8 @@ public class SearchOverlay extends LzScreen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256) { close(); return true; }
-        if (keyCode == 257 || keyCode == 335) { createSearch(); return true; }
+        if (keyCode == Keys.ESCAPE) { close(); return true; }
+        if (keyCode == Keys.ENTER || keyCode == Keys.NUMPAD_ENTER) { createSearch(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
