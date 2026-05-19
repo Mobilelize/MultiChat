@@ -27,6 +27,7 @@ import net.mobilelize.multichat.client.search.SearchOverlay;
 import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -40,7 +41,7 @@ public abstract class ChatScreenMixin {
     // ------------------------------------------------------------------
 
     @Shadow public abstract String normalize(String chatText);
-    @Shadow private TextFieldWidget chatField;
+    @Shadow protected TextFieldWidget chatField;
 
     @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("RETURN"))
     private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
@@ -300,8 +301,9 @@ public abstract class ChatScreenMixin {
         }
     }
 
+    @Unique
     private static boolean isMouseInMessageArea(ChatPanel panel, double mouseY,
-            int topY, float scale, int lineH, int visibleLineCount) {
+                                                int topY, float scale, int lineH, int visibleLineCount) {
         if (!panel.showTabs) return mouseY < topY * (double) scale;
         int tabY = ChatRenderer.getTabBarY(panel, topY, visibleLineCount, lineH);
         if (panel.tabsAtTop) {
