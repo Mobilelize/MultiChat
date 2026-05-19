@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.command.CommandSource;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatTab;
@@ -74,7 +75,8 @@ public class MultiChatCommand {
     private static SuggestionProvider<FabricClientCommandSource> editSuggestions() {
         return (ctx, builder) -> {
             for (ChatTab tab : ChatRenderer.TABS)
-                if (tab.type == TabType.FILTERED || tab.type == TabType.API)
+                if ((tab.type == TabType.FILTERED || tab.type == TabType.API)
+                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name.toLowerCase()))
                     builder.suggest(tab.name);
             return builder.buildFuture();
         };
@@ -83,7 +85,8 @@ public class MultiChatCommand {
     private static SuggestionProvider<FabricClientCommandSource> contextSuggestions() {
         return (ctx, builder) -> {
             for (ChatTab tab : ChatRenderer.TABS)
-                if (tab.type == TabType.FILTERED || tab.type == TabType.API)
+                if ((tab.type == TabType.FILTERED || tab.type == TabType.API)
+                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name.toLowerCase()))
                     builder.suggest(tab.name);
             return builder.buildFuture();
         };

@@ -5,6 +5,7 @@ import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
+import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
@@ -34,20 +35,13 @@ public class TabHandle {
             tab.messages.addFirst(cl);
             created.add(cl);
         }
-        if (tab.messageCap > 0)
-            while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
-        if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
-        MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.getFirst());
+        adjustAfterAdd(tab, created.size());
 
         for (ChatTab target : alsoAddTo) {
             if (target == null) continue;
             for (int i = created.size() - 1; i >= 0; i--)
                 target.messages.addFirst(created.get(i));
-            if (target.messageCap > 0)
-                while (target.messages.size() > target.messageCap) target.messages.removeLast();
-            if (!isActiveInAnyPanel(target)) target.unreadCount++;
-            if (!target.messages.isEmpty())
-                MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(target, target.messages.getFirst());
+            adjustAfterAdd(target, created.size());
         }
     }
 
@@ -64,6 +58,32 @@ public class TabHandle {
 
     public String getId()    { return fullId; }
     public ChatTab getTab()  { return tab; }
+
+    private static void adjustAfterAdd(ChatTab tab, int added) {
+        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+            int scrolled = panel.getScrolledLines(tab);
+            if (scrolled > 0) panel.setScrolledLines(tab, scrolled + added);
+        }
+        ChatSelection.shiftLines(tab, added);
+
+        if (tab.messageCap > 0) {
+            int before = tab.messages.size();
+            while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
+            int removed = before - tab.messages.size();
+            if (removed > 0) {
+                for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+                    int scrolled = panel.getScrolledLines(tab);
+                    if (scrolled > 0)
+                        panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
+                }
+                ChatSelection.clampOrClear(tab);
+            }
+        }
+
+        if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
+        if (!tab.messages.isEmpty())
+            MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.getFirst());
+    }
 
     private static boolean isActiveInAnyPanel(ChatTab tab) {
         for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {

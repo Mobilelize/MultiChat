@@ -40,6 +40,19 @@ public class ChatSelection {
     public static void endDrag()  { selecting = false; }
     public static void clear()    { anchorLine = -1; cursorLine = -1; selecting = false; selPanel = null; }
 
+    public static void shiftLines(ChatTab tab, int delta) {
+        if (selPanel == null || selPanel.getActiveTab() != tab || delta == 0) return;
+        anchorLine += delta;
+        cursorLine += delta;
+    }
+
+    public static void clampOrClear(ChatTab tab) {
+        if (selPanel == null || selPanel.getActiveTab() != tab) return;
+        int max = tab.messages.size() - 1;
+        if (anchorLine > max || cursorLine > max || anchorLine < 0 || cursorLine < 0)
+            clear();
+    }
+
     public static boolean hasSelection() {
         return anchorLine >= 0 && cursorLine >= 0
             && (anchorLine != cursorLine || anchorChar != cursorChar);

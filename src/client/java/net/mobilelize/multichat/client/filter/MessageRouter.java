@@ -134,10 +134,21 @@ public class MessageRouter {
                 int scrolled = panel.getScrolledLines(tab);
                 if (scrolled > 0) panel.setScrolledLines(tab, scrolled + netLinesAdded);
             }
+            ChatSelection.shiftLines(tab, netLinesAdded);
         }
 
         if (tab.messageCap > 0) {
+            int before = tab.messages.size();
             while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
+            int removed = before - tab.messages.size();
+            if (removed > 0) {
+                for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+                    int scrolled = panel.getScrolledLines(tab);
+                    if (scrolled > 0)
+                        panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
+                }
+                ChatSelection.clampOrClear(tab);
+            }
         }
         if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
         if (!tab.messages.isEmpty())
