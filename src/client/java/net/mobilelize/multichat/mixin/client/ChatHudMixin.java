@@ -45,6 +45,7 @@ public class ChatHudMixin {
     )
     private void hookRenderHead(DrawContext context, int currentTick, int mouseX, int mouseY,
                                  boolean focused, CallbackInfo ci) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
         boolean leftVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
         if (!leftVanilla) {
@@ -63,6 +64,7 @@ public class ChatHudMixin {
     )
     private void hookRenderReturn(DrawContext context, int currentTick, int mouseX, int mouseY,
                                    boolean focused, CallbackInfo ci) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
         if (activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA) {
             ChatRenderer.render((ChatHud)(Object)this, context, currentTick, mouseX, mouseY, focused, true);
@@ -81,6 +83,7 @@ public class ChatHudMixin {
 
     @Inject(method = "scroll", at = @At("HEAD"), cancellable = true)
     private void scrollPanel(int scroll, CallbackInfo ci) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
         boolean leftIsVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
         if (!leftIsVanilla) ci.cancel();
@@ -127,6 +130,7 @@ public class ChatHudMixin {
 
     @Inject(method = "addVisibleMessage", at = @At("HEAD"))
     private void routeGlobally(ChatHudLine message, CallbackInfo ci) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         ChatHud self       = (ChatHud)(Object)this;
 
         float scale  = (float) LzChat.chatScale();
@@ -146,6 +150,7 @@ public class ChatHudMixin {
     @Inject(method = "getIndicatorAt", at = @At("HEAD"), cancellable = true)
     private void getIndicatorAt(double mouseX, double mouseY,
                                  CallbackInfoReturnable<@Nullable MessageIndicator> cir) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); return; }
 
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
@@ -205,11 +210,13 @@ public class ChatHudMixin {
 
     @Inject(method = "getTextStyleAt", at = @At("HEAD"), cancellable = true)
     private void suppressTextStyleWhenMenuOpen(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); }
     }
 
     @Inject(method = "getTextStyleAt", at = @At("RETURN"), cancellable = true)
     private void getTextStyleAtAllPanels(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
         boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled
             && leftActive.type == TabType.VANILLA;

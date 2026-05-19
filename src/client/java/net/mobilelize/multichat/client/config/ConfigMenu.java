@@ -78,6 +78,14 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeyCtrlForRight = v)
                 .build());
 
+        general.addEntry(eb.startBooleanToggle(
+                LzText.literal("Disable MultiChat").mc(),
+                MultichatClient.CONFIG.modDisabled)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Disables passive features: custom chat rendering, tab routing, keybinds, and mouse hooks. Commands and the settings GUI still work.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.modDisabled = v)
+                .build());
+
         ConfigCategory leftPanel = builder.getOrCreateCategory(LzText.literal("Left Panel").mc());
 
         leftPanel.addEntry(eb.startBooleanToggle(

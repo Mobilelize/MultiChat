@@ -43,6 +43,7 @@ public abstract class ChatScreenMixin {
 
     @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("RETURN"))
     private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
             long handle = LzClient.windowHandle();
             boolean held = org.lwjgl.glfw.GLFW.glfwGetMouseButton(handle,
@@ -100,6 +101,7 @@ public abstract class ChatScreenMixin {
     @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
     private void onKeyPressed(int keyCode, int scanCode, int modifiers,
                                CallbackInfoReturnable<Boolean> cir) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         if (MultichatClient.CONFIG.selectionEnabled
                 && keyCode == 67 && (modifiers & 2) != 0 && ChatSelection.hasSelection()) {
             String text = ChatSelection.getSelectedText();
@@ -149,6 +151,7 @@ public abstract class ChatScreenMixin {
     @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(double mouseX, double mouseY, int button,
                                  CallbackInfoReturnable<Boolean> cir) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         if (button == 0 && ContextMenu.isOpen()) {
             cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY));
             return;
@@ -313,6 +316,7 @@ public abstract class ChatScreenMixin {
 
     @Inject(method = "sendMessage(Ljava/lang/String;Z)V", at = @At("HEAD"), cancellable = true)
     private void interceptSendMessage(String chatText, boolean addToHistory, CallbackInfo ci) {
+        if (MultichatClient.CONFIG.modDisabled) return;
         String text = normalize(chatText);
         if (text.isEmpty() || text.startsWith("/")) return;
 

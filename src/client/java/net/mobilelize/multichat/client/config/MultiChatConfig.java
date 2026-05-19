@@ -26,6 +26,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean rightPanelTabsAtTop  = false;
 
     // General
+    public boolean modDisabled             = false;
     public boolean showIndicators          = true;
     public boolean selectionEnabled        = true;
     public boolean selectionCtrlSkipsClicks = true;
