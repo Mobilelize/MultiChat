@@ -170,7 +170,9 @@ public class MessageContextMenu {
         int groupEnd = groupStart + 1;
         while (groupEnd < msgs.size() && !msgs.get(groupEnd).endOfEntry()) groupEnd++;
         groupEnd--;
-        for (int i = groupEnd; i >= groupStart; i--) msgs.remove(i);
+        if (groupEnd >= groupStart) {
+            msgs.subList(groupStart, groupEnd + 1).clear();
+        }
     }
 
     private static void flashGreen(LzChatLine target, ChatPanel panel) {
@@ -214,7 +216,7 @@ public class MessageContextMenu {
 
         StringBuilder sb = new StringBuilder();
         for (int i = groupEnd; i >= groupStart; i--) {
-            if (sb.length() > 0) sb.append(" ");
+            if (!sb.isEmpty()) sb.append(" ");
             sb.append(extractText(msgs.get(i)));
         }
         return sb.toString();

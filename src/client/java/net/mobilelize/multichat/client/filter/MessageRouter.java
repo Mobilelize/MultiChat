@@ -67,9 +67,9 @@ public class MessageRouter {
                         .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
                     if (allTab == null) break;
                     for (int j = lines.size() - 1; j >= 0; j--)
-                        tab.messages.add(0, allTab.messages.get(j));
+                        tab.messages.addFirst(allTab.messages.get(j));
                     if (tab.messageCap > 0)
-                        while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
+                        while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
                     if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
                 }
             }
@@ -95,7 +95,7 @@ public class MessageRouter {
         if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText) && tab.collapseLastLines != null) {
             int oldCount = tab.collapseLineCount;
             for (int i = 0; i < oldCount && !tab.messages.isEmpty(); i++)
-                tab.messages.remove(0);
+                tab.messages.removeFirst();
 
             tab.collapseRepeat++;
             tab.collapseLastTick  = original.creationTick();
@@ -112,7 +112,7 @@ public class MessageRouter {
 
             tab.collapseLineCount = updated.size();
             for (int j = 0; j < updated.size(); j++)
-                tab.messages.add(0, LzChatLine.create(
+                tab.messages.addFirst(LzChatLine.create(
                     tab.collapseLastTick, updated.get(j), indicator, j == updated.size() - 1));
             netLinesAdded = updated.size() - oldCount;
         } else {
@@ -126,7 +126,7 @@ public class MessageRouter {
                 : lines;
             tab.collapseLineCount = active.size();
             for (int j = 0; j < active.size(); j++)
-                tab.messages.add(0, LzChatLine.create(
+                tab.messages.addFirst(LzChatLine.create(
                     original.creationTick(), active.get(j), indicator, j == active.size() - 1));
             netLinesAdded = active.size();
         }
@@ -139,11 +139,11 @@ public class MessageRouter {
         }
 
         if (tab.messageCap > 0) {
-            while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
+            while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
         }
         if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
         if (!tab.messages.isEmpty())
-            MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.get(0));
+            MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.getFirst());
     }
 
     private static boolean isActiveInAnyPanel(ChatTab tab) {
@@ -210,7 +210,7 @@ public class MessageRouter {
             ? ChatRenderer.TABS.stream()
                 .filter(t -> t.type == TabType.FILTERED && !t.differenceMode)
                 .toList()
-            : null;
+            : List.of();
 
         int i = 0;
         while (i < all.size()) {
@@ -240,7 +240,7 @@ public class MessageRouter {
         }
 
         if (tab.messageCap > 0) {
-            while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
+            while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
         }
     }
 }
