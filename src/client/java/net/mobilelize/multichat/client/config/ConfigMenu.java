@@ -57,7 +57,7 @@ public class ConfigMenu {
         general.addEntry(eb.startStrField(
                 LzText.literal("Collapse Counter Format").mc(),
                 MultichatClient.CONFIG.collapseCounterFormat)
-                .setDefaultValue("&8(x{count})")
+                .setDefaultValue("&e(x{count})")
                 .setTooltip(LzText.literal("Format for the repeat counter on collapsed messages. Use {count} for the number. Supports color codes (e.g. &8 (x{count})).").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.collapseCounterFormat = v)
                 .build());
@@ -125,7 +125,7 @@ public class ConfigMenu {
         rightPanel.addEntry(eb.startBooleanToggle(
                 LzText.literal("Enable Right Panel").mc(),
                 MultichatClient.CONFIG.rightPanelEnabled)
-                .setDefaultValue(false)
+                .setDefaultValue(true)
                 .setTooltip(LzText.literal("Shows a second chat panel on the right side of the screen.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelEnabled = v)
                 .build());

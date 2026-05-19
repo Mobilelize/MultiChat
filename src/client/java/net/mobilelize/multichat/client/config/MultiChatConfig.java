@@ -18,7 +18,7 @@ public class MultiChatConfig extends LzConfig {
     public String contextTabName = "";
     public boolean leftPanelShowBadges = true;
     public boolean leftPanelShowTabs   = true;
-    public boolean rightPanelEnabled   = false;
+    public boolean rightPanelEnabled   = true;
     public boolean rightPanelShowOnlyWhenFocused = false;
     public boolean rightPanelShowBadges = true;
     public boolean rightPanelShowTabs   = true;
@@ -31,7 +31,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean selectionEnabled        = true;
     public boolean selectionCtrlSkipsClicks = true;
     public String  timestampFormat         = "&d[&6HH&d:&6mm&d:&6ss&d]";
-    public String  collapseCounterFormat  = "&8(x{count})";
+    public String  collapseCounterFormat  = "&e(x{count})";
     public boolean arrowKeySwitchTabs      = true;
     public boolean arrowKeyCtrlForRight    = false;
     public boolean showContextDisplay      = true;
