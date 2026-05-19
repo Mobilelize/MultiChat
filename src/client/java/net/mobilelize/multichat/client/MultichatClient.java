@@ -49,7 +49,8 @@ public class MultichatClient implements ClientModInitializer {
             tc.showTimestamps = tab.showTimestamps;
             tc.tabColor       = tab.tabColor;
             tc.visibility     = tab.visibility;
-            tc.collapseRepeating  = tab.collapseRepeating;
+            tc.collapseRepeating         = tab.collapseRepeating;
+            tc.collapseMatchFormatting   = tab.collapseMatchFormatting;
             tc.messageCap         = tab.messageCap;
             tc.whitelistMode      = tab.filterRules.whitelistMode;
             tc.contextPrefix      = tab.contextPrefix;
@@ -91,6 +92,7 @@ public class MultichatClient implements ClientModInitializer {
             tab.showTimestamps      = tc.showTimestamps;
             tab.tabColor            = tc.tabColor;
             tab.collapseRepeating           = tc.collapseRepeating;
+            tab.collapseMatchFormatting     = tc.collapseMatchFormatting;
             tab.messageCap                  = tc.messageCap;
             tab.filterRules.whitelistMode   = tc.whitelistMode != null ? tc.whitelistMode : net.mobilelize.multichat.client.filter.WhitelistMode.ANY;
             tab.contextPrefix       = tc.contextPrefix != null ? tc.contextPrefix : "";

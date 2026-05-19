@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client;
 
+import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.multichat.client.filter.FilterRuleSet;
@@ -20,17 +21,19 @@ public class ChatTab {
     public boolean showBadge         = true;
     public boolean showTimestamps    = false;
     public int     tabColor          = 0;
-    public boolean collapseRepeating = false;
-    public int     messageCap        = 0;
+    public boolean collapseRepeating        = false;
+    public boolean collapseMatchFormatting  = false;
+    public int     messageCap               = 0;
     public String  contextPrefix     = "";
     public boolean contextCommandMode = true;
 
     // Collapse tracking — reset whenever messages are cleared
-    public String              collapseLastText   = null;
-    public int                 collapseRepeat     = 0;
-    public int                 collapseLineCount  = 0;
-    public int                 collapseLastTick   = 0;
-    public List<LzOrderedText> collapseLastLines  = null;
+    public String              collapseLastText    = null;
+    public Text                collapseLastContent = null;
+    public int                 collapseRepeat      = 0;
+    public int                 collapseLineCount   = 0;
+    public int                 collapseLastTick    = 0;
+    public List<LzOrderedText> collapseLastLines   = null;
 
     public ChatTab(String name, TabType type, TabVisibility visibility) {
         this.name = name;
@@ -39,9 +42,10 @@ public class ChatTab {
     }
 
     public void resetCollapse() {
-        collapseLastText  = null;
-        collapseRepeat    = 0;
-        collapseLineCount = 0;
-        collapseLastLines = null;
+        collapseLastText    = null;
+        collapseLastContent = null;
+        collapseRepeat      = 0;
+        collapseLineCount   = 0;
+        collapseLastLines   = null;
     }
 }

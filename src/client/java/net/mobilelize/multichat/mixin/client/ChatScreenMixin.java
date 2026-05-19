@@ -127,8 +127,8 @@ public abstract class ChatScreenMixin {
                 && chatField.getText().isEmpty()) {
             boolean goRight = keyCode == 262;
             boolean ctrlHeld = (modifiers & 2) != 0;
-            ChatPanel panel = (MultichatClient.CONFIG.arrowKeyCtrlForRight && ctrlHeld)
-                ? ChatRenderer.RIGHT : ChatRenderer.LEFT;
+            boolean wantRight = MultichatClient.CONFIG.arrowKeyCtrlForRight != ctrlHeld;
+            ChatPanel panel = wantRight ? ChatRenderer.RIGHT : ChatRenderer.LEFT;
             if (panel.enabled) {
                 List<ChatTab> visible = panel.getVisibleTabs();
                 if (visible.size() > 1) {
@@ -137,6 +137,7 @@ public abstract class ChatScreenMixin {
                         : (panel.activeTab - 1 + visible.size()) % visible.size();
                     ChatTab nowActive = panel.getActiveTab();
                     nowActive.unreadCount = 0;
+                    panel.scrollActiveTabIntoView();
                     TabChangedCallback.EVENT.invoker().onTabChanged(panel, nowActive);
                 }
             }

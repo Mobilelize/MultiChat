@@ -54,6 +54,14 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.timestampFormat = v)
                 .build());
 
+        general.addEntry(eb.startStrField(
+                LzText.literal("Collapse Counter Format").mc(),
+                MultichatClient.CONFIG.collapseCounterFormat)
+                .setDefaultValue("&8(x{count})")
+                .setTooltip(LzText.literal("Format for the repeat counter on collapsed messages. Use {count} for the number. Supports color codes (e.g. &8 (x{count})).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.collapseCounterFormat = v)
+                .build());
+
         general.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Context Display").mc(),
                 MultichatClient.CONFIG.showContextDisplay)
@@ -66,15 +74,15 @@ public class ConfigMenu {
                 LzText.literal("Arrow Keys Switch Tabs").mc(),
                 MultichatClient.CONFIG.arrowKeySwitchTabs)
                 .setDefaultValue(true)
-                .setTooltip(LzText.literal("Left/Right arrow keys switch tabs on the left panel when chat input is empty.").mc())
+                .setTooltip(LzText.literal("Arrow keys switch tabs when chat input is empty. Ctrl targets the other panel.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeySwitchTabs = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Ctrl+Arrow Switches Right Panel").mc(),
+                LzText.literal("Swap Arrow Key Panels").mc(),
                 MultichatClient.CONFIG.arrowKeyCtrlForRight)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("When Ctrl is held, arrow keys switch tabs on the right panel instead.").mc())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("When enabled, arrow keys switch the right panel and Ctrl+arrow switches the left panel.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeyCtrlForRight = v)
                 .build());
 

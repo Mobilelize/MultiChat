@@ -4,17 +4,11 @@ import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
-import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzOrderedText;
-import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.MessageAddedToTabCallback;
 import net.mobilelize.multichat.api.MessageReceivedCallback;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.SearchTab;
-import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.TabVisibility;
+import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.ArrayList;
@@ -92,7 +86,9 @@ public class MessageRouter {
         LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(original.indicator());
 
         int netLinesAdded;
-        if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText) && tab.collapseLastLines != null) {
+        if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText)
+                && (!tab.collapseMatchFormatting || original.content().equals(tab.collapseLastContent))
+                && tab.collapseLastLines != null) {
             int oldCount = tab.collapseLineCount;
             for (int i = 0; i < oldCount && !tab.messages.isEmpty(); i++)
                 tab.messages.removeFirst();
@@ -104,8 +100,9 @@ public class MessageRouter {
             List<LzOrderedText> base = stamp
                 ? ChatRenderer.stampedLines(tab.collapseLastTick, LzText.wrapMc(original.content()), original.indicator(), lines)
                 : new ArrayList<>(tab.collapseLastLines);
-            LzOrderedText suffix = LzText.literal(" (x" + tab.collapseRepeat + ")")
-                .withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).ordered();
+            String counterStr = " " + MultichatClient.CONFIG.collapseCounterFormat
+                .replace("{count}", String.valueOf(tab.collapseRepeat));
+            LzOrderedText suffix = LzText.format(counterStr).ordered();
             List<LzOrderedText> updated = new ArrayList<>(base);
             int last = updated.size() - 1;
             updated.set(last, LzOrderedText.concat(updated.get(last), suffix));
@@ -116,8 +113,9 @@ public class MessageRouter {
                     tab.collapseLastTick, updated.get(j), indicator, j == updated.size() - 1));
             netLinesAdded = updated.size() - oldCount;
         } else {
-            tab.collapseLastText  = text;
-            tab.collapseRepeat    = 1;
+            tab.collapseLastText    = text;
+            tab.collapseLastContent = original.content();
+            tab.collapseRepeat      = 1;
             tab.collapseLastTick  = original.creationTick();
             tab.collapseLastLines = new ArrayList<>(lines);
 

@@ -85,6 +85,12 @@ public class TabEditScreen {
                 .setSaveConsumer(v -> tab.collapseRepeating = v)
                 .build());
 
+            cat.addEntry(eb.startBooleanToggle(LzText.literal("Collapse: Match Formatting").mc(), tab.collapseMatchFormatting)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("When on, messages only collapse if their formatting is identical, not just their text.").mc())
+                .setSaveConsumer(v -> tab.collapseMatchFormatting = v)
+                .build());
+
             cat.addEntry(eb.startIntField(LzText.literal("Message Cap").mc(), tab.messageCap)
                 .setDefaultValue(0)
                 .setMin(0)

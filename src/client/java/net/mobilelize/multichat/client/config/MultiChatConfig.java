@@ -31,8 +31,9 @@ public class MultiChatConfig extends LzConfig {
     public boolean selectionEnabled        = true;
     public boolean selectionCtrlSkipsClicks = true;
     public String  timestampFormat         = "&d[&6HH&d:&6mm&d:&6ss&d]";
+    public String  collapseCounterFormat  = "&8(x{count})";
     public boolean arrowKeySwitchTabs      = true;
-    public boolean arrowKeyCtrlForRight    = true;
+    public boolean arrowKeyCtrlForRight    = false;
     public boolean showContextDisplay      = true;
 
     // Search
@@ -53,7 +54,8 @@ public class MultiChatConfig extends LzConfig {
         public boolean showBadge         = true;
         public boolean showTimestamps    = false;
         public int     tabColor          = 0;
-        public boolean collapseRepeating = false;
+        public boolean collapseRepeating       = false;
+        public boolean collapseMatchFormatting = false;
         public int     messageCap        = 0;
         public TabVisibility visibility = TabVisibility.BOTH;
         public WhitelistMode whitelistMode = WhitelistMode.ANY;

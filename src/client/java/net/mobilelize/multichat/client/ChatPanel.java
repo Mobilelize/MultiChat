@@ -56,6 +56,15 @@ public class ChatPanel {
         scrollPositions.clear();
     }
 
+    public void scrollActiveTabIntoView() {
+        if (activeTab < tabScrollOffset) {
+            tabScrollOffset = activeTab;
+        } else if (tabLastRendered >= 0 && activeTab > tabLastRendered) {
+            int max = Math.max(0, getVisibleTabs().size() - 1);
+            tabScrollOffset = Math.min(activeTab, max);
+        }
+    }
+
     public int computeXOffset(int scaledWindowWidth, float scale, int chatWidth) {
         if (anchor == Anchor.RIGHT) {
             return Math.round(scaledWindowWidth / scale) - chatWidth - 12 - margin;
