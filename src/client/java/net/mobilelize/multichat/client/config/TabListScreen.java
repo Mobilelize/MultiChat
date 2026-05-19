@@ -16,6 +16,7 @@ import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
+import java.util.Collections;
 import java.util.List;
 
 public class TabListScreen extends LzScreen {
@@ -23,6 +24,9 @@ public class TabListScreen extends LzScreen {
     private static final int LIST_TOP   = 32;
     private static final int ROW_HEIGHT = 22;
     private static final int SB_W       = 6;
+    private static final int BTN_W      = 40;
+    private static final int BTN_H      = 18;
+    private static final int BTN_GAP    = 3;
 
     private final Screen parent;
     private TextFieldWidget nameField;
@@ -30,6 +34,8 @@ public class TabListScreen extends LzScreen {
     private boolean scrollDragging     = false;
     private int     scrollDragStartY   = 0;
     private int     scrollDragStartOff = 0;
+    private int     selectedIdx        = -1;
+    private boolean swapPending        = false;
 
     public TabListScreen(Screen parent) {
         super("MultiChat — Tabs");
@@ -37,13 +43,24 @@ public class TabListScreen extends LzScreen {
     }
 
     private List<ChatTab> allTabs() { return ChatRenderer.TABS; }
+    private int listBottom()        { return height - 62; }
+    private int maxScroll()         { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
-    private int listBottom() { return height - 62; }
-    private int maxScroll()  { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
+    private boolean isMoveable(ChatTab tab) {
+        return tab.type == TabType.FILTERED || tab.type == TabType.API || tab.type == TabType.SEARCH;
+    }
+
+    private int firstMoveableIdx() {
+        List<ChatTab> tabs = allTabs();
+        for (int i = 0; i < tabs.size(); i++)
+            if (isMoveable(tabs.get(i))) return i;
+        return tabs.size();
+    }
 
     @Override
     protected void init() {
         scrollOffset = Math.min(scrollOffset, maxScroll());
+        if (selectedIdx >= allTabs().size()) selectedIdx = -1;
 
         nameField = new TextFieldWidget(textRenderer, width / 2 - 100, height - 50, 158, 20, LzText.empty().mc());
         nameField.setPlaceholder(LzText.literal("New tab name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
@@ -69,16 +86,84 @@ public class TabListScreen extends LzScreen {
         clearAndInit();
     }
 
+    private void moveTab(int idx, boolean up) {
+        List<ChatTab> tabs = allTabs();
+        int target = up ? idx - 1 : idx + 1;
+        if (target < firstMoveableIdx() || target >= tabs.size()) return;
+        if (!isMoveable(tabs.get(target))) return;
+        Collections.swap(tabs, idx, target);
+        selectedIdx = target;
+        MultichatClient.saveTabsToConfig();
+        scrollToSelected();
+    }
+
+    private void scrollToSelected() {
+        if (selectedIdx < 0) return;
+        int rowTop = LIST_TOP + selectedIdx * ROW_HEIGHT;
+        int rowBot = rowTop + ROW_HEIGHT;
+        if (rowTop - scrollOffset < LIST_TOP)
+            scrollOffset = rowTop - LIST_TOP;
+        else if (rowBot - scrollOffset > listBottom())
+            scrollOffset = rowBot - listBottom();
+        scrollOffset = Math.max(0, Math.min(maxScroll(), scrollOffset));
+    }
+
+    // Control button bounds — to the LEFT of the row list, vertically centered
+    private int ctrlBtnX1() { return width / 2 - 130 - BTN_W - 4; }
+    private int ctrlBtnX2() { return width / 2 - 130 - 4; }
+    private int ctrlBtnCx() { return (ctrlBtnX1() + ctrlBtnX2()) / 2; }
+
+    private int ctrlUpY1()   { int cy = (LIST_TOP + listBottom()) / 2; return cy - BTN_H - BTN_GAP - BTN_H / 2; }
+    private int ctrlUpY2()   { return ctrlUpY1() + BTN_H; }
+    private int ctrlDnY1()   { return ctrlUpY2() + BTN_GAP; }
+    private int ctrlDnY2()   { return ctrlDnY1() + BTN_H; }
+    private int ctrlSwapY1() { return ctrlDnY2() + BTN_GAP; }
+    private int ctrlSwapY2() { return ctrlSwapY1() + BTN_H; }
+
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         super.render(ctx, mouseX, mouseY, delta);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, 0xFFFFFF);
         nameField.render(ctx, mouseX, mouseY, delta);
 
-        LzDraw.enableScissor(ctx, 0, LIST_TOP, width, listBottom());
+        int lx = width / 2 - 130;
+
+        // --- Control buttons (left of list) ---
+        int cx1 = ctrlBtnX1(), cx2 = ctrlBtnX2(), cxMid = ctrlBtnCx();
+        int uy1 = ctrlUpY1(),   uy2 = ctrlUpY2();
+        int dy1 = ctrlDnY1(),   dy2 = ctrlDnY2();
+        int sy1 = ctrlSwapY1(), sy2 = ctrlSwapY2();
 
         List<ChatTab> tabs = allTabs();
-        int lx = width / 2 - 130;
+        boolean hasSelected = selectedIdx >= 0 && selectedIdx < tabs.size()
+                              && isMoveable(tabs.get(selectedIdx));
+        boolean canUp   = hasSelected && selectedIdx > firstMoveableIdx();
+        boolean canDown = hasSelected && selectedIdx < tabs.size() - 1
+                          && isMoveable(tabs.get(selectedIdx + 1));
+
+        boolean hoverUp   = mouseX >= cx1 && mouseX < cx2 && mouseY >= uy1 && mouseY < uy2;
+        boolean hoverDown = mouseX >= cx1 && mouseX < cx2 && mouseY >= dy1 && mouseY < dy2;
+        boolean hoverSwap = mouseX >= cx1 && mouseX < cx2 && mouseY >= sy1 && mouseY < sy2;
+
+        int upBg   = canUp   ? (hoverUp   ? 0xAA888888 : 0x66555555) : 0x33333333;
+        int dnBg   = canDown ? (hoverDown ? 0xAA888888 : 0x66555555) : 0x33333333;
+        int swapBg = swapPending ? 0xAA4455FF
+                   : (hasSelected ? (hoverSwap ? 0xAA888888 : 0x66555555) : 0x33333333);
+
+        LzDraw.fill(ctx, cx1, uy1, cx2, uy2, upBg);
+        LzDraw.drawBorder(ctx, cx1, uy1, cx2, uy2, 0x88666666);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↑"), cxMid, uy1 + (BTN_H - 8) / 2, canUp ? 0xFFFFFF : 0x555555);
+
+        LzDraw.fill(ctx, cx1, dy1, cx2, dy2, dnBg);
+        LzDraw.drawBorder(ctx, cx1, dy1, cx2, dy2, 0x88666666);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxMid, dy1 + (BTN_H - 8) / 2, canDown ? 0xFFFFFF : 0x555555);
+
+        LzDraw.fill(ctx, cx1, sy1, cx2, sy2, swapBg);
+        LzDraw.drawBorder(ctx, cx1, sy1, cx2, sy2, 0x88666666);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxMid, sy1 + (BTN_H - 8) / 2, hasSelected ? 0xFFFFFF : 0x555555);
+
+        // --- Tab rows ---
+        LzDraw.enableScissor(ctx, 0, LIST_TOP, width, listBottom());
 
         for (int i = 0; i < tabs.size(); i++) {
             ChatTab tab = tabs.get(i);
@@ -104,18 +189,29 @@ public class TabListScreen extends LzScreen {
             LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, rowBg);
             LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2, rowBdr);
 
+            // Selection highlight
+            if (i == selectedIdx) {
+                LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, swapPending ? 0x553366FF : 0x55FFFF44);
+            } else if (swapPending && isMoveable(tab)
+                    && mouseX >= lx && mouseX < lx + 260 && mouseY >= y && mouseY < y + ROW_HEIGHT) {
+                LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, 0x3300FFAA);
+            }
+
             int nameColor = switch (tab.type) {
                 case FILTERED -> 0xFFFFFF;
                 case SEARCH   -> 0xAAFFDD;
                 case API      -> 0xFFCC88;
                 default       -> 0xAADDFF;
             };
-            LzDraw.drawText(ctx,
-                LzText.empty()
-                    .append(LzText.literal(tab.name + " "))
-                    .append(LzText.literal("[" + tab.visibility.name().toLowerCase() + "]")
-                        .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY))),
-                lx + 6, textY, nameColor);
+
+            // Name text
+            String nameStr = tab.name + " ";
+            LzDraw.drawText(ctx, nameStr, lx + 6, textY, nameColor);
+
+            // Visibility tag — use tab color if set, else gray
+            int visColor = (tab.tabColor != 0) ? (0xFF000000 | (tab.tabColor & 0xFFFFFF)) : 0xFFAAAAAA;
+            int nameW = LzDraw.textWidth(nameStr);
+            LzDraw.drawText(ctx, "[" + tab.visibility.name().toLowerCase() + "]", lx + 6 + nameW, textY, visColor);
 
             boolean canEdit   = tab.type == TabType.FILTERED || tab.type == TabType.API;
             boolean canRemove = tab.type == TabType.FILTERED || tab.type == TabType.SEARCH;
@@ -133,6 +229,7 @@ public class TabListScreen extends LzScreen {
 
         LzDraw.disableScissor(ctx);
 
+        // Scrollbar
         int max = maxScroll();
         if (max > 0) {
             int sbX    = lx + 265;
@@ -148,10 +245,45 @@ public class TabListScreen extends LzScreen {
     }
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256 && swapPending) { // ESC cancels swap mode
+            swapPending = false;
+            return true;
+        }
+        if (selectedIdx >= 0 && selectedIdx < allTabs().size()
+                && isMoveable(allTabs().get(selectedIdx))) {
+            if (keyCode == 265) { moveTab(selectedIdx, true);  return true; } // UP arrow
+            if (keyCode == 264) { moveTab(selectedIdx, false); return true; } // DOWN arrow
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
 
-        int lx   = width / 2 - 130;
+        int lx = width / 2 - 130;
+
+        // Control buttons
+        if (button == 0 && mx >= ctrlBtnX1() && mx < ctrlBtnX2()) {
+            List<ChatTab> tabs = allTabs();
+            boolean hasSelected = selectedIdx >= 0 && selectedIdx < tabs.size()
+                                  && isMoveable(tabs.get(selectedIdx));
+            if (my >= ctrlUpY1() && my < ctrlUpY2()) {
+                if (hasSelected) moveTab(selectedIdx, true);
+                return true;
+            }
+            if (my >= ctrlDnY1() && my < ctrlDnY2()) {
+                if (hasSelected) moveTab(selectedIdx, false);
+                return true;
+            }
+            if (my >= ctrlSwapY1() && my < ctrlSwapY2()) {
+                if (hasSelected) swapPending = !swapPending;
+                return true;
+            }
+        }
+
+        // Scrollbar
         int lxSb = lx + 265;
         int max  = maxScroll();
         if (button == 0 && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
@@ -181,17 +313,39 @@ public class TabListScreen extends LzScreen {
 
         ChatTab tab = tabs.get(idx);
 
+        // Edit button
         if (mx >= lx + 186 && mx < lx + 228) {
             if (tab.type == TabType.FILTERED || tab.type == TabType.API)
                 LzClient.mc().setScreen(TabEditScreen.create(this, tab));
             return true;
         }
+
+        // Remove button
         if ((tab.type == TabType.FILTERED || tab.type == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
+            if (idx == selectedIdx) selectedIdx = -1;
+            else if (idx < selectedIdx) selectedIdx--;
+            swapPending = false;
             ChatRenderer.TABS.remove(tab);
             if (tab.type == TabType.FILTERED) MultichatClient.saveTabsToConfig();
             clearAndInit();
             return true;
         }
+
+        // Row click — select / swap
+        if (button == 0) {
+            if (swapPending && idx != selectedIdx && isMoveable(tab)) {
+                Collections.swap(tabs, selectedIdx, idx);
+                selectedIdx = idx;
+                swapPending = false;
+                MultichatClient.saveTabsToConfig();
+                scrollToSelected();
+            } else {
+                swapPending = false;
+                selectedIdx = (idx == selectedIdx || !isMoveable(tab)) ? -1 : idx;
+            }
+            return true;
+        }
+
         return false;
     }
 

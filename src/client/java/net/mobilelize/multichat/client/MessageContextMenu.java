@@ -132,6 +132,15 @@ public class MessageContextMenu {
                 }
             }
         }
+        if (allIdx < 0) {
+            int tick = line.addedTime();
+            for (int i = 0; i < allTab.messages.size(); i++) {
+                if (allTab.messages.get(i).addedTime() == tick && allTab.messages.get(i).endOfEntry()) {
+                    allIdx = i;
+                    break;
+                }
+            }
+        }
         if (allIdx < 0) return;
 
         List<ChatTab> panelTabs = sourcePanel.getVisibleTabs();

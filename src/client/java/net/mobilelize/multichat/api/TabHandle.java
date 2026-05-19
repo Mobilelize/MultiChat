@@ -8,6 +8,7 @@ import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TabHandle {
@@ -20,22 +21,38 @@ public class TabHandle {
         this.tab    = tab;
     }
 
-    public void sendMessage(LzText message) {
+    public void sendMessage(LzText message, ChatTab... alsoAddTo) {
         if (LzChat.chatHud() == null) return;
         float scale     = (float) LzChat.chatScale();
         int   chatWidth = LzMath.ceil((float) LzChat.chatWidth() / scale);
         var lines = LzChat.breakLines(message, chatWidth);
         int tick = LzChat.ticks();
-        for (int j = 0; j < lines.size(); j++)
-            tab.messages.add(0, LzChatLine.create(tick, lines.get(j), null, j == lines.size() - 1));
+
+        List<LzChatLine> created = new ArrayList<>(lines.size());
+        for (int j = 0; j < lines.size(); j++) {
+            LzChatLine cl = LzChatLine.create(tick, lines.get(j), null, j == lines.size() - 1);
+            tab.messages.addFirst(cl);
+            created.add(cl);
+        }
         if (tab.messageCap > 0)
-            while (tab.messages.size() > tab.messageCap) tab.messages.remove(tab.messages.size() - 1);
+            while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
         if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
-        MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.get(0));
+        MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.getFirst());
+
+        for (ChatTab target : alsoAddTo) {
+            if (target == null) continue;
+            for (int i = created.size() - 1; i >= 0; i--)
+                target.messages.addFirst(created.get(i));
+            if (target.messageCap > 0)
+                while (target.messages.size() > target.messageCap) target.messages.removeLast();
+            if (!isActiveInAnyPanel(target)) target.unreadCount++;
+            if (!target.messages.isEmpty())
+                MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(target, target.messages.getFirst());
+        }
     }
 
-    public void sendMessage(String message) {
-        sendMessage(LzText.literal(message));
+    public void sendMessage(String message, ChatTab... alsoAddTo) {
+        sendMessage(LzText.literal(message), alsoAddTo);
     }
 
     public void setAsContext()   { ChatRenderer.contextTab = tab; }

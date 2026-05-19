@@ -3,6 +3,7 @@ package net.mobilelize.multichat.api;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
@@ -92,4 +93,10 @@ public final class MultiChatApi {
 
     public static ChatPanel getLeftPanel()  { return ChatRenderer.LEFT; }
     public static ChatPanel getRightPanel() { return ChatRenderer.RIGHT; }
+
+    /** Returns the All tab, or {@code null} if not found. */
+    public static ChatTab getAllTab() {
+        return ChatRenderer.TABS.stream()
+            .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
+    }
 }
