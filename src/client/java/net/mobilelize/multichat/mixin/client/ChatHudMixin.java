@@ -8,7 +8,6 @@ import net.minecraft.text.Style;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzClient;
-import net.mobilelize.fabriclib.client.LzOptions;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
@@ -24,6 +23,7 @@ import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -131,12 +131,10 @@ public class ChatHudMixin {
     @Inject(method = "addVisibleMessage", at = @At("HEAD"))
     private void routeGlobally(ChatHudLine message, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
-        ChatHud self       = (ChatHud)(Object)this;
 
         float scale  = (float) LzChat.chatScale();
         int baseWidth = LzMath.floor((double) LzChat.chatWidth() / scale);
-        MessageIndicator indicator = message.indicator();
-        int width = baseWidth - (indicator != null && indicator.icon() != null ? indicator.icon().width + 4 + 2 : 0);
+        int width = baseWidth - getIndicatorWidth(LzMessageIndicator.wrapNullable(message.indicator()));
 
         List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(message.content()), width);
 
@@ -161,7 +159,7 @@ public class ChatHudMixin {
         int chatWidth        = LzMath.ceil((float) LzChat.chatWidth() / scale);
         int windowWidth      = LzClient.scaledWindowWidth();
         int windowHeight     = LzClient.scaledWindowHeight();
-        int lineHeight       = (int)(9.0 * (LzOptions.chatLineSpacing() + 1.0));
+        int lineHeight       = LzChat.chatLineHeight();
         int visibleLineCount = LzChat.visibleLineCount();
 
         // toChatLineY — same for all panels
@@ -204,6 +202,11 @@ public class ChatHudMixin {
         cir.setReturnValue(null);
     }
 
+    @Unique
+    private static int getIndicatorWidth(@Nullable LzMessageIndicator indicator) {
+        return indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
+    }
+
     // ------------------------------------------------------------------
     // Click / style hit-test for all panels
     // ------------------------------------------------------------------
@@ -227,9 +230,8 @@ public class ChatHudMixin {
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
 
-        double lineSpacing = LzOptions.chatLineSpacing();
-        int lineHeight     = (int)(9.0 * (lineSpacing + 1.0));
-        double chatY       = ((double) windowHeight - y - 40.0) / (scale * lineHeight);
+        int lineHeight = LzChat.chatLineHeight();
+        double chatY   = ((double) windowHeight - y - 40.0) / (scale * lineHeight);
         double rawChatX    = x / scale - 4.0;
 
         for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {

@@ -8,7 +8,6 @@ import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzClient;
-import net.mobilelize.fabriclib.client.LzOptions;
 import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.multichat.api.MessageSentCallback;
@@ -57,8 +56,7 @@ public abstract class ChatScreenMixin {
                     int chatWidth    = LzMath.ceil((float) LzChat.chatWidth() / scale);
                     int windowHeight = LzClient.scaledWindowHeight();
                     int windowWidth  = LzClient.scaledWindowWidth();
-                    double ls        = LzOptions.chatLineSpacing();
-                    int lineH        = (int)(9.0 * (ls + 1.0));
+                    int lineH        = LzChat.chatLineHeight();
                     int xOff         = selPanel.computeXOffset(windowWidth, scale, chatWidth);
                     ChatTab active   = selPanel.getActiveTab();
                     if (active != null && !active.messages.isEmpty()) {
@@ -172,8 +170,7 @@ public abstract class ChatScreenMixin {
         int windowWidth  = LzClient.scaledWindowWidth();
         int topY         = LzMath.floor((float)(windowHeight - 40) / scale);
 
-        double ls = LzOptions.chatLineSpacing();
-        int lineH = (int)(9.0 * (ls + 1.0));
+        int lineH = LzChat.chatLineHeight();
         int visibleLineCount = LzChat.visibleLineCount();
 
         if (button == 1) {

@@ -96,7 +96,7 @@ public class ChatRenderer {
         double chatOpacity   = LzOptions.chatOpacity() * 0.9 + 0.1;
         double bgOpacity     = LzOptions.textBackgroundOpacity();
         double lineSpacing   = LzOptions.chatLineSpacing();
-        int lineHeight       = (int)(9.0 * (lineSpacing + 1.0));
+        int lineHeight       = LzChat.chatLineHeight();
         int textOffset       = (int) Math.round(-8.0 * (lineSpacing + 1.0) + 4.0 * lineSpacing);
         int visibleLineCount = LzChat.visibleLineCount();
         boolean hasUnread    = accessor.getHasUnreadNewMessages();
