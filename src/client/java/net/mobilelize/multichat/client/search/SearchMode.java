@@ -1,3 +1,3 @@
 package net.mobilelize.multichat.client.search;
 
-public enum SearchMode { CONTAINS, WORD, REGEX }
+public enum SearchMode { CONTAINS, WORD, FUZZY, REGEX }

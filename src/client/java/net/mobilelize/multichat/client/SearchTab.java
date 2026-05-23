@@ -42,6 +42,15 @@ public class SearchTab extends ChatTab {
                         .matcher(text).find();
                 } catch (Exception e) { yield false; }
             }
+            case FUZZY -> {
+                String t = caseSensitive ? text  : text.toLowerCase();
+                String q = caseSensitive ? query : query.toLowerCase();
+                if (q.isEmpty()) yield true;
+                int qi = 0;
+                for (int ti = 0; ti < t.length() && qi < q.length(); ti++)
+                    if (t.charAt(ti) == q.charAt(qi)) qi++;
+                yield qi == q.length();
+            }
             case REGEX -> {
                 try {
                     yield java.util.regex.Pattern.compile(query, flags).matcher(text).find();
