@@ -16,6 +16,9 @@ import java.util.List;
 
 public class MessageRouter {
 
+    // Cache of original LzText keyed by the ALL-tab endOfEntry LzChatLine.
+    // Used by refilterSearch to call stampedLines() with the original content.
+    private static final java.util.WeakHashMap<LzChatLine, LzText> allTabTextCache = new java.util.WeakHashMap<>();
 
     // ------------------------------------------------------------------
     // Real-time routing (called per incoming message)
@@ -57,13 +60,26 @@ public class MessageRouter {
                     if (!st.matchesText(fullText)) break;
                     if (st.sourceTab != null && !st.sourceTab.filterRules.matches(fullText, indicator)) break;
                     if (!st.matchesTime(original.creationTick())) break;
-                    ChatTab allTab = ChatRenderer.TABS.stream()
-                        .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
-                    if (allTab == null) break;
-                    for (int j = lines.size() - 1; j >= 0; j--)
-                        tab.messages.addFirst(allTab.messages.get(j));
-                    if (tab.messageCap > 0)
-                        while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
+                    if (st.collapseIdentical) {
+                        refilterSearch(st);
+                    } else {
+                        ChatTab allTab = ChatRenderer.TABS.stream()
+                            .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
+                        if (allTab == null) break;
+                        if (st.showTimestamps) {
+                            List<LzOrderedText> stamped = new ArrayList<>(ChatRenderer.stampedLines(
+                                original.creationTick(), LzText.wrapMc(original.content()), original.indicator(), lines));
+                            LzMessageIndicator ind = LzMessageIndicator.wrapNullable(original.indicator());
+                            for (int j = stamped.size() - 1; j >= 0; j--)
+                                tab.messages.addFirst(LzChatLine.create(
+                                    original.creationTick(), stamped.get(j), ind, j == stamped.size() - 1));
+                        } else {
+                            for (int j = lines.size() - 1; j >= 0; j--)
+                                tab.messages.addFirst(allTab.messages.get(j));
+                        }
+                        if (tab.messageCap > 0)
+                            while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
+                    }
                     if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
                 }
             }
@@ -108,9 +124,13 @@ public class MessageRouter {
             updated.set(last, LzOrderedText.concat(updated.get(last), suffix));
 
             tab.collapseLineCount = updated.size();
-            for (int j = 0; j < updated.size(); j++)
-                tab.messages.addFirst(LzChatLine.create(
-                    tab.collapseLastTick, updated.get(j), indicator, j == updated.size() - 1));
+            for (int j = 0; j < updated.size(); j++) {
+                boolean isEnd = j == updated.size() - 1;
+                LzChatLine line = LzChatLine.create(tab.collapseLastTick, updated.get(j), indicator, isEnd);
+                tab.messages.addFirst(line);
+                if (tab.type == TabType.ALL && isEnd)
+                    allTabTextCache.put(line, LzText.wrapMc(original.content()));
+            }
             netLinesAdded = updated.size() - oldCount;
         } else {
             tab.collapseLastText    = text;
@@ -123,9 +143,13 @@ public class MessageRouter {
                 ? ChatRenderer.stampedLines(original.creationTick(), LzText.wrapMc(original.content()), original.indicator(), lines)
                 : lines;
             tab.collapseLineCount = active.size();
-            for (int j = 0; j < active.size(); j++)
-                tab.messages.addFirst(LzChatLine.create(
-                    original.creationTick(), active.get(j), indicator, j == active.size() - 1));
+            for (int j = 0; j < active.size(); j++) {
+                boolean isEnd = j == active.size() - 1;
+                LzChatLine line = LzChatLine.create(original.creationTick(), active.get(j), indicator, isEnd);
+                tab.messages.addFirst(line);
+                if (tab.type == TabType.ALL && isEnd)
+                    allTabTextCache.put(line, LzText.wrapMc(original.content()));
+            }
             netLinesAdded = active.size();
         }
 
@@ -183,6 +207,12 @@ public class MessageRouter {
         }
         if (source.isEmpty()) return;
 
+        // Pass 1: collect matched groups in source order (newest→oldest), build dedup key→count
+        record Group(int start, int end, int tick, String key) {}
+        List<Group> matched = new ArrayList<>();
+        java.util.LinkedHashMap<String, Integer> dedupCounts = tab.collapseIdentical
+            ? new java.util.LinkedHashMap<>() : null;
+
         int i = 0;
         while (i < source.size()) {
             if (!source.get(i).endOfEntry()) { i++; continue; }
@@ -193,14 +223,61 @@ public class MessageRouter {
             StringBuilder sb = new StringBuilder();
             for (int j = groupEnd; j >= groupStart; j--)
                 source.get(j).content().accept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
+            String plainText = sb.toString();
 
             int addedTick = source.get(groupStart).addedTime();
+            if (!tab.matchesText(plainText) || !tab.matchesTime(addedTick)) continue;
 
-            if (tab.matchesText(sb.toString()) && tab.matchesTime(addedTick)) {
-                for (int j = groupStart; j <= groupEnd; j++)
-                    tab.messages.add(tab.messages.size(), source.get(j));
-            }
+            matched.add(new Group(groupStart, groupEnd, addedTick, plainText));
+            if (dedupCounts != null) dedupCounts.merge(plainText, 1, Integer::sum);
         }
+
+        // Pass 2: emit groups. With collapseIdentical, skip duplicates (keep newest = lowest index in source).
+        java.util.Set<String> seen = tab.collapseIdentical ? new java.util.HashSet<>() : null;
+
+        for (Group g : matched) {
+            if (seen != null) {
+                if (seen.contains(g.key())) continue;
+                seen.add(g.key());
+            }
+
+            int count = dedupCounts != null ? dedupCounts.getOrDefault(g.key(), 1) : 1;
+            LzChatLine endLine = source.get(g.start());
+            LzMessageIndicator lzInd = endLine.indicator();
+            MessageIndicator ind = lzInd != null ? lzInd.mc() : null;
+
+            List<LzOrderedText> lines;
+            if (tab.showTimestamps) {
+                LzText originalText = allTabTextCache.get(endLine);
+                if (originalText != null) {
+                    List<LzOrderedText> fallback = new ArrayList<>();
+                    for (int j = g.end(); j >= g.start(); j--) fallback.add(source.get(j).content());
+                    lines = new ArrayList<>(ChatRenderer.stampedLines(g.tick(), originalText, ind, fallback));
+                } else {
+                    lines = new ArrayList<>();
+                    for (int j = g.end(); j >= g.start(); j--) lines.add(source.get(j).content());
+                }
+            } else {
+                lines = new ArrayList<>();
+                for (int j = g.end(); j >= g.start(); j--) lines.add(source.get(j).content());
+            }
+
+            if (count > 1) appendCounter(lines, count);
+            addLinesReversed(tab, lines, g.tick(), lzInd);
+        }
+    }
+
+    private static void appendCounter(List<LzOrderedText> lines, int count) {
+        String cStr = " " + MultichatClient.CONFIG.collapseCounterFormat
+            .replace("{count}", String.valueOf(count));
+        int last = lines.size() - 1;
+        lines.set(last, LzOrderedText.concat(lines.get(last), LzText.format(cStr).ordered()));
+    }
+
+    private static void addLinesReversed(ChatTab tab, List<LzOrderedText> lines, int tick, LzMessageIndicator ind) {
+        for (int j = lines.size() - 1; j >= 0; j--)
+            tab.messages.add(tab.messages.size(),
+                LzChatLine.create(tick, lines.get(j), ind, j == lines.size() - 1));
     }
 
     public static void refilterTab(ChatTab tab) {
@@ -221,15 +298,25 @@ public class MessageRouter {
                 .toList()
             : List.of();
 
+        boolean applySettings = MultichatClient.CONFIG.applySettingsOnRefilter;
+
+        // Local collapse tracking (compare against ALL-tab plain text, not stamped text)
+        String collapseLastText   = null;
+        LzText collapseLastLzText = null;
+        int    collapseRepeat     = 0;
+        int    collapseLineCount  = 0;
+
         int i = 0;
         while (i < all.size()) {
-            int start = i;
+            if (!all.get(i).endOfEntry()) { i++; continue; }
+            int start = i++;
             while (i < all.size() && !all.get(i).endOfEntry()) i++;
-            if (i >= all.size()) break;
-            int end = i++;
+            int end = i - 1;
 
+            // Plain text extracted from ALL tab (no timestamps) — used for filter AND collapse compare
             StringBuilder sb = new StringBuilder();
-            for (int j = start; j <= end; j++) sb.append(all.get(j).content().mc().toString());
+            for (int j = end; j >= start; j--)
+                all.get(j).content().accept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
             String fullText = sb.toString();
             MessageIndicator indicator = all.get(start).indicator() != null
                 ? all.get(start).indicator().mc() : null;
@@ -243,9 +330,58 @@ public class MessageRouter {
                 include = tab.filterRules.matches(fullText, indicator);
             }
 
-            if (include) {
+            if (!include) continue;
+
+            if (!applySettings) {
+                // Legacy path: direct copy, preserve LzChatLine references
                 for (int j = start; j <= end; j++) tab.messages.add(tab.messages.size(), all.get(j));
+                continue;
             }
+
+            int    addedTick  = all.get(start).addedTime();
+            LzText cachedText = allTabTextCache.get(all.get(start));
+
+            // Collapse check: compare fullText (pre-stamp) so timestamps don't affect matching
+            boolean doCollapse = tab.collapseRepeating
+                && collapseLastText != null
+                && fullText.equals(collapseLastText)
+                && (!tab.collapseMatchFormatting || (cachedText != null && collapseLastLzText != null
+                    && cachedText.mc().equals(collapseLastLzText.mc())));
+
+            if (doCollapse) {
+                collapseRepeat++;
+                for (int k = 0; k < collapseLineCount; k++) tab.messages.removeLast();
+            } else {
+                collapseLastText   = fullText;
+                collapseLastLzText = cachedText;
+                collapseRepeat = 1;
+            }
+
+            // Build lines in visual order (top→bottom)
+            List<LzOrderedText> lines;
+            if (tab.showTimestamps && cachedText != null) {
+                List<LzOrderedText> fallback = new ArrayList<>();
+                for (int j = end; j >= start; j--) fallback.add(all.get(j).content());
+                lines = new ArrayList<>(ChatRenderer.stampedLines(addedTick, cachedText, indicator, fallback));
+            } else {
+                lines = new ArrayList<>();
+                for (int j = end; j >= start; j--) lines.add(all.get(j).content());
+            }
+
+            // Append collapse counter to last visual line (bottom)
+            if (collapseRepeat > 1) {
+                String cStr = " " + MultichatClient.CONFIG.collapseCounterFormat
+                    .replace("{count}", String.valueOf(collapseRepeat));
+                int last = lines.size() - 1;
+                lines.set(last, LzOrderedText.concat(lines.get(last), LzText.format(cStr).ordered()));
+            }
+
+            // Store bottom visual line first (endOfEntry=true), then upper lines
+            LzMessageIndicator lzInd = all.get(start).indicator();
+            for (int j = lines.size() - 1; j >= 0; j--)
+                tab.messages.add(tab.messages.size(),
+                    LzChatLine.create(addedTick, lines.get(j), lzInd, j == lines.size() - 1));
+            collapseLineCount = lines.size();
         }
 
         if (tab.messageCap > 0) {

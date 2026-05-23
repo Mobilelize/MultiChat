@@ -26,6 +26,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean rightPanelTabsAtTop  = false;
 
     // General
+    public boolean applySettingsOnRefilter = false;
     public boolean modDisabled             = false;
     public boolean showIndicators          = true;
     public boolean selectionEnabled        = true;
@@ -44,6 +45,8 @@ public class MultiChatConfig extends LzConfig {
     public boolean      searchDefaultCase         = false;
     public boolean      searchDefaultLive         = true;
     public TabVisibility searchDefaultVisibility  = TabVisibility.BOTH;
+    public boolean      searchDefaultTimestamps        = true;
+    public boolean      searchDefaultCollapseIdentical = false;
 
     public List<TabConfig>    tabs    = new ArrayList<>();
     public List<ApiTabConfig> apiTabs = new ArrayList<>();

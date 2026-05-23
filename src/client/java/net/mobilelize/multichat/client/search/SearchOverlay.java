@@ -24,7 +24,7 @@ import java.util.List;
 public class SearchOverlay extends LzScreen {
 
     private static final int W          = 314;
-    private static final int H_BASE     = 178;
+    private static final int H_BASE     = 204;
     private static final int HEADER_STD = 22;
     private static final int HEADER_SCP = 32;
 
@@ -36,10 +36,12 @@ public class SearchOverlay extends LzScreen {
     private TextFieldWidget fromField;
     private TextFieldWidget toField;
 
-    private SearchMode   searchMode;
-    private boolean      caseSensitive;
+    private SearchMode    searchMode;
+    private boolean       caseSensitive;
     private TabVisibility visibility;
-    private boolean      liveUpdate;
+    private boolean       liveUpdate;
+    private boolean       showTimestamps;
+    private boolean       collapseIdentical;
 
     public SearchOverlay(Screen parent, ChatTab sourceTab) {
         this(parent, sourceTab, "");
@@ -50,10 +52,12 @@ public class SearchOverlay extends LzScreen {
         this.parent        = parent;
         this.sourceTab     = sourceTab;
         this.initialQuery  = initialQuery;
-        this.searchMode    = MultichatClient.CONFIG.searchDefaultMode;
-        this.caseSensitive = MultichatClient.CONFIG.searchDefaultCase;
-        this.liveUpdate    = MultichatClient.CONFIG.searchDefaultLive;
-        this.visibility    = MultichatClient.CONFIG.searchDefaultVisibility;
+        this.searchMode     = MultichatClient.CONFIG.searchDefaultMode;
+        this.caseSensitive  = MultichatClient.CONFIG.searchDefaultCase;
+        this.liveUpdate     = MultichatClient.CONFIG.searchDefaultLive;
+        this.visibility     = MultichatClient.CONFIG.searchDefaultVisibility;
+        this.showTimestamps       = MultichatClient.CONFIG.searchDefaultTimestamps;
+        this.collapseIdentical    = MultichatClient.CONFIG.searchDefaultCollapseIdentical;
     }
 
     private int header() { return sourceTab != null ? HEADER_SCP : HEADER_STD; }
@@ -102,11 +106,21 @@ public class SearchOverlay extends LzScreen {
                 b -> { liveUpdate = !liveUpdate; b.setMessage(LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")).mc()); })
             .dimensions(fx + btnW + 4, top + 84, btnW, 20).build());
 
+        addDrawableChild(ButtonWidget.builder(
+                LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF")).mc(),
+                b -> { showTimestamps = !showTimestamps; b.setMessage(LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF")).mc()); })
+            .dimensions(fx, top + 110, btnW, 20).build());
+
+        addDrawableChild(ButtonWidget.builder(
+                LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF")).mc(),
+                b -> { collapseIdentical = !collapseIdentical; b.setMessage(LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF")).mc()); })
+            .dimensions(fx + btnW + 4, top + 110, btnW, 20).build());
+
         addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> close())
-            .dimensions(cx - 86, top + 112, 80, 20).build());
+            .dimensions(cx - 86, top + 138, 80, 20).build());
 
         addDrawableChild(ButtonWidget.builder(LzText.literal("Create Search").mc(), b -> createSearch())
-            .dimensions(cx + 6, top + 112, 100, 20).build());
+            .dimensions(cx + 6, top + 138, 100, 20).build());
     }
 
     private SearchMode cycleMode() {
@@ -138,6 +152,8 @@ public class SearchOverlay extends LzScreen {
 
         SearchTab tab = new SearchTab(name, query, searchMode, caseSensitive,
             fromTicks, toTicks, sourceTab, liveUpdate, visibility);
+        tab.showTimestamps    = showTimestamps;
+        tab.collapseIdentical = collapseIdentical;
         ChatRenderer.TABS.add(tab);
         MessageRouter.refilterSearch(tab);
 

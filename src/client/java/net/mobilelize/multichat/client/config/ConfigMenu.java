@@ -23,6 +23,14 @@ public class ConfigMenu {
         ConfigCategory general = builder.getOrCreateCategory(LzText.literal("General").mc());
 
         general.addEntry(eb.startBooleanToggle(
+                LzText.literal("Apply Settings on Refilter").mc(),
+                MultichatClient.CONFIG.applySettingsOnRefilter)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("When ON, refiltering a tab also applies its timestamps and collapse settings to rebuilt messages.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.applySettingsOnRefilter = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Indicators").mc(),
                 MultichatClient.CONFIG.showIndicators)
                 .setDefaultValue(true)
@@ -221,6 +229,22 @@ public class ConfigMenu {
                 .setEnumNameProvider(v -> LzText.literal(v.name()).mc())
                 .setTooltip(LzText.literal("Which panel the search tab appears in by default.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultVisibility = v)
+                .build());
+
+        search.addEntry(eb.startBooleanToggle(
+                LzText.literal("Default: Timestamps").mc(),
+                MultichatClient.CONFIG.searchDefaultTimestamps)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Show timestamps on search results by default.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultTimestamps = v)
+                .build());
+
+        search.addEntry(eb.startBooleanToggle(
+                LzText.literal("Default: Collapse Identical").mc(),
+                MultichatClient.CONFIG.searchDefaultCollapseIdentical)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Collapse duplicate messages in search results by default. Only the newest instance is shown with a count.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultCollapseIdentical = v)
                 .build());
 
         return builder.build();

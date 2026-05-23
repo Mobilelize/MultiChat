@@ -13,6 +13,7 @@ public class SearchTab extends ChatTab {
     public final int        timeToTicks;   // min age in ticks (0 = no min)
     public final ChatTab    sourceTab;     // null = search all messages
     public       boolean    liveUpdate;
+    public       boolean    collapseIdentical;
 
     public SearchTab(String name, String query, SearchMode searchMode, boolean caseSensitive,
                      int timeFromTicks, int timeToTicks, ChatTab sourceTab, boolean liveUpdate,
