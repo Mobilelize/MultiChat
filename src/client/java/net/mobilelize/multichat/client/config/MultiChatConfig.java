@@ -15,7 +15,9 @@ public class MultiChatConfig extends LzConfig {
     @Override
     public String directory() { return "config/multichat"; }
 
-    public String contextTabName = "";
+    public String contextTabName   = "";
+    public int    leftActiveTab    = 0;
+    public int    rightActiveTab   = 0;
     public boolean leftPanelShowBadges = true;
     public boolean leftPanelShowTabs   = true;
     public boolean rightPanelEnabled   = true;
@@ -26,7 +28,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean rightPanelTabsAtTop  = false;
 
     // General
-    public boolean applySettingsOnRefilter = false;
+    public boolean applySettingsOnRefilter = true;
     public boolean modDisabled             = false;
     public boolean showIndicators          = true;
     public boolean selectionEnabled        = true;

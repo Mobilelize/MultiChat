@@ -1,6 +1,7 @@
 package net.mobilelize.multichat.client;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
@@ -32,6 +33,7 @@ public class MultichatClient implements ClientModInitializer {
 
         restoreTabsFromConfig();
         MultiChatCommand.register();
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveTabsToConfig());
     }
 
     // ------------------------------------------------------------------
@@ -79,6 +81,10 @@ public class MultichatClient implements ClientModInitializer {
         CONFIG.apiTabs = apiOut;
 
         CONFIG.contextTabName = ChatRenderer.contextTab != null ? ChatRenderer.contextTab.name : "";
+
+        CONFIG.leftActiveTab  = ChatRenderer.LEFT.activeTab;
+        CONFIG.rightActiveTab = ChatRenderer.RIGHT.activeTab;
+
         CONFIG.save();
     }
 
@@ -112,6 +118,11 @@ public class MultichatClient implements ClientModInitializer {
                 .filter(t -> t.name.equals(CONFIG.contextTabName))
                 .findFirst().orElse(null);
         }
+
+        int leftSize  = ChatRenderer.LEFT.getVisibleTabs().size();
+        int rightSize = ChatRenderer.RIGHT.getVisibleTabs().size();
+        ChatRenderer.LEFT.activeTab  = leftSize  > 0 ? Math.min(CONFIG.leftActiveTab,  leftSize  - 1) : 0;
+        ChatRenderer.RIGHT.activeTab = rightSize > 0 ? Math.min(CONFIG.rightActiveTab, rightSize - 1) : 0;
     }
 
     private static List<RuleConfig> serializeRules(List<FilterRule> rules) {

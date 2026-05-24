@@ -25,7 +25,7 @@ public class ConfigMenu {
         general.addEntry(eb.startBooleanToggle(
                 LzText.literal("Apply Settings on Refilter").mc(),
                 MultichatClient.CONFIG.applySettingsOnRefilter)
-                .setDefaultValue(false)
+                .setDefaultValue(true)
                 .setTooltip(LzText.literal("When ON, refiltering a tab also applies its timestamps and collapse settings to rebuilt messages.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.applySettingsOnRefilter = v)
                 .build());
