@@ -30,13 +30,22 @@ public class MessageRouter {
         String fullText = original.content().getString();
         MessageIndicator indicator = original.indicator();
 
-        boolean matchedFiltered = false;
-
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
         ChatTab rightActive = ChatRenderer.RIGHT.getActiveTab();
         boolean leftDiff = leftActive != null && leftActive.type == TabType.FILTERED && leftActive.differenceMode;
         boolean rightDiff = rightActive != null && rightActive.type == TabType.FILTERED && rightActive.differenceMode;
-        boolean activeDifference = leftDiff ^ rightDiff;
+        boolean activeDifference = false;
+        ChatTab diffActiveTab  = null;
+        ChatTab nonDiffActive  = null;
+        if (leftDiff ^ rightDiff) {
+            ChatTab candidate = leftDiff ? rightActive : leftActive;
+            if (candidate != null && !candidate.filterRules.whitelist.isEmpty()) {
+                activeDifference = true;
+                diffActiveTab    = leftDiff ? leftActive : rightActive;
+                nonDiffActive    = candidate;
+            }
+        }
+        boolean nonDiffReceived = false;
 
         for (ChatTab tab : ChatRenderer.TABS) {
             if (tab.visibility == TabVisibility.NONE) continue;
@@ -44,10 +53,10 @@ public class MessageRouter {
                 case ALL -> addLines(tab, original, lines);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case FILTERED -> {
-                    if (activeDifference && tab.differenceMode && (tab == leftActive || tab == rightActive)) break;
+                    if (activeDifference && tab == diffActiveTab) break;
                     if (tab.filterRules.matches(fullText, indicator)) {
                         addLines(tab, original, lines);
-                        matchedFiltered = true;
+                        if (activeDifference && tab == nonDiffActive) nonDiffReceived = true;
                     }
                 }
                 case API -> {
@@ -85,14 +94,8 @@ public class MessageRouter {
             }
         }
 
-        if (!matchedFiltered) {
-            if (!activeDifference) return;
-            if (leftActive != null && leftActive.filterRules.matches(fullText, indicator)) {
-                addLines(leftActive, original, lines);
-            }
-            if (rightActive != null && rightActive.filterRules.matches(fullText, indicator)) {
-                addLines(rightActive, original, lines);
-            }
+        if (activeDifference && !nonDiffReceived) {
+            addLines(diffActiveTab, original, lines);
         }
     }
 
@@ -128,8 +131,6 @@ public class MessageRouter {
                 boolean isEnd = j == updated.size() - 1;
                 LzChatLine line = LzChatLine.create(tab.collapseLastTick, updated.get(j), indicator, isEnd);
                 tab.messages.addFirst(line);
-                if (tab.type == TabType.ALL && isEnd)
-                    allTabTextCache.put(line, LzText.wrapMc(original.content()));
             }
             netLinesAdded = updated.size() - oldCount;
         } else {
