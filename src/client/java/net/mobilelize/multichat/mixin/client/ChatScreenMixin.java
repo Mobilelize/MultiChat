@@ -125,11 +125,27 @@ public abstract class ChatScreenMixin {
         if (MultichatClient.CONFIG.arrowKeySwitchTabs
                 && (keyCode == Keys.RIGHT || keyCode == Keys.LEFT)
                 && chatField.getText().isEmpty()) {
-            boolean goRight = keyCode == Keys.RIGHT;
-            boolean ctrlHeld = (modifiers & 2) != 0;
-            boolean wantRight = MultichatClient.CONFIG.arrowKeyCtrlForRight != ctrlHeld;
-            ChatPanel panel = wantRight ? ChatRenderer.RIGHT : ChatRenderer.LEFT;
-            if (panel.enabled) {
+            boolean goRight   = keyCode == Keys.RIGHT;
+            boolean ctrlHeld  = (modifiers & 2) != 0;
+
+            if (ctrlHeld) {
+                // Ctrl+Arrow → cycle focused panel
+                List<ChatPanel> candidates = ChatRenderer.PANELS.stream()
+                    .filter(p -> p.enabled && !p.getVisibleTabs().isEmpty())
+                    .toList();
+                if (candidates.size() > 1) {
+                    int idx = candidates.indexOf(ChatRenderer.focusedPanel);
+                    if (idx < 0) idx = 0;
+                    ChatRenderer.focusedPanel = goRight
+                        ? candidates.get((idx + 1) % candidates.size())
+                        : candidates.get((idx - 1 + candidates.size()) % candidates.size());
+                    if (MultichatClient.CONFIG.flashOnPanelFocus)
+                        ChatRenderer.focusedPanel.tabFlashTick = ChatRenderer.currentTick;
+                }
+            } else {
+                // Arrow → switch tab on focused panel
+                ChatPanel panel = ChatRenderer.focusedPanel;
+                if (!panel.enabled || panel.getVisibleTabs().isEmpty()) panel = ChatRenderer.LEFT;
                 List<ChatTab> visible = panel.getVisibleTabs();
                 if (visible.size() > 1) {
                     panel.activeTab = goRight
@@ -137,6 +153,8 @@ public abstract class ChatScreenMixin {
                         : (panel.activeTab - 1 + visible.size()) % visible.size();
                     ChatTab nowActive = panel.getActiveTab();
                     nowActive.unreadCount = 0;
+                    if (MultichatClient.CONFIG.flashOnTabSwitch)
+                        panel.tabFlashTick = ChatRenderer.currentTick;
                     panel.scrollActiveTabIntoView();
                     TabChangedCallback.EVENT.invoker().onTabChanged(panel, nowActive);
                 }

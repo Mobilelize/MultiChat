@@ -50,7 +50,8 @@ public class ChatRenderer {
 
     public static ChatPanel primaryPanel() { return PANELS.getFirst(); }
 
-    public static ChatTab contextTab = null;
+    public static ChatTab   contextTab    = null;
+    public static ChatPanel focusedPanel  = LEFT;
 
     public static int             currentTick        = 0;
     public static Set<LzChatLine> highlightLines     = new HashSet<>();
@@ -68,8 +69,9 @@ public class ChatRenderer {
 
     public static int lastMouseX = 0;
 
-    public static final int TAB_HEIGHT = 10;
-    public static final int ARROW_W    = 10;
+    public static final int TAB_HEIGHT    = 10;
+    public static final int ARROW_W      = 10;
+    private static final int FLASH_TICKS = 12;
 
     public static int getTabBarY(ChatPanel panel, int topY, int visibleLineCount, int lineHeight) {
         return panel.tabsAtTop ? topY - visibleLineCount * lineHeight - TAB_HEIGHT : topY;
@@ -286,6 +288,14 @@ public class ChatRenderer {
                 int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
                 LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x0055CC55);
+            }
+
+            int flashAge = currentTick - panel.tabFlashTick;
+            if (flashAge >= 0 && flashAge < FLASH_TICKS) {
+                float t = (float) flashAge / FLASH_TICKS;
+                int flashAlpha = (int)(80 * (1f - t) * (1f - t));
+                if (flashAlpha > 0)
+                    LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (flashAlpha << 24) | 0x00CCCCCC);
             }
 
             if (MultichatClient.CONFIG.selectionEnabled) {

@@ -103,14 +103,16 @@ public class PanelListScreen extends LzScreen {
             LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2, rowBdr);
 
             // Status tags
-            String tag = "[" + panel.anchor.name().toLowerCase() + "] "
-                + (panel.enabled ? "§a[on]§r" : "§c[off]§r");
-            if (panel.primary) tag = "[primary] " + tag;
-
+            String anchorTag = (panel.primary ? "[primary] " : "") + "[" + panel.anchor.name().toLowerCase() + "] ";
             String displayName = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
             String nameStr = displayName + " ";
-            LzDraw.drawText(ctx, nameStr, lx + 6, textY, 0xFFFFFF);
-            LzDraw.drawText(ctx, tag, lx + 6 + LzDraw.textWidth(nameStr), textY, 0xAAAAAA);
+            int nameX = lx + 6;
+            LzDraw.drawText(ctx, nameStr, nameX, textY, 0xFFFFFF);
+            int afterName = nameX + LzDraw.textWidth(nameStr);
+            LzDraw.drawText(ctx, anchorTag, afterName, textY, 0xAAAAAA);
+            int afterTag = afterName + LzDraw.textWidth(anchorTag);
+            LzDraw.drawText(ctx, panel.enabled ? "[on]" : "[off]", afterTag, textY,
+                panel.enabled ? 0xFF55FF55 : 0xFFFF5555);
 
             // Edit button — always
             boolean hoverEdit = mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;

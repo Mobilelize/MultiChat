@@ -35,8 +35,6 @@ public class PanelLayoutScreen extends LzScreen {
     private int        resizeAnchorX1 = 0;
     private int        resizeAnchorY1 = 0;
 
-    private boolean confirmPending = false;
-
     // anchor, customX, customY, customWidth, customHeightLines
     private final Map<ChatPanel, Object[]> originals = new HashMap<>();
 
@@ -47,9 +45,10 @@ public class PanelLayoutScreen extends LzScreen {
 
     @Override
     protected void init() {
-        originals.clear();
-        for (ChatPanel p : ChatRenderer.PANELS)
-            originals.put(p, new Object[] { p.anchor, p.customX, p.customY, p.customWidth, p.customHeightLines });
+        if (originals.isEmpty()) {
+            for (ChatPanel p : ChatRenderer.PANELS)
+                originals.put(p, new Object[] { p.anchor, p.customX, p.customY, p.customWidth, p.customHeightLines });
+        }
 
         addDrawableChild(ButtonWidget.builder(LzText.literal("Save").mc(), b -> save())
             .dimensions(width / 2 - 53, height - 26, 50, 18).build());
@@ -179,58 +178,10 @@ public class PanelLayoutScreen extends LzScreen {
         LzDraw.drawCenteredText(ctx,
             LzText.literal("Drag panels  |  Drag edges to resize  |  Esc / Cancel = revert"), width / 2, 6, 0xFFAAAAAA);
 
-        if (confirmPending) renderConfirmModal(ctx, mouseX, mouseY);
-    }
-
-    private void renderConfirmModal(DrawContext ctx, int mouseX, int mouseY) {
-        int mw = 190, mh = 60;
-        int mx1 = width  / 2 - mw / 2;
-        int my1 = height / 2 - mh / 2;
-        int mx2 = mx1 + mw;
-        int my2 = my1 + mh;
-        int bY1 = my1 + 28, bY2 = my1 + 44;
-
-        boolean hovSave    = mouseX >= mx1 + 8   && mouseX < mx1 + 62  && mouseY >= bY1 && mouseY < bY2;
-        boolean hovDiscard = mouseX >= mx1 + 68  && mouseX < mx1 + 126 && mouseY >= bY1 && mouseY < bY2;
-        boolean hovCancel  = mouseX >= mx1 + 132 && mouseX < mx1 + 182 && mouseY >= bY1 && mouseY < bY2;
-
-        ctx.getMatrices().push();
-        ctx.getMatrices().translate(0, 0, 400);
-
-        LzDraw.fill(ctx, mx1, my1, mx2, my2, 0xEE1A1A1A);
-        LzDraw.drawBorder(ctx, mx1, my1, mx2, my2, 0xFFAAAAAA);
-        LzDraw.drawCenteredText(ctx, LzText.literal("Save changes?"), width / 2, my1 + 10, 0xFFFFFFFF);
-
-        LzDraw.fill(ctx, mx1 + 8,   bY1, mx1 + 62,  bY2, hovSave    ? 0xCC449944 : 0xAA2D6B2D);
-        LzDraw.fill(ctx, mx1 + 68,  bY1, mx1 + 126, bY2, hovDiscard ? 0xCCAA4444 : 0xAA6B2D2D);
-        LzDraw.fill(ctx, mx1 + 132, bY1, mx1 + 182, bY2, hovCancel  ? 0xCC777777 : 0xAA444444);
-
-        LzDraw.drawCenteredText(ctx, LzText.literal("Save"),    mx1 + 35,  bY1 + 5, 0xFFFFFFFF);
-        LzDraw.drawCenteredText(ctx, LzText.literal("Discard"), mx1 + 97,  bY1 + 5, 0xFFFFFFFF);
-        LzDraw.drawCenteredText(ctx, LzText.literal("Cancel"),  mx1 + 157, bY1 + 5, 0xFFCCCCCC);
-
-        ctx.getMatrices().pop();
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Modal intercepts everything while open
-        if (confirmPending) {
-            if (button == 0) {
-                int mw = 190;
-                int mx1 = width  / 2 - mw / 2;
-                int my1 = height / 2 - 30;
-                int bY1 = my1 + 28, bY2 = my1 + 44;
-
-                if (mouseY >= bY1 && mouseY < bY2) {
-                    if (mouseX >= mx1 + 8   && mouseX < mx1 + 62)  { confirmPending = false; save();            return true; }
-                    if (mouseX >= mx1 + 68  && mouseX < mx1 + 126) { confirmPending = false; restoreAndClose(); return true; }
-                    if (mouseX >= mx1 + 132 && mouseX < mx1 + 182) { confirmPending = false;                    return true; }
-                }
-            }
-            return true;
-        }
-
         if (super.mouseClicked(mouseX, mouseY, button)) return true;
         if (button != 0) return false;
 
@@ -318,16 +269,12 @@ public class PanelLayoutScreen extends LzScreen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) {
-            if (confirmPending) { confirmPending = false; return true; }
-            attemptClose();
-            return true;
-        }
+        if (keyCode == Keys.ESCAPE) { attemptClose(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void attemptClose() {
-        if (isDirty()) confirmPending = true;
+        if (isDirty()) LzClient.mc().setScreen(new ConfirmScreen(this, "Save changes?", this::save, this::restoreAndClose));
         else restoreAndClose();
     }
 
@@ -336,10 +283,7 @@ public class PanelLayoutScreen extends LzScreen {
         close();
     }
 
-    private void cancel() {
-        if (isDirty()) confirmPending = true;
-        else restoreAndClose();
-    }
+    private void cancel() { attemptClose(); }
 
     private void restoreAndClose() {
         for (Map.Entry<ChatPanel, Object[]> e : originals.entrySet()) {

@@ -48,9 +48,10 @@ public class PanelTabsScreen extends LzScreen {
 
     @Override
     protected void init() {
-        originals.clear();
-        for (ChatTab t : ChatRenderer.TABS)
-            originals.put(t, new LinkedHashSet<>(t.visibleOnPanels));
+        if (originals.isEmpty()) {
+            for (ChatTab t : ChatRenderer.TABS)
+                originals.put(t, new LinkedHashSet<>(t.visibleOnPanels));
+        }
 
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
@@ -66,18 +67,9 @@ public class PanelTabsScreen extends LzScreen {
             for (ChatTab t : ChatRenderer.TABS) t.visibleOnPanels.remove(Integer.valueOf(panel.id));
         }).dimensions(bx + 60, LIST_TOP - 22, 72, 18).build());
 
-        // Vanilla Only: only applies when editing the primary panel; on others it clears to nothing
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Vanilla Only").mc(), b -> {
-            for (ChatTab t : ChatRenderer.TABS) {
-                boolean show = t.type == TabType.VANILLA && panel.primary;
-                if (show) t.visibleOnPanels.add(panel.id);
-                else      t.visibleOnPanels.remove(Integer.valueOf(panel.id));
-            }
-        }).dimensions(bx + 136, LIST_TOP - 22, 82, 18).build());
-
         addDrawableChild(ButtonWidget.builder(LzText.literal("Save").mc(),   b -> save())
             .dimensions(width / 2 - 53, height - 26, 50, 18).build());
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> cancel())
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> attemptClose())
             .dimensions(width / 2 + 3,  height - 26, 50, 18).build());
     }
 
@@ -229,8 +221,20 @@ public class PanelTabsScreen extends LzScreen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) { cancel(); return true; }
+        if (keyCode == Keys.ESCAPE) { attemptClose(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean isDirty() {
+        for (Map.Entry<ChatTab, Set<Integer>> e : originals.entrySet()) {
+            if (!e.getKey().visibleOnPanels.equals(e.getValue())) return true;
+        }
+        return false;
+    }
+
+    private void attemptClose() {
+        if (isDirty()) LzClient.mc().setScreen(new ConfirmScreen(this, "Save changes?", this::save, this::cancel));
+        else cancel();
     }
 
     private void save() {

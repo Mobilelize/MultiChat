@@ -87,7 +87,10 @@ public class ChatHudMixin {
         boolean leftIsVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
         if (!leftIsVanilla) ci.cancel();
 
-        int windowWidth = LzClient.scaledWindowWidth();
+        int windowWidth  = LzClient.scaledWindowWidth();
+        int windowHeight = LzClient.scaledWindowHeight();
+        double sf        = LzClient.mc().getWindow().getScaleFactor();
+        double mouseY    = LzClient.mc().mouse.getY() / sf;
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled) continue;
@@ -95,14 +98,20 @@ public class ChatHudMixin {
             if (active == null || active.type == TabType.VANILLA) continue;
             if (active.messages.isEmpty()) continue;
 
-            float scale   = panel.resolveScale();
-            int chatWidth = panel.resolveWidth();
+            float scale      = panel.resolveScale();
+            int   chatWidth  = panel.resolveWidth();
+            int   lines      = panel.resolveLines();
+            int   lineHeight = panel.resolveLineHeight();
+            int   topY       = panel.resolveTopY(windowHeight);
+            int   xOffset    = panel.computeXOffset(windowWidth);
 
             double rawChatX   = ChatRenderer.lastMouseX / (double) scale - 4.0;
-            int xOffset       = panel.computeXOffset(windowWidth);
             double localChatX = rawChatX - xOffset;
-
             if (localChatX < -4.0 || localChatX > chatWidth + 8) continue;
+
+            double panelTop    = (topY - lines * lineHeight) * (double) scale;
+            double panelBottom = (topY + ChatRenderer.TAB_HEIGHT) * (double) scale;
+            if (mouseY < panelTop || mouseY > panelBottom) continue;
 
             ci.cancel();
             int max = Math.max(0, active.messages.size() - panel.resolveLines());
@@ -168,7 +177,7 @@ public class ChatHudMixin {
             int topY         = panel.resolveTopY(windowHeight);
             double chatLineY = (topY * (double) scale - mouseY) / (scale * lineHeight);
             double chatLineX = mouseX / scale - 4.0 - xOffset;
-            if (chatLineX < -4.0) continue;
+            if (chatLineX < -4.0 || chatLineX > chatWidth) continue;
 
             int maxLines = Math.min(visibleLineCount, active.messages.size());
             if (chatLineY < 0.0 || chatLineY >= maxLines) continue;

@@ -26,6 +26,7 @@ public class ChatPanel {
     public boolean tabsAtTop          = false;
     public int     tabScrollOffset    = 0;
     public int     tabLastRendered    = -1;
+    public int     tabFlashTick       = -1000;
 
     // Custom position — only used when anchor == CUSTOM and !primary (screen pixels)
     public int customX = 0;

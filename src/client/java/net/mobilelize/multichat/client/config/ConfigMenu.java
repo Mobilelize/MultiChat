@@ -80,16 +80,32 @@ public class ConfigMenu {
                 LzText.literal("Arrow Keys Switch Tabs").mc(),
                 MultichatClient.CONFIG.arrowKeySwitchTabs)
                 .setDefaultValue(true)
-                .setTooltip(LzText.literal("Arrow keys switch tabs when chat input is empty. Ctrl targets the other panel.").mc())
+                .setTooltip(LzText.literal("Arrow keys switch tabs on the focused panel. Ctrl+Arrow cycles which panel is focused.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeySwitchTabs = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Swap Arrow Key Panels").mc(),
-                MultichatClient.CONFIG.arrowKeyCtrlForRight)
+                LzText.literal("Flash on Tab Switch").mc(),
+                MultichatClient.CONFIG.flashOnTabSwitch)
                 .setDefaultValue(false)
-                .setTooltip(LzText.literal("When enabled, arrow keys switch the right panel and Ctrl+arrow switches the left panel.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeyCtrlForRight = v)
+                .setTooltip(LzText.literal("Flash message backgrounds when switching tabs with arrow keys.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.flashOnTabSwitch = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
+                LzText.literal("Flash on Panel Focus").mc(),
+                MultichatClient.CONFIG.flashOnPanelFocus)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Flash message backgrounds when switching focused panel with Ctrl+Arrow.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.flashOnPanelFocus = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
+                LzText.literal("Early Message Capture").mc(),
+                MultichatClient.CONFIG.earlyMessageCapture)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Use Fabric API to capture messages before other mods modify them. Fixes filter rules when mods like Lunar Client prepend timestamps.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.earlyMessageCapture = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
@@ -152,21 +168,11 @@ public class ConfigMenu {
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
-                LzText.literal("Default: Left Panel").mc(),
-                MultichatClient.CONFIG.searchDefaultPanels.contains(0))
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Show new search tabs on the left panel by default.").mc())
-                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add(0);
-                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove(Integer.valueOf(0)); })
-                .build());
-
-        search.addEntry(eb.startBooleanToggle(
-                LzText.literal("Default: Right Panel").mc(),
-                MultichatClient.CONFIG.searchDefaultPanels.contains(1))
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Show new search tabs on the right panel by default.").mc())
-                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add(1);
-                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove(Integer.valueOf(1)); })
+                LzText.literal("Default: Show Badge").mc(),
+                MultichatClient.CONFIG.searchDefaultBadge)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Show unread count badge on search tabs by default. Off keeps the tab bar cleaner for temporary searches.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultBadge = v)
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
@@ -184,6 +190,65 @@ public class ConfigMenu {
                 .setTooltip(LzText.literal("Collapse duplicate messages in search results by default. Only the newest instance is shown with a count.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultCollapseIdentical = v)
                 .build());
+
+        // ── Help ──────────────────────────────────────────────────────────
+        ConfigCategory help = builder.getOrCreateCategory(LzText.literal("Help").mc());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lTabs&r\n" +
+            "&7Tabs organize chat into views. Each panel shows a list of tabs at the bottom (or top).\n" +
+            "  &f[All]&r&7  Receives every message.\n" +
+            "  &f[Vanilla]&r&7  The default Minecraft chat. Only visible on the main panel.\n" +
+            "  &f[Filtered]&r&7  User-defined tab. Shows messages matching its whitelist/blacklist rules.\n" +
+            "  &f[Search]&r&7  Temporary tab created by a search query.\n" +
+            "  &f[API]&r&7  Controlled by another mod via the MultiChat API."
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lPanels&r\n" +
+            "&7Panels are independent chat windows. The &fmain panel&r&7 is always on the left.\n" +
+            "Additional panels can be positioned anywhere on screen.\n" +
+            "Open &fMod Menu → MultiChat → Panels&r&7 to add, configure, and arrange panels.\n" +
+            "Use &fPanel Layout&r&7 to drag and resize panels visually with snap-to-grid.\n" +
+            "&fArrow keys&r&7 switch tabs on the focused panel. &fCtrl+Arrow&r&7 cycles the focused panel."
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lFilters (Whitelist / Blacklist)&r\n" +
+            "&7Filtered tabs use rules to decide which messages they receive.\n" +
+            "  &fWhitelist&r&7 — message must match at least one rule (or all, if mode is ALL).\n" +
+            "  &fBlacklist&r&7 — matching messages are excluded even if whitelisted.\n" +
+            "Rule types: &fCONTAINS, STARTS_WITH, ENDS_WITH, REGEX, EXACT.&r\n" +
+            "&7Indicator filter: &fANY, CHAT, SYSTEM&r&7, etc. — filters by message source type."
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lContext Tab&r\n" +
+            "&7Right-click a tab and select &fSet as Context&r&7 to make it active.\n" +
+            "While a context tab is set, messages you send are prefixed automatically.\n" +
+            "  &fContext Prefix&r&7 — text prepended to your message.\n" +
+            "  &fCommand Mode ON&r&7 — sent as a command (e.g. prefix &f/tell Steve&r&7 + your message).\n" +
+            "  &fCommand Mode OFF&r&7 — sent as plain chat text.\n" +
+            "The active context is shown above the chat input bar."
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lText Selection & Search&r\n" +
+            "&7Click and drag in chat to select text. &fCtrl+C&r&7 copies the selection.\n" +
+            "&fCtrl+F&r&7 (or your configured key) opens Search. With text selected, it pre-fills the query.\n" +
+            "Right-click any message for: &fCopy, Search for this, Jump to All, Delete.&r\n" +
+            "&7Search supports &fCONTAINS, REGEX, FUZZY&r&7 modes and live updates as new messages arrive."
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lFormat Codes&r\n" +
+            "&7Used in Timestamp Format and Collapse Counter Format fields.\n" +
+            "  &f&#RRGGBB&r&7 — hex color   " +
+            "&aa&r&7 — green   &bb&r&7 — aqua   &cc&r&7 — red   &dd&r&7 — purple\n" +
+            "  &ee&r&7 — yellow   &ff&r&7 — white   &77 — gray   &88 — dark gray\n" +
+            "  &l&fBold&r&7   &o&fItalic&r&7   &n&fUnderline&r&7   &m&fStrike&r&7   " +
+            "&fr&7 — reset   k — obfuscate"
+        ).mc()).build());
 
         return builder.build();
     }

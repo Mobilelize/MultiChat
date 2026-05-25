@@ -2,7 +2,9 @@ package net.mobilelize.multichat.client;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.mobilelize.fabriclib.config.LzConfig;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.ApiTabConfig;
@@ -10,6 +12,7 @@ import net.mobilelize.multichat.client.config.MultiChatConfig.PanelConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.TabConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.RuleConfig;
 import net.mobilelize.multichat.client.filter.FilterRule;
+import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.ArrayList;
@@ -26,6 +29,15 @@ public class MultichatClient implements ClientModInitializer {
         restoreTabsFromConfig();
         MultiChatCommand.register();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveTabsToConfig());
+
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (overlay || CONFIG.modDisabled || !CONFIG.earlyMessageCapture) return;
+            MessageRouter.offerRaw(LzText.wrapMc(message));
+        });
+        ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, timestamp) -> {
+            if (CONFIG.modDisabled || !CONFIG.earlyMessageCapture) return;
+            MessageRouter.offerRaw(LzText.wrapMc(message));
+        });
     }
 
     // ------------------------------------------------------------------
@@ -100,6 +112,13 @@ public class MultichatClient implements ClientModInitializer {
         }
         CONFIG.apiTabs = apiOut;
 
+        for (ChatTab tab : ChatRenderer.TABS) {
+            if (tab.type == TabType.ALL)
+                CONFIG.allTabPanels = new ArrayList<>(tab.visibleOnPanels);
+            else if (tab.type == TabType.VANILLA)
+                CONFIG.vanillaTabPanels = new ArrayList<>(tab.visibleOnPanels);
+        }
+
         CONFIG.contextTabName = ChatRenderer.contextTab != null ? ChatRenderer.contextTab.name : "";
         CONFIG.save();
     }
@@ -112,8 +131,8 @@ public class MultichatClient implements ClientModInitializer {
         if (CONFIG.panels.isEmpty()) return;
 
         // Panel 0 — always LEFT (primary, enabled)
-        if (CONFIG.panels.size() >= 1) {
-            applyPanelConfig(ChatRenderer.LEFT, CONFIG.panels.get(0));
+        if (!CONFIG.panels.isEmpty()) {
+            applyPanelConfig(ChatRenderer.LEFT, CONFIG.panels.getFirst());
             ChatRenderer.LEFT.primary = true;
             ChatRenderer.LEFT.enabled = true;
             ChatRenderer.LEFT.id      = 0;
@@ -156,6 +175,16 @@ public class MultichatClient implements ClientModInitializer {
     }
 
     private static void restoreTabsFromConfig() {
+        for (ChatTab tab : ChatRenderer.TABS) {
+            if (tab.type == TabType.ALL) {
+                tab.visibleOnPanels.clear();
+                tab.visibleOnPanels.addAll(CONFIG.allTabPanels);
+            } else if (tab.type == TabType.VANILLA) {
+                tab.visibleOnPanels.clear();
+                tab.visibleOnPanels.addAll(CONFIG.vanillaTabPanels);
+            }
+        }
+
         ChatRenderer.TABS.removeIf(t -> t.type == TabType.FILTERED);
         for (TabConfig tc : CONFIG.tabs) {
             ChatTab tab = new ChatTab(tc.name, TabType.FILTERED, new java.util.LinkedHashSet<>(tc.visibleOnPanels));

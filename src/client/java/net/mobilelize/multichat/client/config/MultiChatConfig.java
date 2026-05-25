@@ -26,8 +26,10 @@ public class MultiChatConfig extends LzConfig {
     public String  timestampFormat         = "&d[&6HH&d:&6mm&d:&6ss&d]";
     public String  collapseCounterFormat  = "&e(x{count})";
     public boolean arrowKeySwitchTabs      = true;
-    public boolean arrowKeyCtrlForRight    = false;
+    public boolean flashOnTabSwitch        = false;
+    public boolean flashOnPanelFocus       = true;
     public boolean showContextDisplay      = true;
+    public boolean earlyMessageCapture    = true;
 
     // Search
     public boolean      searchKeybindEnabled      = true;
@@ -36,12 +38,16 @@ public class MultiChatConfig extends LzConfig {
     public SearchMode   searchDefaultMode         = SearchMode.CONTAINS;
     public boolean      searchDefaultCase         = false;
     public boolean      searchDefaultLive         = true;
-    public List<Integer> searchDefaultPanels = new java.util.ArrayList<>(List.of(0, 1));
+    public boolean      searchDefaultBadge        = false;
     public boolean      searchDefaultTimestamps        = true;
     public boolean      searchDefaultCollapseIdentical = false;
 
     public List<TabConfig>    tabs    = new ArrayList<>();
     public List<ApiTabConfig> apiTabs = new ArrayList<>();
+
+    // visibleOnPanels for the two fixed system tabs
+    public List<Integer> allTabPanels     = new java.util.ArrayList<>(java.util.List.of(0, 1));
+    public List<Integer> vanillaTabPanels = new java.util.ArrayList<>(java.util.List.of(0));
 
     public static class PanelConfig {
         public int     id                  = 0;

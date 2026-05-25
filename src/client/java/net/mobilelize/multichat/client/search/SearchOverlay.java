@@ -15,12 +15,8 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
-
-import java.util.List;
 
 public class SearchOverlay extends LzScreen {
 
@@ -37,12 +33,12 @@ public class SearchOverlay extends LzScreen {
     private TextFieldWidget fromField;
     private TextFieldWidget toField;
 
-    private SearchMode    searchMode;
-    private boolean       caseSensitive;
-    private Set<Integer>  visibleOnPanels;
-    private boolean       liveUpdate;
-    private boolean       showTimestamps;
-    private boolean       collapseIdentical;
+    private SearchMode searchMode;
+    private boolean    caseSensitive;
+    private boolean    liveUpdate;
+    private boolean    showBadge;
+    private boolean    showTimestamps;
+    private boolean    collapseIdentical;
 
     public SearchOverlay(Screen parent, ChatTab sourceTab) {
         this(parent, sourceTab, "");
@@ -53,12 +49,12 @@ public class SearchOverlay extends LzScreen {
         this.parent        = parent;
         this.sourceTab     = sourceTab;
         this.initialQuery  = initialQuery;
-        this.searchMode      = MultichatClient.CONFIG.searchDefaultMode;
-        this.caseSensitive   = MultichatClient.CONFIG.searchDefaultCase;
-        this.liveUpdate      = MultichatClient.CONFIG.searchDefaultLive;
-        this.visibleOnPanels = new LinkedHashSet<>(MultichatClient.CONFIG.searchDefaultPanels);
-        this.showTimestamps       = MultichatClient.CONFIG.searchDefaultTimestamps;
-        this.collapseIdentical    = MultichatClient.CONFIG.searchDefaultCollapseIdentical;
+        this.searchMode       = MultichatClient.CONFIG.searchDefaultMode;
+        this.caseSensitive    = MultichatClient.CONFIG.searchDefaultCase;
+        this.liveUpdate       = MultichatClient.CONFIG.searchDefaultLive;
+        this.showBadge        = MultichatClient.CONFIG.searchDefaultBadge;
+        this.showTimestamps   = MultichatClient.CONFIG.searchDefaultTimestamps;
+        this.collapseIdentical = MultichatClient.CONFIG.searchDefaultCollapseIdentical;
     }
 
     private int header() { return sourceTab != null ? HEADER_SCP : HEADER_STD; }
@@ -98,8 +94,8 @@ public class SearchOverlay extends LzScreen {
             .dimensions(fx + btnW + 4, top + 58, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Vis: " + panelSetLabel()).mc(),
-                b -> { cyclePanels(); b.setMessage(LzText.literal("Vis: " + panelSetLabel()).mc()); })
+                LzText.literal("Badge: " + (showBadge ? "ON" : "OFF")).mc(),
+                b -> { showBadge = !showBadge; b.setMessage(LzText.literal("Badge: " + (showBadge ? "ON" : "OFF")).mc()); })
             .dimensions(fx, top + 84, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
@@ -133,22 +129,6 @@ public class SearchOverlay extends LzScreen {
         };
     }
 
-    private String panelSetLabel() {
-        boolean l = visibleOnPanels.contains(0), r = visibleOnPanels.contains(1);
-        if (l && r) return "BOTH";
-        if (l)      return "LEFT";
-        if (r)      return "RIGHT";
-        return "NONE";
-    }
-
-    private void cyclePanels() {
-        boolean l = visibleOnPanels.contains(0), r = visibleOnPanels.contains(1);
-        visibleOnPanels.clear();
-        if (l && r)  { visibleOnPanels.add(0); }        // BOTH  → LEFT
-        else if (l)  { visibleOnPanels.add(1); }        // LEFT  → RIGHT
-        else         { visibleOnPanels.add(0); visibleOnPanels.add(1); } // RIGHT/NONE → BOTH
-    }
-
     private void createSearch() {
         String query     = queryField.getText().trim();
         int    fromTicks = TimeParser.parseTicks(fromField.getText().trim());
@@ -159,8 +139,12 @@ public class SearchOverlay extends LzScreen {
 
         ChatRenderer.TABS.removeIf(t -> t.type == net.mobilelize.multichat.client.TabType.SEARCH);
 
+        java.util.Set<Integer> allPanelIds = new java.util.LinkedHashSet<>();
+        for (ChatPanel p : ChatRenderer.PANELS) { if (p.enabled) allPanelIds.add(p.id); }
+
         SearchTab tab = new SearchTab(name, query, searchMode, caseSensitive,
-            fromTicks, toTicks, sourceTab, liveUpdate, visibleOnPanels);
+            fromTicks, toTicks, sourceTab, liveUpdate, allPanelIds);
+        tab.showBadge         = showBadge;
         tab.showTimestamps    = showTimestamps;
         tab.collapseIdentical = collapseIdentical;
         ChatRenderer.TABS.add(tab);
