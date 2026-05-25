@@ -2,6 +2,7 @@ package net.mobilelize.multichat.client;
 
 import net.minecraft.client.gui.DrawContext;
 import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
@@ -152,16 +153,12 @@ public class MessageContextMenu {
         int maxScroll = Math.max(0, allTab.messages.size() - LzChat.visibleLineCount());
         sourcePanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));
 
-        List<LzChatLine> allMsgs = allTab.messages;
-        int groupStart = allIdx;
-        while (groupStart > 0 && !allMsgs.get(groupStart).endOfEntry()) groupStart--;
-        int groupEnd = groupStart + 1;
-        while (groupEnd < allMsgs.size() && !allMsgs.get(groupEnd).endOfEntry()) groupEnd++;
-        groupEnd--;
-        java.util.Set<LzChatLine> group = new java.util.HashSet<>();
-        for (int i = groupStart; i <= groupEnd; i++) group.add(allMsgs.get(i));
-        ChatRenderer.highlightLines     = group;
-        ChatRenderer.highlightUntilTick = ChatRenderer.currentTick + 60;
+        // Highlight via entry so all panels (any width) light up the same message
+        LzChatEntry targetEntry = allTab.messages.get(allIdx).entry();
+        if (targetEntry != null) {
+            ChatRenderer.highlightEntries   = java.util.Collections.singleton(targetEntry);
+            ChatRenderer.highlightUntilTick = ChatRenderer.currentTick + 60;
+        }
     }
 
     // ------------------------------------------------------------------
@@ -171,8 +168,15 @@ public class MessageContextMenu {
     private static void deleteMessage(ChatPanel panel) {
         ChatTab active = panel.getActiveTab();
         if (active == null || active.type == TabType.ALL) return;
-        List<LzChatLine> msgs = active.messages;
-        int idx = msgs.indexOf(line);
+        List<LzChatLine> msgs = active.messages; // always delete from primary list
+        LzChatEntry targetEntry = line.entry();
+        int idx = -1;
+        if (targetEntry != null) {
+            for (int i = 0; i < msgs.size(); i++) {
+                if (msgs.get(i).endOfEntry() && msgs.get(i).entry() == targetEntry) { idx = i; break; }
+            }
+        }
+        if (idx < 0) idx = msgs.indexOf(line);
         if (idx < 0) return;
         int groupStart = idx;
         while (groupStart > 0 && !msgs.get(groupStart).endOfEntry()) groupStart--;
@@ -182,25 +186,15 @@ public class MessageContextMenu {
         if (groupEnd >= groupStart) {
             msgs.subList(groupStart, groupEnd + 1).clear();
         }
+        active.clearWidthCaches();
     }
 
     private static void flashGreen(LzChatLine target, ChatPanel panel) {
-        ChatTab active = panel.getActiveTab();
-        if (active == null) return;
-        List<LzChatLine> msgs = active.messages;
-        int clickedIdx = msgs.indexOf(target);
-        if (clickedIdx < 0) return;
-
-        int groupStart = clickedIdx;
-        while (groupStart > 0 && !msgs.get(groupStart).endOfEntry()) groupStart--;
-        int groupEnd = groupStart + 1;
-        while (groupEnd < msgs.size() && !msgs.get(groupEnd).endOfEntry()) groupEnd++;
-        groupEnd--;
-
-        java.util.Set<LzChatLine> group = new java.util.HashSet<>();
-        for (int i = groupStart; i <= groupEnd; i++) group.add(msgs.get(i));
-        ChatRenderer.copyHighlightLines = group;
-        ChatRenderer.copyHighlightUntil = ChatRenderer.currentTick + 40;
+        LzChatEntry entry = target.entry();
+        if (entry != null) {
+            ChatRenderer.copyHighlightEntries = java.util.Collections.singleton(entry);
+            ChatRenderer.copyHighlightUntil   = ChatRenderer.currentTick + 40;
+        }
     }
 
     static String extractText(LzChatLine v) {
@@ -213,7 +207,7 @@ public class MessageContextMenu {
         ChatTab active = panel.getActiveTab();
         if (active == null) return extractText(clicked);
 
-        List<LzChatLine> msgs = active.messages;
+        List<LzChatLine> msgs = ChatRenderer.getMessages(panel, active);
         int clickedIdx = msgs.indexOf(clicked);
         if (clickedIdx < 0) return extractText(clicked);
 

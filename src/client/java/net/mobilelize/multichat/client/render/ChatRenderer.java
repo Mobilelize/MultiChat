@@ -4,6 +4,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzChatVisibility;
@@ -21,6 +22,7 @@ import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -54,10 +56,10 @@ public class ChatRenderer {
     public static ChatPanel focusedPanel  = LEFT;
 
     public static int             currentTick        = 0;
-    public static Set<LzChatLine> highlightLines     = new HashSet<>();
-    public static int             highlightUntilTick = 0;
-    public static Set<LzChatLine> copyHighlightLines = new HashSet<>();
-    public static int             copyHighlightUntil = 0;
+    public static Set<LzChatEntry> highlightEntries   = new HashSet<>();
+    public static int              highlightUntilTick = 0;
+    public static Set<LzChatEntry> copyHighlightEntries = new HashSet<>();
+    public static int              copyHighlightUntil = 0;
 
     private static long wallTimeStart = -1;
     private static int  tickStart     = 0;
@@ -136,7 +138,7 @@ public class ChatRenderer {
             if (activeTab.type == TabType.VANILLA) continue;
             if (panel == LEFT && skipLeftMessages) continue;
 
-            List<LzChatLine> msgs = activeTab.messages;
+            List<LzChatLine> msgs = getMessages(panel, activeTab);
             if (msgs.isEmpty()) continue;
 
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
@@ -275,16 +277,17 @@ public class ChatRenderer {
 
             LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (bgAlpha << 24) | lineBgRgb);
 
-            if (!ChatRenderer.highlightLines.isEmpty()
+            LzChatEntry visibleEntry = visible.entry();
+            if (!ChatRenderer.highlightEntries.isEmpty()
                     && ChatRenderer.currentTick < ChatRenderer.highlightUntilTick
-                    && ChatRenderer.highlightLines.contains(visible)) {
+                    && visibleEntry != null && ChatRenderer.highlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
                 LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x00FFAA00);
             }
-            if (!ChatRenderer.copyHighlightLines.isEmpty()
+            if (!ChatRenderer.copyHighlightEntries.isEmpty()
                     && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
-                    && ChatRenderer.copyHighlightLines.contains(visible)) {
+                    && visibleEntry != null && ChatRenderer.copyHighlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
                 LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x0055CC55);
@@ -366,7 +369,7 @@ public class ChatRenderer {
         ChatTab activeTab = panel.getActiveTab();
         if (activeTab == null) return -1;
 
-        List<LzChatLine> visibleMessages = activeTab.messages;
+        List<LzChatLine> visibleMessages = getMessages(panel, activeTab);
         int scrolledLines = panel.getScrolledLines(activeTab);
         int maxLines = Math.min(visibleLineCount, visibleMessages.size());
 
@@ -389,11 +392,70 @@ public class ChatRenderer {
         var chat = LzChat.chatHud();
         if (chat == null) return fallback;
         int baseWidth = LzMath.floor((double) LzChat.chatWidth() / LzChat.chatScale());
-        int width = baseWidth - (indicator != null && indicator.icon() != null
-            ? indicator.icon().width + 4 + 2 : 0);
+        return stampedLines(creationTick, originalContent, indicator, baseWidth);
+    }
+
+    /** Stamp + wrap at an explicit panel width (already in text-renderer units, indicator-unadjusted). */
+    public static List<LzOrderedText> stampedLines(int creationTick, LzText originalContent,
+                                                    @org.jetbrains.annotations.Nullable MessageIndicator indicator,
+                                                    int panelWidth) {
+        int indicatorW = indicator != null && indicator.icon() != null
+            ? indicator.icon().width + 4 + 2 : 0;
+        int wrapWidth = panelWidth - indicatorW;
+        if (wallTimeStart < 0) return LzChat.breakLines(originalContent, wrapWidth);
         String ts = formatTimestamp(MultichatClient.CONFIG.timestampFormat, getWallTime(creationTick));
         LzText combined = LzText.empty().append(LzText.format(ts + " ")).append(originalContent);
-        return LzChat.breakLines(combined, width);
+        return LzChat.breakLines(combined, wrapWidth);
+    }
+
+    // ── Per-panel message list ─────────────────────────────────────────────────
+
+    /** Returns the message list appropriate for this panel (primary uses tab.messages; others use width cache). */
+    public static List<LzChatLine> getMessages(ChatPanel panel, ChatTab tab) {
+        if (panel.primary) return tab.messages;
+        int width = panel.resolveWidth();
+        return tab.messagesByWidth.computeIfAbsent(width, w -> buildForWidth(tab, w));
+    }
+
+    private static List<LzChatLine> buildForWidth(ChatTab tab, int panelWidth) {
+        List<LzChatLine> result = new ArrayList<>();
+        List<LzChatLine> src   = tab.messages;
+        int i = 0;
+        while (i < src.size()) {
+            LzChatLine endLine = src.get(i);
+            if (!endLine.endOfEntry()) { i++; continue; }
+
+            int groupEnd = i + 1;
+            while (groupEnd < src.size() && !src.get(groupEnd).endOfEntry()) groupEnd++;
+
+            LzChatEntry entry = endLine.entry();
+            if (entry != null) {
+                MessageIndicator ind = entry.indicator != null ? entry.indicator.mc() : null;
+                List<LzOrderedText> newLines = tab.showTimestamps
+                    ? stampedLines(entry.creationTick, entry.originalContent, ind, panelWidth)
+                    : breakLinesForPanel(entry.originalContent, ind, panelWidth);
+
+                List<LzChatLine> group = new ArrayList<>(newLines.size());
+                for (int j = 0; j < newLines.size(); j++) {
+                    group.add(LzChatLine.create(entry.creationTick, newLines.get(j),
+                            entry.indicator, j == newLines.size() - 1, entry));
+                }
+                Collections.reverse(group); // endOfEntry line at front, matching tab.messages order
+                result.addAll(group);
+            } else {
+                for (int k = i; k < groupEnd; k++) result.add(src.get(k));
+            }
+            i = groupEnd;
+        }
+        return result;
+    }
+
+    private static List<LzOrderedText> breakLinesForPanel(LzText content,
+                                                            @org.jetbrains.annotations.Nullable MessageIndicator indicator,
+                                                            int panelWidth) {
+        int indicatorW = indicator != null && indicator.icon() != null
+            ? indicator.icon().width + 4 + 2 : 0;
+        return LzChat.breakLines(content, panelWidth - indicatorW);
     }
 
     private static java.time.LocalTime getWallTime(int addedTick) {

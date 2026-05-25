@@ -114,7 +114,8 @@ public class ChatHudMixin {
             if (mouseY < panelTop || mouseY > panelBottom) continue;
 
             ci.cancel();
-            int max = Math.max(0, active.messages.size() - panel.resolveLines());
+            List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
+            int max = Math.max(0, panelMsgs.size() - panel.resolveLines());
             panel.setScrolledLines(active, LzMath.clamp(panel.getScrolledLines(active) + scroll, 0, max));
             return;
         }
@@ -179,16 +180,17 @@ public class ChatHudMixin {
             double chatLineX = mouseX / scale - 4.0 - xOffset;
             if (chatLineX < -4.0 || chatLineX > chatWidth) continue;
 
-            int maxLines = Math.min(visibleLineCount, active.messages.size());
+            List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
+            int maxLines = Math.min(visibleLineCount, panelMsgs.size());
             if (chatLineY < 0.0 || chatLineY >= maxLines) continue;
             int lineIdx = LzMath.floor(chatLineY + panel.getScrolledLines(active));
-            if (lineIdx < 0 || lineIdx >= active.messages.size()) continue;
+            if (lineIdx < 0 || lineIdx >= panelMsgs.size()) continue;
 
             // getMessageIndex: walk back to endOfEntry
-            while (lineIdx >= 0 && !active.messages.get(lineIdx).endOfEntry()) lineIdx--;
+            while (lineIdx >= 0 && !panelMsgs.get(lineIdx).endOfEntry()) lineIdx--;
             if (lineIdx < 0) continue;
 
-            LzChatLine line = active.messages.get(lineIdx);
+            LzChatLine line = panelMsgs.get(lineIdx);
             LzMessageIndicator indicator = line.indicator();
             if (indicator == null) { cir.setReturnValue(null); return; }
 
@@ -250,14 +252,15 @@ public class ChatHudMixin {
             if (localChatX < -4.0 || localChatX > chatWidth) continue;
 
             int scrolledLines = panel.getScrolledLines(active);
-            int maxLines = Math.min(LzChat.visibleLineCount(), active.messages.size());
+            List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
+            int maxLines = Math.min(LzChat.visibleLineCount(), panelMsgs.size());
             if (chatY < 0.0 || chatY >= maxLines) continue;
 
             int lineIdx = LzMath.floor(chatY + scrolledLines);
-            if (lineIdx < 0 || lineIdx >= active.messages.size()) continue;
+            if (lineIdx < 0 || lineIdx >= panelMsgs.size()) continue;
 
             Style style = LzDraw.textHandler()
-                    .getStyleAt(active.messages.get(lineIdx).content().mc(), LzMath.floor(localChatX));
+                    .getStyleAt(panelMsgs.get(lineIdx).content().mc(), LzMath.floor(localChatX));
             if (style != null) {
                 cir.setReturnValue(style);
                 return;

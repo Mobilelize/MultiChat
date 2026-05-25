@@ -3,6 +3,7 @@ package net.mobilelize.multichat.client;
 import net.minecraft.text.Style;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzMutableText;
 import net.mobilelize.fabriclib.text.LzOrderedText;
@@ -48,7 +49,7 @@ public class ChatSelection {
 
     public static void clampOrClear(ChatTab tab) {
         if (selPanel == null || selPanel.getActiveTab() != tab) return;
-        int max = tab.messages.size() - 1;
+        int max = ChatRenderer.getMessages(selPanel, tab).size() - 1;
         if (anchorLine > max || cursorLine > max || anchorLine < 0 || cursorLine < 0)
             clear();
     }
@@ -99,7 +100,7 @@ public class ChatSelection {
         if (!hasSelection() || selPanel == null) return "";
         ChatTab tab = selPanel.getActiveTab();
         if (tab == null) return "";
-        List<LzChatLine> msgs = tab.messages;
+        List<LzChatLine> msgs = ChatRenderer.getMessages(selPanel, tab);
         int[] n = norm();
         int tl = n[0], bl = n[1], tc = n[2], bc = n[3];
 
@@ -130,7 +131,8 @@ public class ChatSelection {
         if (active == null) return -1;
         int scrolled = panel.getScrolledLines(active);
         int idx = LzMath.floor(chatY + scrolled);
-        if (idx < 0 || idx >= active.messages.size()) return -1;
+        List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
+        if (idx < 0 || idx >= panelMsgs.size()) return -1;
         if (idx >= visibleLineCount + scrolled) return -1;
         return idx;
     }

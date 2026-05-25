@@ -7,8 +7,10 @@ import net.mobilelize.multichat.client.filter.FilterRuleSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class ChatTab {
@@ -17,6 +19,8 @@ public class ChatTab {
     public final TabType type;
     public final Set<Integer> visibleOnPanels = new LinkedHashSet<>();
     public final List<LzChatLine> messages = new ArrayList<>();
+    // Keyed by panel.resolveWidth(); rebuilt lazily when a secondary panel renders.
+    public final Map<Integer, List<LzChatLine>> messagesByWidth = new HashMap<>();
     public int unreadCount = 0;
     public final FilterRuleSet filterRules = new FilterRuleSet();
     public String  apiId             = null;
@@ -49,11 +53,16 @@ public class ChatTab {
         return type == TabType.ALL || type == TabType.VANILLA;
     }
 
+    public void clearWidthCaches() {
+        messagesByWidth.clear();
+    }
+
     public void resetCollapse() {
         collapseLastText    = null;
         collapseLastContent = null;
         collapseRepeat      = 0;
         collapseLineCount   = 0;
         collapseLastLines   = null;
+        clearWidthCaches();
     }
 }
