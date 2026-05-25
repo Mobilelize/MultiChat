@@ -116,7 +116,7 @@ public abstract class ChatScreenMixin {
                 && keyCode == MultichatClient.CONFIG.searchKeybindKey
                 && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (modifiers & 2) != 0)) {
             String selText = ChatSelection.hasSelection()
-                ? ChatSelection.getSelectedText().replace('\n', ' ').trim() : "";
+                ? ChatSelection.getSelectedText().replaceAll("\n", "").trim() : "";
             LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
             cir.setReturnValue(true);
             return;

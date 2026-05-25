@@ -85,7 +85,7 @@ public class TabListScreen extends LzScreen {
         String name = nameField.getText().trim();
         if (name.isEmpty()) return;
         if (ChatRenderer.TABS.stream().anyMatch(t -> t.type == TabType.FILTERED && t.name.equalsIgnoreCase(name))) return;
-        ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, java.util.List.of("panel0", "panel1")));
+        ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, java.util.List.of(0, 1)));
         MultichatClient.saveTabsToConfig();
         clearAndInit();
     }
@@ -208,16 +208,48 @@ public class TabListScreen extends LzScreen {
                 default       -> 0xAADDFF;
             };
 
-            // Name text
+            // Name
             String nameStr = tab.name + " ";
             LzDraw.drawText(ctx, nameStr, lx + 6, textY, nameColor);
 
-            // Visibility tag — use tab color if set, else gray
-            int visColor = (tab.tabColor != 0) ? (0xFF000000 | (tab.tabColor & 0xFFFFFF)) : 0xFFAAAAAA;
-            int nameW = LzDraw.textWidth(nameStr);
-            boolean lv = tab.visibleOnPanels.contains("panel0"), rv = tab.visibleOnPanels.contains("panel1");
-            String panelStr = (lv && rv) ? "both" : lv ? "left" : rv ? "right" : "none";
-            LzDraw.drawText(ctx, "[" + panelStr + "]", lx + 6 + nameW, textY, visColor);
+            int infoX = lx + 6 + LzDraw.textWidth(nameStr);
+
+            // Tab color swatch
+            if (tab.tabColor != 0) {
+                LzDraw.fill(ctx, infoX, textY + 1, infoX + 7, textY + 7, 0xFF000000 | (tab.tabColor & 0xFFFFFF));
+                infoX += 10;
+            }
+
+            if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
+                int wlCount = tab.filterRules.whitelist.size();
+                int blCount = tab.filterRules.blacklist.size();
+
+                String wlStr = "WL:" + wlCount + " ";
+                String blStr = "BL:" + blCount;
+                LzDraw.drawText(ctx, wlStr, infoX, textY, wlCount > 0 ? 0xFF88FF88 : 0xFF666666);
+                infoX += LzDraw.textWidth(wlStr);
+                LzDraw.drawText(ctx, blStr, infoX, textY, blCount > 0 ? 0xFFFF8888 : 0xFF666666);
+                infoX += LzDraw.textWidth(blStr);
+
+                // Settings flags: T=timestamps C=collapse D=diff B=badge-off P=prefix
+                StringBuilder flags = new StringBuilder();
+                if (tab.showTimestamps)          flags.append("T");
+                if (tab.collapseRepeating)       flags.append("C");
+                if (tab.differenceMode)          flags.append("D");
+                if (!tab.showBadge)              flags.append("B");
+                if (!tab.contextPrefix.isEmpty()) flags.append("P");
+                if (!flags.isEmpty())
+                    LzDraw.drawText(ctx, "  " + flags, infoX, textY, 0xFF9999CC);
+            } else {
+                String typeTag = switch (tab.type) {
+                    case ALL     -> "[all]";
+                    case VANILLA -> "[vanilla]";
+                    case SEARCH  -> "[search]";
+                    default      -> "";
+                };
+                if (!typeTag.isEmpty())
+                    LzDraw.drawText(ctx, typeTag, infoX, textY, 0xFF666666);
+            }
 
             boolean canEdit   = tab.type == TabType.FILTERED || tab.type == TabType.API;
             boolean canRemove = tab.type == TabType.FILTERED || tab.type == TabType.SEARCH;

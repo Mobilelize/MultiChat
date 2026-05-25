@@ -15,7 +15,7 @@ public class ChatTab {
 
     public String name;
     public final TabType type;
-    public final Set<String> visibleOnPanels = new LinkedHashSet<>();
+    public final Set<Integer> visibleOnPanels = new LinkedHashSet<>();
     public final List<LzChatLine> messages = new ArrayList<>();
     public int unreadCount = 0;
     public final FilterRuleSet filterRules = new FilterRuleSet();
@@ -39,7 +39,7 @@ public class ChatTab {
     public int                 collapseLastTick    = 0;
     public List<LzOrderedText> collapseLastLines   = null;
 
-    public ChatTab(String name, TabType type, Collection<String> visibleOnPanels) {
+    public ChatTab(String name, TabType type, Collection<Integer> visibleOnPanels) {
         this.name = name;
         this.type = type;
         this.visibleOnPanels.addAll(visibleOnPanels);

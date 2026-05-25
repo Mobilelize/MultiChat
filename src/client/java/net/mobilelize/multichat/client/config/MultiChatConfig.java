@@ -36,7 +36,7 @@ public class MultiChatConfig extends LzConfig {
     public SearchMode   searchDefaultMode         = SearchMode.CONTAINS;
     public boolean      searchDefaultCase         = false;
     public boolean      searchDefaultLive         = true;
-    public List<String> searchDefaultPanels = new java.util.ArrayList<>(List.of("panel0", "panel1"));
+    public List<Integer> searchDefaultPanels = new java.util.ArrayList<>(List.of(0, 1));
     public boolean      searchDefaultTimestamps        = true;
     public boolean      searchDefaultCollapseIdentical = false;
 
@@ -44,7 +44,8 @@ public class MultiChatConfig extends LzConfig {
     public List<ApiTabConfig> apiTabs = new ArrayList<>();
 
     public static class PanelConfig {
-        public String  id                  = "panel0";
+        public int     id                  = 0;
+        public String  name                = "";
         public boolean enabled             = true;
         public String  anchor              = "LEFT";
         public int     margin              = 0;
@@ -73,7 +74,7 @@ public class MultiChatConfig extends LzConfig {
         public boolean collapseRepeating       = false;
         public boolean collapseMatchFormatting = false;
         public int     messageCap        = 0;
-        public List<String> visibleOnPanels = new java.util.ArrayList<>();
+        public List<Integer> visibleOnPanels = new java.util.ArrayList<>();
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
         public String contextPrefix = "";
         public boolean contextCommandMode = true;
@@ -84,7 +85,7 @@ public class MultiChatConfig extends LzConfig {
     public static class ApiTabConfig {
         public String id = "";
         public String displayName = "";
-        public List<String> visibleOnPanels = new java.util.ArrayList<>();
+        public List<Integer> visibleOnPanels = new java.util.ArrayList<>();
         public int color = 0;
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
         public String contextPrefix = "";

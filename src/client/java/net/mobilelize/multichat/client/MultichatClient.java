@@ -38,6 +38,7 @@ public class MultichatClient implements ClientModInitializer {
         for (ChatPanel panel : ChatRenderer.PANELS) {
             PanelConfig pc      = new PanelConfig();
             pc.id                  = panel.id;
+            pc.name                = panel.name;
             pc.enabled             = panel.enabled;
             pc.anchor              = panel.anchor.name();
             pc.margin              = panel.margin;
@@ -115,13 +116,13 @@ public class MultichatClient implements ClientModInitializer {
             applyPanelConfig(ChatRenderer.LEFT, CONFIG.panels.get(0));
             ChatRenderer.LEFT.primary = true;
             ChatRenderer.LEFT.enabled = true;
-            ChatRenderer.LEFT.id      = "panel0";
+            ChatRenderer.LEFT.id      = 0;
         }
 
         // Panel 1 — RIGHT
         if (CONFIG.panels.size() >= 2) {
             applyPanelConfig(ChatRenderer.RIGHT, CONFIG.panels.get(1));
-            ChatRenderer.RIGHT.id = "panel1";
+            ChatRenderer.RIGHT.id = 1;
         }
 
         // Extra panels beyond the two defaults
@@ -133,7 +134,8 @@ public class MultichatClient implements ClientModInitializer {
     }
 
     private static void applyPanelConfig(ChatPanel panel, PanelConfig pc) {
-        panel.id = pc.id;
+        panel.id   = pc.id;
+        panel.name = pc.name.isEmpty() ? panel.name : pc.name;
         panel.enabled = pc.enabled;
         try { panel.anchor = ChatPanel.Anchor.valueOf(pc.anchor); }
         catch (Exception e) { panel.anchor = ChatPanel.Anchor.LEFT; }

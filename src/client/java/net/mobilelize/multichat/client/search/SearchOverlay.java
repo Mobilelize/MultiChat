@@ -39,7 +39,7 @@ public class SearchOverlay extends LzScreen {
 
     private SearchMode    searchMode;
     private boolean       caseSensitive;
-    private Set<String>   visibleOnPanels;
+    private Set<Integer>  visibleOnPanels;
     private boolean       liveUpdate;
     private boolean       showTimestamps;
     private boolean       collapseIdentical;
@@ -134,7 +134,7 @@ public class SearchOverlay extends LzScreen {
     }
 
     private String panelSetLabel() {
-        boolean l = visibleOnPanels.contains("panel0"), r = visibleOnPanels.contains("panel1");
+        boolean l = visibleOnPanels.contains(0), r = visibleOnPanels.contains(1);
         if (l && r) return "BOTH";
         if (l)      return "LEFT";
         if (r)      return "RIGHT";
@@ -142,11 +142,11 @@ public class SearchOverlay extends LzScreen {
     }
 
     private void cyclePanels() {
-        boolean l = visibleOnPanels.contains("panel0"), r = visibleOnPanels.contains("panel1");
+        boolean l = visibleOnPanels.contains(0), r = visibleOnPanels.contains(1);
         visibleOnPanels.clear();
-        if (l && r)       { visibleOnPanels.add("panel0"); }           // BOTH  → LEFT
-        else if (l)       { visibleOnPanels.add("panel1"); }           // LEFT  → RIGHT
-        else              { visibleOnPanels.add("panel0"); visibleOnPanels.add("panel1"); } // RIGHT/NONE → BOTH
+        if (l && r)  { visibleOnPanels.add(0); }        // BOTH  → LEFT
+        else if (l)  { visibleOnPanels.add(1); }        // LEFT  → RIGHT
+        else         { visibleOnPanels.add(0); visibleOnPanels.add(1); } // RIGHT/NONE → BOTH
     }
 
     private void createSearch() {

@@ -100,7 +100,7 @@ public class MessageContextMenu {
             }
             case "Search for this" -> {
                 String text = ChatSelection.hasSelection()
-                    ? ChatSelection.getSelectedText().replace('\n', ' ').trim()
+                    ? ChatSelection.getSelectedText().replaceAll("\n", "").trim()
                     : extractFullMessage(line, sourcePanel).trim();
                 LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, text));
             }
@@ -225,8 +225,11 @@ public class MessageContextMenu {
 
         StringBuilder sb = new StringBuilder();
         for (int i = groupEnd; i >= groupStart; i--) {
-            if (!sb.isEmpty()) sb.append(" ");
-            sb.append(extractText(msgs.get(i)));
+            String part = extractText(msgs.get(i)).strip();
+            if (!part.isEmpty()) {
+                if (!sb.isEmpty()) sb.append(" ");
+                sb.append(part);
+            }
         }
         return sb.toString();
     }

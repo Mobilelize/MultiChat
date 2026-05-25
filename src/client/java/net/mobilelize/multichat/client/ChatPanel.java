@@ -15,7 +15,8 @@ public class ChatPanel {
 
     public Anchor  anchor             = Anchor.LEFT;
     public boolean primary            = false;
-    public String  id                 = "panel0";
+    public int     id                 = 0;
+    public String  name               = "";
     public int     margin             = 0;
     public int     activeTab          = 0;
     public boolean enabled            = false;

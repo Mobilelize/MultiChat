@@ -18,7 +18,7 @@ public class SearchTab extends ChatTab {
 
     public SearchTab(String name, String query, SearchMode searchMode, boolean caseSensitive,
                      int timeFromTicks, int timeToTicks, ChatTab sourceTab, boolean liveUpdate,
-                     java.util.Collection<String> visibleOnPanels) {
+                     java.util.Collection<Integer> visibleOnPanels) {
         super(name, TabType.SEARCH, visibleOnPanels);
         this.query         = query;
         this.searchMode    = searchMode;

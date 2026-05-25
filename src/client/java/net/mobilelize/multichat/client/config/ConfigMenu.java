@@ -153,20 +153,20 @@ public class ConfigMenu {
 
         search.addEntry(eb.startBooleanToggle(
                 LzText.literal("Default: Left Panel").mc(),
-                MultichatClient.CONFIG.searchDefaultPanels.contains("panel0"))
+                MultichatClient.CONFIG.searchDefaultPanels.contains(0))
                 .setDefaultValue(true)
                 .setTooltip(LzText.literal("Show new search tabs on the left panel by default.").mc())
-                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add("panel0");
-                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove("panel0"); })
+                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add(0);
+                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove(Integer.valueOf(0)); })
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
                 LzText.literal("Default: Right Panel").mc(),
-                MultichatClient.CONFIG.searchDefaultPanels.contains("panel1"))
+                MultichatClient.CONFIG.searchDefaultPanels.contains(1))
                 .setDefaultValue(true)
                 .setTooltip(LzText.literal("Show new search tabs on the right panel by default.").mc())
-                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add("panel1");
-                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove("panel1"); })
+                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add(1);
+                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove(Integer.valueOf(1)); })
                 .build());
 
         search.addEntry(eb.startBooleanToggle(

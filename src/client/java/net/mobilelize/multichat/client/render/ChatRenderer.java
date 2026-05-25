@@ -37,12 +37,14 @@ public class ChatRenderer {
         LEFT         = new ChatPanel();
         LEFT.primary = true;
         LEFT.enabled = true;
-        LEFT.id      = "panel0";
+        LEFT.id      = 0;
+        LEFT.name    = "Main";
         PANELS.add(LEFT);
 
         RIGHT        = new ChatPanel();
         RIGHT.anchor = ChatPanel.Anchor.RIGHT;
-        RIGHT.id     = "panel1";
+        RIGHT.id     = 1;
+        RIGHT.name   = "Second Panel";
         PANELS.add(RIGHT);
     }
 
@@ -60,8 +62,8 @@ public class ChatRenderer {
     private static int  tickStart     = 0;
 
     public static final List<ChatTab> TABS = new ArrayList<>(List.of(
-        new ChatTab("All",     TabType.ALL,     List.of("panel0", "panel1")),
-        new ChatTab("Vanilla", TabType.VANILLA, List.of("panel0"))
+        new ChatTab("All",     TabType.ALL,     List.of(0, 1)),
+        new ChatTab("Vanilla", TabType.VANILLA, List.of(0))
     ));
 
     public static int lastMouseX = 0;

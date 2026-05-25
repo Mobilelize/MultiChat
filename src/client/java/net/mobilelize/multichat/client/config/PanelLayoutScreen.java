@@ -1,0 +1,362 @@
+package net.mobilelize.multichat.client.config;
+
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzScreen;
+import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.ChatPanel;
+import net.mobilelize.multichat.client.Keys;
+import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.render.ChatRenderer;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class PanelLayoutScreen extends LzScreen {
+
+    private static final int GRID_SIZE = 8;
+    private static final int EDGE_GRAB = 7;   // px from edge that counts as resize hit
+    private static final int OUTER_PAD = 4;   // px the outer outline extends left/right
+
+    private enum ResizeDir { WIDTH, HEIGHT }
+
+    private final Screen parent;
+    private boolean snapEnabled = true;
+
+    private ChatPanel dragging    = null;
+    private int       dragOffsetX = 0;
+    private int       dragOffsetY = 0;
+
+    private ChatPanel  resizing       = null;
+    private ResizeDir  resizeDir      = null;
+    private int        resizeAnchorX1 = 0;
+    private int        resizeAnchorY1 = 0;
+
+    private boolean confirmPending = false;
+
+    // anchor, customX, customY, customWidth, customHeightLines
+    private final Map<ChatPanel, Object[]> originals = new HashMap<>();
+
+    public PanelLayoutScreen(Screen parent) {
+        super("Panel Layout");
+        this.parent = parent;
+    }
+
+    @Override
+    protected void init() {
+        originals.clear();
+        for (ChatPanel p : ChatRenderer.PANELS)
+            originals.put(p, new Object[] { p.anchor, p.customX, p.customY, p.customWidth, p.customHeightLines });
+
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Save").mc(), b -> save())
+            .dimensions(width / 2 - 53, height - 26, 50, 18).build());
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> cancel())
+            .dimensions(width / 2 + 3, height - 26, 50, 18).build());
+        addDrawableChild(ButtonWidget.builder(LzText.literal(snapEnabled ? "Snap: ON" : "Snap: OFF").mc(), b -> {
+            snapEnabled = !snapEnabled;
+            b.setMessage(LzText.literal(snapEnabled ? "Snap: ON" : "Snap: OFF").mc());
+        }).dimensions(width - 82, height - 26, 78, 18).build());
+    }
+
+    // Screen-pixel bounding box [x1, y1, x2, y2]
+    private int[] bounds(ChatPanel panel) {
+        float scale      = panel.resolveScale();
+        int   chatWidth  = panel.resolveWidth();
+        int   lines      = panel.resolveLines();
+        int   lineHeight = panel.resolveLineHeight();
+        int   xOffset    = panel.computeXOffset(width);
+        int   topY       = panel.resolveTopY(height);
+
+        int x1 = Math.round((4 + xOffset) * scale);
+        int y1 = Math.round((topY - lines * lineHeight) * scale);
+        int x2 = Math.round((4 + xOffset + chatWidth) * scale);
+        int y2 = Math.round((topY + ChatRenderer.TAB_HEIGHT) * scale);
+        return new int[] { x1, y1, x2, y2 };
+    }
+
+    private int snap(int v) {
+        return snapEnabled ? Math.round(v / (float) GRID_SIZE) * GRID_SIZE : v;
+    }
+
+    private boolean isDirty() {
+        for (Map.Entry<ChatPanel, Object[]> e : originals.entrySet()) {
+            ChatPanel p = e.getKey();
+            Object[]  o = e.getValue();
+            if (p.anchor            != (ChatPanel.Anchor) o[0]) return true;
+            if (p.customX           != (int) o[1])              return true;
+            if (p.customY           != (int) o[2])              return true;
+            if (p.customWidth       != (int) o[3])              return true;
+            if (p.customHeightLines != (int) o[4])              return true;
+        }
+        return false;
+    }
+
+    // Convert panel from anchor-based to CUSTOM at its current visual position
+    private void pinToCustom(ChatPanel panel, int[] b) {
+        if (panel.anchor == ChatPanel.Anchor.CUSTOM) return;
+        float scale = panel.resolveScale();
+        int   lines = panel.resolveLines();
+        int   lh    = panel.resolveLineHeight();
+        panel.customX = b[0] - Math.round(4 * scale);
+        panel.customY = b[1] + Math.round(lines * lh * scale);
+        panel.anchor  = ChatPanel.Anchor.CUSTOM;
+    }
+
+    @Override
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+
+        if (snapEnabled) {
+            for (int gx = 0; gx < width;  gx += GRID_SIZE)
+                LzDraw.fill(ctx, gx, 0, gx + 1, height, 0x0DFFFFFF);
+            for (int gy = 0; gy < height; gy += GRID_SIZE)
+                LzDraw.fill(ctx, 0, gy, width, gy + 1, 0x0DFFFFFF);
+        }
+    }
+
+    @Override
+    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        super.render(ctx, mouseX, mouseY, delta);
+
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (!panel.enabled) continue;
+            int[] b  = bounds(panel);
+            int   x1 = b[0], y1 = b[1], x2 = b[2], y2 = b[3];
+            int   cx = (x1 + x2) / 2;
+            int   cy = (y1 + y2) / 2;
+            boolean hov = mouseX >= x1 && mouseX < x2 && mouseY >= y1 && mouseY < y2;
+
+            // Outer border extends left/right to show true rendered panel extent
+            int outerCol = panel.primary ? 0x55446699 : 0x55FF8800;
+            LzDraw.drawBorder(ctx, x1 - OUTER_PAD, y1, x2 + OUTER_PAD, y2, outerCol);
+
+            if (panel.primary) {
+                LzDraw.fill(ctx, x1, y1, x2, y2, 0x1A4488FF);
+                LzDraw.drawBorder(ctx, x1, y1, x2, y2, 0xFF4488FF);
+                LzDraw.drawCenteredText(ctx, LzText.literal(panel.name + " (locked)"), cx, cy - 4, 0xFF88AAFF);
+                LzDraw.drawCenteredText(ctx, LzText.literal("primary panel"),           cx, cy + 5, 0x884488FF);
+            } else {
+                boolean drag  = dragging == panel;
+                boolean resiz = resizing == panel;
+                int fillCol   = (drag || resiz) ? 0x33FFAA00 : (hov ? 0x22FFFFFF : 0x11FFFFFF);
+                int borderCol = (drag || resiz) ? 0xFFFFAA00 : (hov ? 0xFFFFFFFF : 0xFF888888);
+                int labelCol  = (drag || resiz) ? 0xFFFFCC44 : (hov ? 0xFFFFFFFF : 0xFFCCCCCC);
+
+                LzDraw.fill(ctx, x1, y1, x2, y2, fillCol);
+                LzDraw.drawBorder(ctx, x1, y1, x2, y2, borderCol);
+
+                String name   = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
+                String anchor = panel.anchor == ChatPanel.Anchor.CUSTOM
+                    ? "x:" + panel.customX + " y:" + panel.customY
+                    : panel.anchor.name().toLowerCase() + (panel.margin != 0 ? " +" + panel.margin : "");
+
+                LzDraw.drawCenteredText(ctx, LzText.literal(name),   cx, cy - 4, labelCol);
+                LzDraw.drawCenteredText(ctx, LzText.literal(anchor), cx, cy + 5, 0x88FFFFFF);
+
+                LzDraw.fill(ctx, x1 + 1, y1 + 1, x2 - 1, y1 + 10, drag ? 0x66FFAA00 : 0x44FFFFFF);
+                LzDraw.drawCenteredText(ctx, LzText.literal("drag"), cx, y1 + 2, drag ? 0xFFFFCC44 : 0x88FFFFFF);
+
+                boolean hovRight = !drag && mouseX >= x2 - EDGE_GRAB && mouseX <= x2 + EDGE_GRAB
+                    && mouseY >= y1 && mouseY < y2;
+                int rightCol = (resiz && resizeDir == ResizeDir.WIDTH) ? 0xCCFFAA00 : hovRight ? 0xAAFFFFFF : 0x44FFFFFF;
+                LzDraw.fill(ctx, x2 - 3, y1 + 12, x2 + 3, y2 - 4, rightCol);
+
+                boolean hovBot = !drag && mouseX >= x1 && mouseX < x2
+                    && mouseY >= y2 - EDGE_GRAB && mouseY <= y2 + EDGE_GRAB;
+                int botCol = (resiz && resizeDir == ResizeDir.HEIGHT) ? 0xCCFFAA00 : hovBot ? 0xAAFFFFFF : 0x44FFFFFF;
+                LzDraw.fill(ctx, x1 + 12, y2 - 3, x2 - 12, y2 + 3, botCol);
+
+                if (resiz) {
+                    String sizeInfo = "w:" + panel.resolveWidth() + "  h:" + panel.resolveLines() + " lines";
+                    LzDraw.drawCenteredText(ctx, LzText.literal(sizeInfo), cx, y1 - 10, 0xFFFFCC44);
+                }
+            }
+        }
+
+        LzDraw.drawCenteredText(ctx,
+            LzText.literal("Drag panels  |  Drag edges to resize  |  Esc / Cancel = revert"), width / 2, 6, 0xFFAAAAAA);
+
+        if (confirmPending) renderConfirmModal(ctx, mouseX, mouseY);
+    }
+
+    private void renderConfirmModal(DrawContext ctx, int mouseX, int mouseY) {
+        int mw = 190, mh = 60;
+        int mx1 = width  / 2 - mw / 2;
+        int my1 = height / 2 - mh / 2;
+        int mx2 = mx1 + mw;
+        int my2 = my1 + mh;
+        int bY1 = my1 + 28, bY2 = my1 + 44;
+
+        boolean hovSave    = mouseX >= mx1 + 8   && mouseX < mx1 + 62  && mouseY >= bY1 && mouseY < bY2;
+        boolean hovDiscard = mouseX >= mx1 + 68  && mouseX < mx1 + 126 && mouseY >= bY1 && mouseY < bY2;
+        boolean hovCancel  = mouseX >= mx1 + 132 && mouseX < mx1 + 182 && mouseY >= bY1 && mouseY < bY2;
+
+        ctx.getMatrices().push();
+        ctx.getMatrices().translate(0, 0, 400);
+
+        LzDraw.fill(ctx, mx1, my1, mx2, my2, 0xEE1A1A1A);
+        LzDraw.drawBorder(ctx, mx1, my1, mx2, my2, 0xFFAAAAAA);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Save changes?"), width / 2, my1 + 10, 0xFFFFFFFF);
+
+        LzDraw.fill(ctx, mx1 + 8,   bY1, mx1 + 62,  bY2, hovSave    ? 0xCC449944 : 0xAA2D6B2D);
+        LzDraw.fill(ctx, mx1 + 68,  bY1, mx1 + 126, bY2, hovDiscard ? 0xCCAA4444 : 0xAA6B2D2D);
+        LzDraw.fill(ctx, mx1 + 132, bY1, mx1 + 182, bY2, hovCancel  ? 0xCC777777 : 0xAA444444);
+
+        LzDraw.drawCenteredText(ctx, LzText.literal("Save"),    mx1 + 35,  bY1 + 5, 0xFFFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Discard"), mx1 + 97,  bY1 + 5, 0xFFFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Cancel"),  mx1 + 157, bY1 + 5, 0xFFCCCCCC);
+
+        ctx.getMatrices().pop();
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Modal intercepts everything while open
+        if (confirmPending) {
+            if (button == 0) {
+                int mw = 190;
+                int mx1 = width  / 2 - mw / 2;
+                int my1 = height / 2 - 30;
+                int bY1 = my1 + 28, bY2 = my1 + 44;
+
+                if (mouseY >= bY1 && mouseY < bY2) {
+                    if (mouseX >= mx1 + 8   && mouseX < mx1 + 62)  { confirmPending = false; save();            return true; }
+                    if (mouseX >= mx1 + 68  && mouseX < mx1 + 126) { confirmPending = false; restoreAndClose(); return true; }
+                    if (mouseX >= mx1 + 132 && mouseX < mx1 + 182) { confirmPending = false;                    return true; }
+                }
+            }
+            return true;
+        }
+
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+        if (button != 0) return false;
+
+        // Resize handles take priority over drag
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (panel.primary || !panel.enabled) continue;
+            int[] b = bounds(panel);
+            int x1 = b[0], y1 = b[1], x2 = b[2], y2 = b[3];
+
+            if (mouseX >= x2 - EDGE_GRAB && mouseX <= x2 + EDGE_GRAB && mouseY >= y1 && mouseY < y2) {
+                pinToCustom(panel, b);
+                resizing       = panel;
+                resizeDir      = ResizeDir.WIDTH;
+                resizeAnchorX1 = bounds(panel)[0];
+                return true;
+            }
+
+            if (mouseX >= x1 && mouseX < x2 && mouseY >= y2 - EDGE_GRAB && mouseY <= y2 + EDGE_GRAB) {
+                pinToCustom(panel, b);
+                resizing       = panel;
+                resizeDir      = ResizeDir.HEIGHT;
+                resizeAnchorY1 = bounds(panel)[1];
+                return true;
+            }
+        }
+
+        // Drag
+        ChatPanel hit = null;
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (panel.primary || !panel.enabled) continue;
+            int[] b = bounds(panel);
+            if (mouseX >= b[0] && mouseX < b[2] && mouseY >= b[1] && mouseY < b[3]) hit = panel;
+        }
+        if (hit == null) return false;
+
+        int[] b = bounds(hit);
+        pinToCustom(hit, b);
+
+        int[] nb    = bounds(hit);
+        dragging    = hit;
+        dragOffsetX = (int) mouseX - nb[0];
+        dragOffsetY = (int) mouseY - nb[1];
+        return true;
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+        if (resizing != null && button == 0) {
+            float scale = resizing.resolveScale();
+
+            if (resizeDir == ResizeDir.WIDTH) {
+                resizing.customWidth = Math.max(40, (int) ((mouseX - resizeAnchorX1) / scale));
+            } else {
+                int   lh        = resizing.resolveLineHeight();
+                float newTopY   = (float)(mouseY / scale) - ChatRenderer.TAB_HEIGHT;
+                float y1Unscaled = resizeAnchorY1 / scale;
+                resizing.customHeightLines = Math.max(2, (int) ((newTopY - y1Unscaled) / lh));
+                resizing.customY = (int)(mouseY - ChatRenderer.TAB_HEIGHT * (double) scale);
+            }
+            return true;
+        }
+
+        if (dragging != null && button == 0) {
+            float scale      = dragging.resolveScale();
+            int   lines      = dragging.resolveLines();
+            int   lineHeight = dragging.resolveLineHeight();
+
+            int newX1 = (int) mouseX - dragOffsetX;
+            int newY1 = (int) mouseY - dragOffsetY;
+
+            dragging.customX = snap(newX1 - Math.round(4 * scale));
+            dragging.customY = snap(newY1 + Math.round(lines * lineHeight * scale));
+            return true;
+        }
+
+        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        dragging = null;
+        resizing = null;
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == Keys.ESCAPE) {
+            if (confirmPending) { confirmPending = false; return true; }
+            attemptClose();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void attemptClose() {
+        if (isDirty()) confirmPending = true;
+        else restoreAndClose();
+    }
+
+    private void save() {
+        MultichatClient.saveTabsToConfig();
+        close();
+    }
+
+    private void cancel() {
+        if (isDirty()) confirmPending = true;
+        else restoreAndClose();
+    }
+
+    private void restoreAndClose() {
+        for (Map.Entry<ChatPanel, Object[]> e : originals.entrySet()) {
+            ChatPanel p = e.getKey();
+            Object[]  o = e.getValue();
+            p.anchor            = (ChatPanel.Anchor) o[0];
+            p.customX           = (int) o[1];
+            p.customY           = (int) o[2];
+            p.customWidth       = (int) o[3];
+            p.customHeightLines = (int) o[4];
+        }
+        close();
+    }
+
+    @Override
+    public void close() { LzClient.mc().setScreen(parent); }
+
+    @Override
+    public boolean shouldPause() { return false; }
+}

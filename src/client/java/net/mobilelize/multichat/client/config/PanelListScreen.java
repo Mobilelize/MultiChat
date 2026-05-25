@@ -3,8 +3,10 @@ package net.mobilelize.multichat.client.config;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
+import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
@@ -42,22 +44,34 @@ public class PanelListScreen extends LzScreen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
         addDrawableChild(ButtonWidget.builder(LzText.literal("Add Panel").mc(), btn -> addPanel())
-            .dimensions(width / 2 - 102, height - 28, 98, 20).build());
+            .dimensions(width / 2 - 154, height - 28, 98, 20).build());
+
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Layout").mc(),
+                btn -> LzClient.mc().setScreen(new PanelLayoutScreen(this)))
+            .dimensions(width / 2 - 50, height - 28, 100, 20).build());
 
         addDrawableChild(ButtonWidget.builder(LzText.literal("Done").mc(), btn -> close())
-            .dimensions(width / 2 + 4, height - 28, 98, 20).build());
+            .dimensions(width / 2 + 56, height - 28, 98, 20).build());
     }
 
     private void addPanel() {
-        Set<String> ids = ChatRenderer.PANELS.stream().map(p -> p.id).collect(Collectors.toSet());
-        int n = 0;
-        String id;
-        do { id = "panel" + n++; } while (ids.contains(id));
+        Set<Integer> ids = ChatRenderer.PANELS.stream().map(p -> p.id).collect(Collectors.toSet());
+        int id = 0;
+        while (ids.contains(id)) id++;
 
         ChatPanel panel = new ChatPanel();
         panel.id      = id;
+        panel.name    = "Panel " + (ChatRenderer.PANELS.size() + 1);
         panel.enabled = true;
-        panel.anchor  = ChatPanel.Anchor.LEFT;
+        panel.anchor  = ChatPanel.Anchor.CUSTOM;
+
+        // Default to screen center
+        float scale        = (float) LzChat.chatScale();
+        int   defaultWidth = LzMath.ceil((float) LzChat.chatWidth() / scale);
+        int   panelPxW     = Math.round(defaultWidth * scale);
+        panel.customX      = (width  - panelPxW) / 2;
+        panel.customY      = height  / 2;
+
         ChatRenderer.PANELS.add(panel);
         MultichatClient.saveTabsToConfig();
         clearAndInit();
@@ -93,7 +107,8 @@ public class PanelListScreen extends LzScreen {
                 + (panel.enabled ? "§a[on]§r" : "§c[off]§r");
             if (panel.primary) tag = "[primary] " + tag;
 
-            String nameStr = panel.id + " ";
+            String displayName = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
+            String nameStr = displayName + " ";
             LzDraw.drawText(ctx, nameStr, lx + 6, textY, 0xFFFFFF);
             LzDraw.drawText(ctx, tag, lx + 6 + LzDraw.textWidth(nameStr), textY, 0xAAAAAA);
 
