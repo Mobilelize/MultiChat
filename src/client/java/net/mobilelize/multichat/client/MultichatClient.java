@@ -130,13 +130,10 @@ public class MultichatClient implements ClientModInitializer {
     private static void restorePanelsFromConfig() {
         if (CONFIG.panels.isEmpty()) return;
 
-        // Panel 0 — always LEFT (primary, enabled)
-        if (!CONFIG.panels.isEmpty()) {
-            applyPanelConfig(ChatRenderer.LEFT, CONFIG.panels.getFirst());
-            ChatRenderer.LEFT.primary = true;
-            ChatRenderer.LEFT.enabled = true;
-            ChatRenderer.LEFT.id      = 0;
-        }
+        applyPanelConfig(ChatRenderer.LEFT, CONFIG.panels.getFirst());
+        ChatRenderer.LEFT.primary = true;
+        ChatRenderer.LEFT.enabled = true;
+        ChatRenderer.LEFT.id      = 0;
 
         // Panel 1 — RIGHT
         if (CONFIG.panels.size() >= 2) {
