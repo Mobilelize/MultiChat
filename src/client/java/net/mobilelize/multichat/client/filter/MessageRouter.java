@@ -48,7 +48,6 @@ public class MessageRouter {
         boolean nonDiffReceived = false;
 
         for (ChatTab tab : ChatRenderer.TABS) {
-            if (tab.visibility == TabVisibility.NONE) continue;
             switch (tab.type) {
                 case ALL -> addLines(tab, original, lines);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
@@ -155,7 +154,7 @@ public class MessageRouter {
         }
 
         if (netLinesAdded != 0) {
-            for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+            for (ChatPanel panel : ChatRenderer.PANELS) {
                 int scrolled = panel.getScrolledLines(tab);
                 if (scrolled > 0) panel.setScrolledLines(tab, scrolled + netLinesAdded);
             }
@@ -167,7 +166,7 @@ public class MessageRouter {
             while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
             int removed = before - tab.messages.size();
             if (removed > 0) {
-                for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+                for (ChatPanel panel : ChatRenderer.PANELS) {
                     int scrolled = panel.getScrolledLines(tab);
                     if (scrolled > 0)
                         panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
@@ -181,7 +180,7 @@ public class MessageRouter {
     }
 
     private static boolean isActiveInAnyPanel(ChatTab tab) {
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             List<ChatTab> visible = panel.getVisibleTabs();
             int idx = visible.indexOf(tab);
             if (idx >= 0 && panel.activeTab == idx) return true;

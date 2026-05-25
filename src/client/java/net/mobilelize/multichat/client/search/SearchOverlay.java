@@ -15,7 +15,8 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
-import net.mobilelize.multichat.client.TabVisibility;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
@@ -38,7 +39,7 @@ public class SearchOverlay extends LzScreen {
 
     private SearchMode    searchMode;
     private boolean       caseSensitive;
-    private TabVisibility visibility;
+    private Set<String>   visibleOnPanels;
     private boolean       liveUpdate;
     private boolean       showTimestamps;
     private boolean       collapseIdentical;
@@ -52,10 +53,10 @@ public class SearchOverlay extends LzScreen {
         this.parent        = parent;
         this.sourceTab     = sourceTab;
         this.initialQuery  = initialQuery;
-        this.searchMode     = MultichatClient.CONFIG.searchDefaultMode;
-        this.caseSensitive  = MultichatClient.CONFIG.searchDefaultCase;
-        this.liveUpdate     = MultichatClient.CONFIG.searchDefaultLive;
-        this.visibility     = MultichatClient.CONFIG.searchDefaultVisibility;
+        this.searchMode      = MultichatClient.CONFIG.searchDefaultMode;
+        this.caseSensitive   = MultichatClient.CONFIG.searchDefaultCase;
+        this.liveUpdate      = MultichatClient.CONFIG.searchDefaultLive;
+        this.visibleOnPanels = new LinkedHashSet<>(MultichatClient.CONFIG.searchDefaultPanels);
         this.showTimestamps       = MultichatClient.CONFIG.searchDefaultTimestamps;
         this.collapseIdentical    = MultichatClient.CONFIG.searchDefaultCollapseIdentical;
     }
@@ -97,8 +98,8 @@ public class SearchOverlay extends LzScreen {
             .dimensions(fx + btnW + 4, top + 58, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Vis: " + visibility.name()).mc(),
-                b -> { visibility = cycleVis(); b.setMessage(LzText.literal("Vis: " + visibility.name()).mc()); })
+                LzText.literal("Vis: " + panelSetLabel()).mc(),
+                b -> { cyclePanels(); b.setMessage(LzText.literal("Vis: " + panelSetLabel()).mc()); })
             .dimensions(fx, top + 84, btnW, 20).build());
 
         addDrawableChild(ButtonWidget.builder(
@@ -132,13 +133,20 @@ public class SearchOverlay extends LzScreen {
         };
     }
 
-    private TabVisibility cycleVis() {
-        return switch (visibility) {
-            case BOTH  -> TabVisibility.LEFT;
-            case LEFT  -> TabVisibility.RIGHT;
-            case RIGHT -> TabVisibility.BOTH;
-            default    -> TabVisibility.BOTH;
-        };
+    private String panelSetLabel() {
+        boolean l = visibleOnPanels.contains("panel0"), r = visibleOnPanels.contains("panel1");
+        if (l && r) return "BOTH";
+        if (l)      return "LEFT";
+        if (r)      return "RIGHT";
+        return "NONE";
+    }
+
+    private void cyclePanels() {
+        boolean l = visibleOnPanels.contains("panel0"), r = visibleOnPanels.contains("panel1");
+        visibleOnPanels.clear();
+        if (l && r)       { visibleOnPanels.add("panel0"); }           // BOTH  → LEFT
+        else if (l)       { visibleOnPanels.add("panel1"); }           // LEFT  → RIGHT
+        else              { visibleOnPanels.add("panel0"); visibleOnPanels.add("panel1"); } // RIGHT/NONE → BOTH
     }
 
     private void createSearch() {
@@ -152,13 +160,13 @@ public class SearchOverlay extends LzScreen {
         ChatRenderer.TABS.removeIf(t -> t.type == net.mobilelize.multichat.client.TabType.SEARCH);
 
         SearchTab tab = new SearchTab(name, query, searchMode, caseSensitive,
-            fromTicks, toTicks, sourceTab, liveUpdate, visibility);
+            fromTicks, toTicks, sourceTab, liveUpdate, visibleOnPanels);
         tab.showTimestamps    = showTimestamps;
         tab.collapseIdentical = collapseIdentical;
         ChatRenderer.TABS.add(tab);
         MessageRouter.refilterSearch(tab);
 
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled) continue;
             int idx = panel.getVisibleTabs().indexOf(tab);
             if (idx >= 0) { panel.activeTab = idx; panel.scrollActiveTabIntoView(); break; }

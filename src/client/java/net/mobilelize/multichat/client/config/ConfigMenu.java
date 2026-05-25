@@ -7,8 +7,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.InputUtil;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.TabVisibility;
-import net.mobilelize.multichat.client.render.ChatRenderer;
 
 public class ConfigMenu {
 
@@ -102,74 +100,6 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.modDisabled = v)
                 .build());
 
-        ConfigCategory leftPanel = builder.getOrCreateCategory(LzText.literal("Left Panel").mc());
-
-        leftPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Show Tabs").mc(),
-                MultichatClient.CONFIG.leftPanelShowTabs)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Show the tab bar on the left panel.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelShowTabs = v)
-                .build());
-
-        leftPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Tabs at Top").mc(),
-                MultichatClient.CONFIG.leftPanelTabsAtTop)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Show the tab bar above messages instead of below them.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelTabsAtTop = v)
-                .build());
-
-        leftPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Show Badges").mc(),
-                MultichatClient.CONFIG.leftPanelShowBadges)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Show unread message counts on inactive tabs in the left panel.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.leftPanelShowBadges = v)
-                .build());
-
-        ConfigCategory rightPanel = builder.getOrCreateCategory(LzText.literal("Right Panel").mc());
-
-        rightPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Enable Right Panel").mc(),
-                MultichatClient.CONFIG.rightPanelEnabled)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Shows a second chat panel on the right side of the screen.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelEnabled = v)
-                .build());
-
-        rightPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Show Only In Chat").mc(),
-                MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Right panel only renders when the chat screen is open.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused = v)
-                .build());
-
-        rightPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Show Badges").mc(),
-                MultichatClient.CONFIG.rightPanelShowBadges)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Show unread message counts on inactive tabs in the right panel.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowBadges = v)
-                .build());
-
-        rightPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Show Tabs").mc(),
-                MultichatClient.CONFIG.rightPanelShowTabs)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Show the tab bar on the right panel.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelShowTabs = v)
-                .build());
-
-        rightPanel.addEntry(eb.startBooleanToggle(
-                LzText.literal("Tabs at Top").mc(),
-                MultichatClient.CONFIG.rightPanelTabsAtTop)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Show the tab bar above messages instead of below them.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.rightPanelTabsAtTop = v)
-                .build());
-
         ConfigCategory search = builder.getOrCreateCategory(LzText.literal("Search").mc());
 
         search.addEntry(eb.startBooleanToggle(
@@ -221,14 +151,22 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultLive = v)
                 .build());
 
-        search.addEntry(eb.startEnumSelector(
-                LzText.literal("Default: Visibility").mc(),
-                TabVisibility.class,
-                MultichatClient.CONFIG.searchDefaultVisibility)
-                .setDefaultValue(TabVisibility.BOTH)
-                .setEnumNameProvider(v -> LzText.literal(v.name()).mc())
-                .setTooltip(LzText.literal("Which panel the search tab appears in by default.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultVisibility = v)
+        search.addEntry(eb.startBooleanToggle(
+                LzText.literal("Default: Left Panel").mc(),
+                MultichatClient.CONFIG.searchDefaultPanels.contains("panel0"))
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Show new search tabs on the left panel by default.").mc())
+                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add("panel0");
+                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove("panel0"); })
+                .build());
+
+        search.addEntry(eb.startBooleanToggle(
+                LzText.literal("Default: Right Panel").mc(),
+                MultichatClient.CONFIG.searchDefaultPanels.contains("panel1"))
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Show new search tabs on the right panel by default.").mc())
+                .setSaveConsumer(v -> { if (v) MultichatClient.CONFIG.searchDefaultPanels.add("panel1");
+                                        else  MultichatClient.CONFIG.searchDefaultPanels.remove("panel1"); })
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
@@ -251,14 +189,6 @@ public class ConfigMenu {
     }
 
     private static void applyAndSave() {
-        ChatRenderer.LEFT.showBadges           = MultichatClient.CONFIG.leftPanelShowBadges;
-        ChatRenderer.LEFT.showTabs             = MultichatClient.CONFIG.leftPanelShowTabs;
-        ChatRenderer.LEFT.tabsAtTop            = MultichatClient.CONFIG.leftPanelTabsAtTop;
-        ChatRenderer.RIGHT.enabled             = MultichatClient.CONFIG.rightPanelEnabled;
-        ChatRenderer.RIGHT.showOnlyWhenFocused = MultichatClient.CONFIG.rightPanelShowOnlyWhenFocused;
-        ChatRenderer.RIGHT.showBadges          = MultichatClient.CONFIG.rightPanelShowBadges;
-        ChatRenderer.RIGHT.showTabs            = MultichatClient.CONFIG.rightPanelShowTabs;
-        ChatRenderer.RIGHT.tabsAtTop           = MultichatClient.CONFIG.rightPanelTabsAtTop;
-        MultichatClient.CONFIG.save();
+        MultichatClient.saveTabsToConfig();
     }
 }

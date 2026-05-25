@@ -14,7 +14,6 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.Collections;
@@ -70,19 +69,23 @@ public class TabListScreen extends LzScreen {
         addDrawableChild(ButtonWidget.builder(LzText.literal("Add").mc(), btn -> addTab())
             .dimensions(width / 2 + 62, height - 50, 40, 20).build());
 
+        addDrawableChild(ButtonWidget.builder(LzText.literal("Panels").mc(),
+                btn -> LzClient.mc().setScreen(new PanelListScreen(this)))
+            .dimensions(width / 2 - 102, height - 26, 62, 20).build());
+
         addDrawableChild(ButtonWidget.builder(LzText.literal("Settings").mc(),
                 btn -> LzClient.mc().setScreen(ConfigMenu.create(this)))
-            .dimensions(width / 2 - 102, height - 26, 100, 20).build());
+            .dimensions(width / 2 - 36, height - 26, 72, 20).build());
 
         addDrawableChild(ButtonWidget.builder(LzText.literal("Done").mc(), btn -> close())
-            .dimensions(width / 2 + 2, height - 26, 100, 20).build());
+            .dimensions(width / 2 + 40, height - 26, 62, 20).build());
     }
 
     private void addTab() {
         String name = nameField.getText().trim();
         if (name.isEmpty()) return;
         if (ChatRenderer.TABS.stream().anyMatch(t -> t.type == TabType.FILTERED && t.name.equalsIgnoreCase(name))) return;
-        ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, TabVisibility.BOTH));
+        ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, java.util.List.of("panel0", "panel1")));
         MultichatClient.saveTabsToConfig();
         clearAndInit();
     }
@@ -212,7 +215,9 @@ public class TabListScreen extends LzScreen {
             // Visibility tag — use tab color if set, else gray
             int visColor = (tab.tabColor != 0) ? (0xFF000000 | (tab.tabColor & 0xFFFFFF)) : 0xFFAAAAAA;
             int nameW = LzDraw.textWidth(nameStr);
-            LzDraw.drawText(ctx, "[" + tab.visibility.name().toLowerCase() + "]", lx + 6 + nameW, textY, visColor);
+            boolean lv = tab.visibleOnPanels.contains("panel0"), rv = tab.visibleOnPanels.contains("panel1");
+            String panelStr = (lv && rv) ? "both" : lv ? "left" : rv ? "right" : "none";
+            LzDraw.drawText(ctx, "[" + panelStr + "]", lx + 6 + nameW, textY, visColor);
 
             boolean canEdit   = tab.type == TabType.FILTERED || tab.type == TabType.API;
             boolean canRemove = tab.type == TabType.FILTERED || tab.type == TabType.SEARCH;

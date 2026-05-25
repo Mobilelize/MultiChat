@@ -7,9 +7,9 @@ import me.shedaniel.clothconfig2.gui.entries.MultiElementListEntry;
 import me.shedaniel.clothconfig2.gui.entries.NestedListListEntry;
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.filter.FilterRule;
 import net.mobilelize.multichat.client.filter.FilterType;
@@ -66,11 +66,15 @@ public class TabEditScreen {
                 .build());
         }
 
-        cat.addEntry(eb.startEnumSelector(LzText.literal("Visibility").mc(), TabVisibility.class, tab.visibility)
-            .setDefaultValue(tab.type == TabType.FILTERED ? TabVisibility.BOTH : tab.visibility)
-            .setTooltip(LzText.literal("Which panel(s) show this tab.").mc())
-            .setSaveConsumer(v -> tab.visibility = v)
-            .build());
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            final String panelId = panel.id;
+            cat.addEntry(eb.startBooleanToggle(
+                    LzText.literal("Show on: " + panelId).mc(),
+                    tab.visibleOnPanels.contains(panelId))
+                .setDefaultValue(true)
+                .setSaveConsumer(v -> { if (v) tab.visibleOnPanels.add(panelId); else tab.visibleOnPanels.remove(panelId); })
+                .build());
+        }
 
         if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
             cat.addEntry(eb.startBooleanToggle(LzText.literal("Show Timestamps").mc(), tab.showTimestamps)

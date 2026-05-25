@@ -1,7 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
 import net.mobilelize.fabriclib.config.LzConfig;
-import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.filter.FilterType;
 import net.mobilelize.multichat.client.filter.IndicatorFilter;
 import net.mobilelize.multichat.client.filter.WhitelistMode;
@@ -15,17 +14,8 @@ public class MultiChatConfig extends LzConfig {
     @Override
     public String directory() { return "config/multichat"; }
 
-    public String contextTabName   = "";
-    public int    leftActiveTab    = 0;
-    public int    rightActiveTab   = 0;
-    public boolean leftPanelShowBadges = true;
-    public boolean leftPanelShowTabs   = true;
-    public boolean rightPanelEnabled   = true;
-    public boolean rightPanelShowOnlyWhenFocused = false;
-    public boolean rightPanelShowBadges = true;
-    public boolean rightPanelShowTabs   = true;
-    public boolean leftPanelTabsAtTop   = false;
-    public boolean rightPanelTabsAtTop  = false;
+    public String            contextTabName = "";
+    public List<PanelConfig> panels         = new ArrayList<>();
 
     // General
     public boolean applySettingsOnRefilter = true;
@@ -46,12 +36,32 @@ public class MultiChatConfig extends LzConfig {
     public SearchMode   searchDefaultMode         = SearchMode.CONTAINS;
     public boolean      searchDefaultCase         = false;
     public boolean      searchDefaultLive         = true;
-    public TabVisibility searchDefaultVisibility  = TabVisibility.BOTH;
+    public List<String> searchDefaultPanels = new java.util.ArrayList<>(List.of("panel0", "panel1"));
     public boolean      searchDefaultTimestamps        = true;
     public boolean      searchDefaultCollapseIdentical = false;
 
     public List<TabConfig>    tabs    = new ArrayList<>();
     public List<ApiTabConfig> apiTabs = new ArrayList<>();
+
+    public static class PanelConfig {
+        public String  id                  = "panel0";
+        public boolean enabled             = true;
+        public String  anchor              = "LEFT";
+        public int     margin              = 0;
+        public int     activeTab           = 0;
+        public boolean showOnlyWhenFocused = false;
+        public boolean showBadges          = true;
+        public boolean showTabs            = true;
+        public boolean tabsAtTop           = false;
+        public int     customX             = 0;
+        public int     customY             = 0;
+        public int     customWidth         = -1;
+        public int     customHeightLines   = -1;
+        public float   customScale         = -1f;
+        public int     bgColor             = 0;
+        public double  customBgOpacity     = -1;
+        public double  customChatOpacity   = -1;
+    }
 
     public static class TabConfig {
         public String name = "";
@@ -59,10 +69,11 @@ public class MultiChatConfig extends LzConfig {
         public boolean showBadge         = true;
         public boolean showTimestamps    = false;
         public int     tabColor          = 0;
+        public int     msgBgColor        = 0;
         public boolean collapseRepeating       = false;
         public boolean collapseMatchFormatting = false;
         public int     messageCap        = 0;
-        public TabVisibility visibility = TabVisibility.BOTH;
+        public List<String> visibleOnPanels = new java.util.ArrayList<>();
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
         public String contextPrefix = "";
         public boolean contextCommandMode = true;
@@ -73,7 +84,7 @@ public class MultiChatConfig extends LzConfig {
     public static class ApiTabConfig {
         public String id = "";
         public String displayName = "";
-        public TabVisibility visibility = TabVisibility.BOTH;
+        public List<String> visibleOnPanels = new java.util.ArrayList<>();
         public int color = 0;
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
         public String contextPrefix = "";

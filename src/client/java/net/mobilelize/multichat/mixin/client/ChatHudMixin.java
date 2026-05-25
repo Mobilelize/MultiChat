@@ -77,8 +77,7 @@ public class ChatHudMixin {
 
     @Inject(method = "resetScroll", at = @At("HEAD"))
     private void resetPanelScroll(CallbackInfo ci) {
-        ChatRenderer.LEFT.resetScrollPositions();
-        ChatRenderer.RIGHT.resetScrollPositions();
+        ChatRenderer.PANELS.forEach(ChatPanel::resetScrollPositions);
     }
 
     @Inject(method = "scroll", at = @At("HEAD"), cancellable = true)
@@ -88,28 +87,25 @@ public class ChatHudMixin {
         boolean leftIsVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
         if (!leftIsVanilla) ci.cancel();
 
-        ChatHud self        = (ChatHud)(Object)this;
-        ChatHudAccessor acc = (ChatHudAccessor) self;
-
-        float scale     = (float) LzChat.chatScale();
-        int chatWidth   = LzMath.ceil((float) LzChat.chatWidth() / scale);
         int windowWidth = LzClient.scaledWindowWidth();
 
-        double rawChatX = ChatRenderer.lastMouseX / (double) scale - 4.0;
-
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled) continue;
             ChatTab active = panel.getActiveTab();
             if (active == null || active.type == TabType.VANILLA) continue;
             if (active.messages.isEmpty()) continue;
 
-            int xOffset       = panel.computeXOffset(windowWidth, scale, chatWidth);
+            float scale   = panel.resolveScale();
+            int chatWidth = panel.resolveWidth();
+
+            double rawChatX   = ChatRenderer.lastMouseX / (double) scale - 4.0;
+            int xOffset       = panel.computeXOffset(windowWidth);
             double localChatX = rawChatX - xOffset;
 
             if (localChatX < -4.0 || localChatX > chatWidth + 8) continue;
 
-            ci.cancel(); // cancel vanilla scroll only when we're handling it
-            int max = Math.max(0, active.messages.size() - LzChat.visibleLineCount());
+            ci.cancel();
+            int max = Math.max(0, active.messages.size() - panel.resolveLines());
             panel.setScrolledLines(active, LzMath.clamp(panel.getScrolledLines(active) + scroll, 0, max));
             return;
         }
@@ -155,28 +151,25 @@ public class ChatHudMixin {
         if (leftActive != null && ChatRenderer.LEFT.enabled && leftActive.type == TabType.VANILLA) return;
         if (!MultichatClient.CONFIG.showIndicators) { cir.setReturnValue(null); return; }
 
-        float scale          = (float) LzChat.chatScale();
-        int chatWidth        = LzMath.ceil((float) LzChat.chatWidth() / scale);
-        int windowWidth      = LzClient.scaledWindowWidth();
-        int windowHeight     = LzClient.scaledWindowHeight();
-        int lineHeight       = LzChat.chatLineHeight();
-        int visibleLineCount = LzChat.visibleLineCount();
+        int windowWidth  = LzClient.scaledWindowWidth();
+        int windowHeight = LzClient.scaledWindowHeight();
 
-        // toChatLineY — same for all panels
-        double chatLineY = ((double) windowHeight - mouseY - 40.0) / (scale * lineHeight);
-
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled) continue;
             ChatTab active = panel.getActiveTab();
             if (active == null || active.type == TabType.VANILLA || active.messages.isEmpty()) continue;
 
-            int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
+            float scale          = panel.resolveScale();
+            int chatWidth        = panel.resolveWidth();
+            int lineHeight       = panel.resolveLineHeight();
+            int visibleLineCount = panel.resolveLines();
 
-            // toChatLineX — panel-local
+            int xOffset      = panel.computeXOffset(windowWidth);
+            int topY         = panel.resolveTopY(windowHeight);
+            double chatLineY = (topY * (double) scale - mouseY) / (scale * lineHeight);
             double chatLineX = mouseX / scale - 4.0 - xOffset;
-            if (chatLineX < -4.0) continue; // outside this panel's left edge
+            if (chatLineX < -4.0) continue;
 
-            // getMessageLineIndex equivalent (Y bounds)
             int maxLines = Math.min(visibleLineCount, active.messages.size());
             if (chatLineY < 0.0 || chatLineY >= maxLines) continue;
             int lineIdx = LzMath.floor(chatLineY + panel.getScrolledLines(active));
@@ -225,23 +218,24 @@ public class ChatHudMixin {
             && leftActive.type == TabType.VANILLA;
         if (cir.getReturnValue() != null && leftIsVanilla) return;
 
-        float scale      = (float) LzChat.chatScale();
-        int chatWidth    = LzMath.ceil((float) LzChat.chatWidth() / scale);
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
 
-        int lineHeight = LzChat.chatLineHeight();
-        double chatY   = ((double) windowHeight - y - 40.0) / (scale * lineHeight);
-        double rawChatX    = x / scale - 4.0;
-
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled) continue;
 
             ChatTab active = panel.getActiveTab();
             if (active == null || active.type == TabType.VANILLA) continue;
             if (active.messages.isEmpty()) continue;
 
-            int xOffset       = panel.computeXOffset(windowWidth, scale, chatWidth);
+            float scale    = panel.resolveScale();
+            int chatWidth  = panel.resolveWidth();
+            int lineHeight = panel.resolveLineHeight();
+
+            int panelTopY     = panel.resolveTopY(windowHeight);
+            double chatY      = (panelTopY * (double) scale - y) / (scale * lineHeight);
+            double rawChatX   = x / scale - 4.0;
+            int xOffset       = panel.computeXOffset(windowWidth);
             double localChatX = rawChatX - xOffset;
 
             if (localChatX < -4.0 || localChatX > chatWidth) continue;

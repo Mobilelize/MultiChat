@@ -6,13 +6,16 @@ import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.multichat.client.filter.FilterRuleSet;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ChatTab {
 
     public String name;
     public final TabType type;
-    public TabVisibility visibility;
+    public final Set<String> visibleOnPanels = new LinkedHashSet<>();
     public final List<LzChatLine> messages = new ArrayList<>();
     public int unreadCount = 0;
     public final FilterRuleSet filterRules = new FilterRuleSet();
@@ -21,6 +24,7 @@ public class ChatTab {
     public boolean showBadge         = true;
     public boolean showTimestamps    = false;
     public int     tabColor          = 0;
+    public int     msgBgColor        = 0;   // 0 = use panel bgColor
     public boolean collapseRepeating        = false;
     public boolean collapseMatchFormatting  = false;
     public int     messageCap               = 0;
@@ -35,10 +39,14 @@ public class ChatTab {
     public int                 collapseLastTick    = 0;
     public List<LzOrderedText> collapseLastLines   = null;
 
-    public ChatTab(String name, TabType type, TabVisibility visibility) {
+    public ChatTab(String name, TabType type, Collection<String> visibleOnPanels) {
         this.name = name;
         this.type = type;
-        this.visibility = visibility;
+        this.visibleOnPanels.addAll(visibleOnPanels);
+    }
+
+    public boolean isSystemTab() {
+        return type == TabType.ALL || type == TabType.VANILLA;
     }
 
     public void resetCollapse() {

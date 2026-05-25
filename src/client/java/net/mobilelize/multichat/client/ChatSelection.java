@@ -123,7 +123,8 @@ public class ChatSelection {
                                int windowHeight, int chatWidth, int xOffset) {
         double localX = mouseX / scale - 4.0 - xOffset;
         if (localX < -4.0 || localX > chatWidth) return -1;
-        double chatY = ((double) windowHeight - mouseY - 40.0) / (scale * lineHeight);
+        int topY = panel.resolveTopY(windowHeight);
+        double chatY = (topY * (double) scale - mouseY) / (scale * lineHeight);
         if (chatY < 0.0) return -1;
         ChatTab active = panel.getActiveTab();
         if (active == null) return -1;

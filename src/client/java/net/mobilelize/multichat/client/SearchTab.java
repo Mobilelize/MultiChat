@@ -2,6 +2,7 @@ package net.mobilelize.multichat.client;
 
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchMode;
+import java.util.Collection;
 
 public class SearchTab extends ChatTab {
 
@@ -17,8 +18,8 @@ public class SearchTab extends ChatTab {
 
     public SearchTab(String name, String query, SearchMode searchMode, boolean caseSensitive,
                      int timeFromTicks, int timeToTicks, ChatTab sourceTab, boolean liveUpdate,
-                     TabVisibility visibility) {
-        super(name, TabType.SEARCH, visibility);
+                     java.util.Collection<String> visibleOnPanels) {
+        super(name, TabType.SEARCH, visibleOnPanels);
         this.query         = query;
         this.searchMode    = searchMode;
         this.caseSensitive = caseSensitive;

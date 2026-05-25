@@ -52,16 +52,16 @@ public abstract class ChatScreenMixin {
             if (held) {
                 ChatPanel selPanel = ChatSelection.getPanel();
                 if (selPanel != null && selPanel.enabled) {
-                    float scale      = (float) LzChat.chatScale();
-                    int chatWidth    = LzMath.ceil((float) LzChat.chatWidth() / scale);
-                    int windowHeight = LzClient.scaledWindowHeight();
                     int windowWidth  = LzClient.scaledWindowWidth();
-                    int lineH        = LzChat.chatLineHeight();
-                    int xOff         = selPanel.computeXOffset(windowWidth, scale, chatWidth);
+                    int windowHeight = LzClient.scaledWindowHeight();
+                    float scale      = selPanel.resolveScale();
+                    int chatWidth    = selPanel.resolveWidth();
+                    int lineH        = selPanel.resolveLineHeight();
+                    int xOff         = selPanel.computeXOffset(windowWidth);
                     ChatTab active   = selPanel.getActiveTab();
                     if (active != null && !active.messages.isEmpty()) {
                         int idx = ChatSelection.hitLine(selPanel, mouseX, mouseY,
-                            LzChat.visibleLineCount(), scale, lineH, windowHeight, chatWidth, xOff);
+                            selPanel.resolveLines(), scale, lineH, windowHeight, chatWidth, xOff);
                         if (idx >= 0) {
                             float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
                             int charIdx  = ChatSelection.charIndexAtX(
@@ -164,23 +164,22 @@ public abstract class ChatScreenMixin {
 
         if (button == 0) ChatSelection.clear();
 
-        float scale      = (float) LzChat.chatScale();
-        int chatWidth    = LzMath.ceil((float) LzChat.chatWidth() / scale);
         int windowHeight = LzClient.scaledWindowHeight();
         int windowWidth  = LzClient.scaledWindowWidth();
-        int topY         = LzMath.floor((float)(windowHeight - 40) / scale);
-
-        int lineH = LzChat.chatLineHeight();
-        int visibleLineCount = LzChat.visibleLineCount();
 
         if (button == 1) {
-            for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+            for (ChatPanel panel : ChatRenderer.PANELS) {
                 if (!panel.enabled) continue;
+                float scale = panel.resolveScale();
+                int chatWidth = panel.resolveWidth();
+                int lineH = panel.resolveLineHeight();
+                int visibleLineCount = panel.resolveLines();
+                int topY = panel.resolveTopY(windowHeight);
                 if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLineCount)) continue;
                 ChatTab active = panel.getActiveTab();
                 if (active == null) continue;
 
-                int xOff = panel.computeXOffset(windowWidth, scale, chatWidth);
+                int xOff = panel.computeXOffset(windowWidth);
                 int hIdx = ChatRenderer.computeHoveredIndex(
                     panel, (int) mouseX, (int) mouseY,
                     visibleLineCount, windowHeight, scale, lineH, chatWidth, xOff, true);
@@ -195,13 +194,18 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.selectionEnabled && button == 0) {
-            for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+            for (ChatPanel panel : ChatRenderer.PANELS) {
                 if (!panel.enabled) continue;
+                float scale = panel.resolveScale();
+                int chatWidth = panel.resolveWidth();
+                int lineH = panel.resolveLineHeight();
+                int visibleLineCount = panel.resolveLines();
+                int topY = panel.resolveTopY(windowHeight);
                 if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLineCount)) continue;
                 ChatTab active = panel.getActiveTab();
                 if (active == null || active.messages.isEmpty()) continue;
 
-                int xOff = panel.computeXOffset(windowWidth, scale, chatWidth);
+                int xOff = panel.computeXOffset(windowWidth);
                 int exactIdx = ChatSelection.hitLine(panel, mouseX, mouseY,
                     visibleLineCount, scale, lineH, windowHeight, chatWidth, xOff);
                 if (exactIdx < 0) continue;
@@ -225,15 +229,21 @@ public abstract class ChatScreenMixin {
             }
         }
 
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled || !panel.showTabs) continue;
+
+            float scale = panel.resolveScale();
+            int chatWidth = panel.resolveWidth();
+            int lineH = panel.resolveLineHeight();
+            int visibleLineCount = panel.resolveLines();
+            int topY = panel.resolveTopY(windowHeight);
 
             int tabY = ChatRenderer.getTabBarY(panel, topY, visibleLineCount, lineH);
             double panelTabBarScreenTop = tabY * (double) scale;
             double panelTabBarScreenBot = (tabY + ChatRenderer.TAB_HEIGHT) * (double) scale;
             if (mouseY < panelTabBarScreenTop || mouseY > panelTabBarScreenBot) continue;
 
-            int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
+            int xOffset = panel.computeXOffset(windowWidth);
             List<ChatTab> visibleTabs = panel.getVisibleTabs();
 
             boolean hasLeft  = panel.tabScrollOffset > 0;

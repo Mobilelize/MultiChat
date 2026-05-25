@@ -1,5 +1,8 @@
 package net.mobilelize.multichat.client;
 
+import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.client.LzOptions;
+import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.HashMap;
@@ -8,32 +11,79 @@ import java.util.Map;
 
 public class ChatPanel {
 
-    public enum Anchor { LEFT, RIGHT }
+    public enum Anchor { LEFT, RIGHT, CUSTOM }
 
-    public final Anchor anchor;
-    public final int margin;
-    public int activeTab = 0;
-    public boolean enabled;
-    public boolean showOnlyWhenFocused;
-    public boolean showBadges = true;
-    public boolean showTabs   = true;
-    public boolean tabsAtTop  = false;
-    public int tabScrollOffset = 0;
-    public int tabLastRendered = -1;
+    public Anchor  anchor             = Anchor.LEFT;
+    public boolean primary            = false;
+    public String  id                 = "panel0";
+    public int     margin             = 0;
+    public int     activeTab          = 0;
+    public boolean enabled            = false;
+    public boolean showOnlyWhenFocused = false;
+    public boolean showBadges         = true;
+    public boolean showTabs           = true;
+    public boolean tabsAtTop          = false;
+    public int     tabScrollOffset    = 0;
+    public int     tabLastRendered    = -1;
+
+    // Custom position — only used when anchor == CUSTOM and !primary (screen pixels)
+    public int customX = 0;
+    public int customY = 0;
+
+    // Per-panel display overrides — ignored on primary panel (always uses MC defaults)
+    public int    customWidth       = -1;   // -1 = use MC default
+    public int    customHeightLines = -1;   // -1 = use MC default
+    public float  customScale       = -1f;  // -1 = use MC default
+    public int    bgColor           = 0;    // 0 = transparent
+    public double customBgOpacity   = -1;   // -1 = use MC default
+    public double customChatOpacity = -1;   // -1 = use MC default
+
     private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();
 
-    public ChatPanel(Anchor anchor, int margin, boolean enabled, boolean showOnlyWhenFocused) {
-        this.anchor = anchor;
-        this.margin = margin;
-        this.enabled = enabled;
-        this.showOnlyWhenFocused = showOnlyWhenFocused;
+    public ChatPanel() {}
+
+    // -----------------------------------------------------------------------
+    // Resolvers — primary panel always uses MC defaults; others use override if set
+    // -----------------------------------------------------------------------
+
+    public float resolveScale() {
+        if (primary || customScale <= 0) return (float) LzChat.chatScale();
+        return customScale;
     }
+
+    public int resolveWidth() {
+        float scale = resolveScale();
+        if (primary || customWidth <= 0) return LzMath.ceil((float) LzChat.chatWidth() / scale);
+        return customWidth;
+    }
+
+    public int resolveLines() {
+        if (primary || customHeightLines <= 0) return LzChat.visibleLineCount();
+        return customHeightLines;
+    }
+
+    public int resolveLineHeight() {
+        // TODO: compute from customScale when non-primary panels have custom scale set
+        return LzChat.chatLineHeight();
+    }
+
+    public double resolveBgOpacity() {
+        if (primary || customBgOpacity < 0) return LzOptions.textBackgroundOpacity();
+        return customBgOpacity;
+    }
+
+    public double resolveChatOpacity() {
+        if (primary || customChatOpacity < 0) return LzOptions.chatOpacity() * 0.9 + 0.1;
+        return customChatOpacity;
+    }
+
+    // -----------------------------------------------------------------------
+    // Tab helpers
+    // -----------------------------------------------------------------------
 
     public List<ChatTab> getVisibleTabs() {
         return ChatRenderer.TABS.stream()
-            .filter(t -> t.visibility == TabVisibility.BOTH
-                      || (anchor == Anchor.LEFT  && t.visibility == TabVisibility.LEFT)
-                      || (anchor == Anchor.RIGHT && t.visibility == TabVisibility.RIGHT))
+            .filter(t -> t.visibleOnPanels.contains(this.id))
             .toList();
     }
 
@@ -65,10 +115,17 @@ public class ChatPanel {
         }
     }
 
-    public int computeXOffset(int scaledWindowWidth, float scale, int chatWidth) {
-        if (anchor == Anchor.RIGHT) {
-            return Math.round(scaledWindowWidth / scale) - chatWidth - 12 - margin;
-        }
-        return margin;
+    public int resolveTopY(int windowHeight) {
+        if (primary || anchor != Anchor.CUSTOM)
+            return LzMath.floor((float)(windowHeight - 40) / resolveScale());
+        return Math.round(customY / resolveScale());
+    }
+
+    public int computeXOffset(int scaledWindowWidth) {
+        return switch (anchor) {
+            case RIGHT  -> Math.round(scaledWindowWidth / resolveScale()) - resolveWidth() - 12 - margin;
+            case CUSTOM -> !primary ? Math.round(customX / resolveScale()) : margin;
+            default     -> margin;
+        };
     }
 }

@@ -18,7 +18,6 @@ import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
 import java.util.ArrayList;
@@ -28,8 +27,26 @@ import java.util.Set;
 
 public class ChatRenderer {
 
-    public static final ChatPanel LEFT  = new ChatPanel(ChatPanel.Anchor.LEFT,  0, true,  false);
-    public static final ChatPanel RIGHT = new ChatPanel(ChatPanel.Anchor.RIGHT, 0, false, false);
+    public static final List<ChatPanel> PANELS = new ArrayList<>();
+
+    // Convenience references — same objects as PANELS.get(0) and PANELS.get(1)
+    public static final ChatPanel LEFT;
+    public static final ChatPanel RIGHT;
+
+    static {
+        LEFT         = new ChatPanel();
+        LEFT.primary = true;
+        LEFT.enabled = true;
+        LEFT.id      = "panel0";
+        PANELS.add(LEFT);
+
+        RIGHT        = new ChatPanel();
+        RIGHT.anchor = ChatPanel.Anchor.RIGHT;
+        RIGHT.id     = "panel1";
+        PANELS.add(RIGHT);
+    }
+
+    public static ChatPanel primaryPanel() { return PANELS.getFirst(); }
 
     public static ChatTab contextTab = null;
 
@@ -43,8 +60,8 @@ public class ChatRenderer {
     private static int  tickStart     = 0;
 
     public static final List<ChatTab> TABS = new ArrayList<>(List.of(
-        new ChatTab("All",     TabType.ALL,     TabVisibility.BOTH),
-        new ChatTab("Vanilla", TabType.VANILLA, TabVisibility.LEFT)
+        new ChatTab("All",     TabType.ALL,     List.of("panel0", "panel1")),
+        new ChatTab("Vanilla", TabType.VANILLA, List.of("panel0"))
     ));
 
     public static int lastMouseX = 0;
@@ -63,8 +80,7 @@ public class ChatRenderer {
     }
 
     public static void resetForRefresh() {
-        LEFT.resetScrollPositions();
-        RIGHT.resetScrollPositions();
+        PANELS.forEach(ChatPanel::resetScrollPositions);
         TABS.forEach(t -> {
             t.messages.clear();
             t.unreadCount = 0;
@@ -82,33 +98,33 @@ public class ChatRenderer {
 
         if (LzOptions.chatVisibility() == LzChatVisibility.HIDDEN) return;
 
-        boolean anyVisible = (LEFT.enabled  && (!LEFT.showOnlyWhenFocused  || focused))
-                          || (RIGHT.enabled && (!RIGHT.showOnlyWhenFocused || focused));
+        boolean anyVisible = PANELS.stream()
+            .anyMatch(p -> p.enabled && (!p.showOnlyWhenFocused || focused));
         if (!anyVisible) return;
 
         LzClient.mc().getProfiler().push("multichat");
 
-        float scale       = (float) LzChat.chatScale();
-        int chatWidth     = LzMath.ceil((float) LzChat.chatWidth() / scale);
-        int windowHeight  = LzDraw.scaledHeight(context);
-        int windowWidth   = LzDraw.scaledWidth(context);
+        int windowHeight   = LzDraw.scaledHeight(context);
+        int windowWidth    = LzDraw.scaledWidth(context);
+        double lineSpacing = LzOptions.chatLineSpacing();
+        boolean hasUnread  = accessor.getHasUnreadNewMessages();
 
-        double chatOpacity   = LzOptions.chatOpacity() * 0.9 + 0.1;
-        double bgOpacity     = LzOptions.textBackgroundOpacity();
-        double lineSpacing   = LzOptions.chatLineSpacing();
-        int lineHeight       = LzChat.chatLineHeight();
-        int textOffset       = (int) Math.round(-8.0 * (lineSpacing + 1.0) + 4.0 * lineSpacing);
-        int visibleLineCount = LzChat.visibleLineCount();
-        boolean hasUnread    = accessor.getHasUnreadNewMessages();
-        int topY             = LzMath.floor((float)(windowHeight - 40) / scale);
-
-        for (ChatPanel panel : List.of(LEFT, RIGHT)) {
+        for (ChatPanel panel : PANELS) {
             if (!panel.enabled) continue;
             if (panel.showOnlyWhenFocused && !focused) continue;
 
             ChatTab activeTab = panel.getActiveTab();
             if (activeTab == null) continue;
-            int xOffset = panel.computeXOffset(windowWidth, scale, chatWidth);
+
+            float scale          = panel.resolveScale();
+            int chatWidth        = panel.resolveWidth();
+            double chatOpacity   = panel.resolveChatOpacity();
+            double bgOpacity     = panel.resolveBgOpacity();
+            int lineHeight       = panel.resolveLineHeight();
+            int textOffset       = (int) Math.round(-8.0 * (lineSpacing + 1.0) + 4.0 * lineSpacing);
+            int visibleLineCount = panel.resolveLines();
+            int topY             = panel.resolveTopY(windowHeight);
+            int xOffset          = panel.computeXOffset(windowWidth);
 
             int tabY = getTabBarY(panel, topY, visibleLineCount, lineHeight);
             if (focused && panel.showTabs) renderTabBar(context, panel, xOffset, tabY, scale, chatWidth);
@@ -122,10 +138,11 @@ public class ChatRenderer {
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
 
+            int lineBgRgb = (activeTab.msgBgColor != 0 ? activeTab.msgBgColor : panel.bgColor) & 0xFFFFFF;
             renderAt(context, currentTick, focused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
-                    lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset, panel);
+                    lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset, panel, lineBgRgb);
         }
 
         LzClient.mc().getProfiler().pop();
@@ -226,7 +243,7 @@ public class ChatRenderer {
                                   int chatWidth, int topY, float scale,
                                   double chatOpacity, double bgOpacity,
                                   int lineHeight, int textOffset, int visibleLineCount,
-                                  int hoveredIndex, int xOffset, ChatPanel panel) {
+                                  int hoveredIndex, int xOffset, ChatPanel panel, int lineBgRgb) {
         LzDraw.pushMatrix(context);
         LzDraw.scale(context, scale, scale);
         LzDraw.translate(context, 4.0F + xOffset, 0.0F);
@@ -252,7 +269,7 @@ public class ChatRenderer {
             int lineBot = lineTop - lineHeight;
             int textY   = lineTop + textOffset;
 
-            LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, bgAlpha << 24);
+            LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (bgAlpha << 24) | lineBgRgb);
 
             if (!ChatRenderer.highlightLines.isEmpty()
                     && ChatRenderer.currentTick < ChatRenderer.highlightUntilTick
@@ -329,7 +346,8 @@ public class ChatRenderer {
 
         double rawChatX   = mouseX / (double) scale - 4.0;
         double localChatX = rawChatX - xOffset;
-        double chatY      = ((double) windowHeight - mouseY - 40.0) / (scale * lineHeight);
+        int    topY       = panel.resolveTopY(windowHeight);
+        double chatY      = (topY * (double) scale - mouseY) / (scale * lineHeight);
 
         if (localChatX < -4.0 || localChatX > chatWidth) return -1;
 

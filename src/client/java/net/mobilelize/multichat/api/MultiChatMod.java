@@ -55,8 +55,13 @@ public class MultiChatMod {
 
         String resolvedName = (saved != null && saved.displayName != null && !saved.displayName.isEmpty())
             ? saved.displayName : displayName;
-        ChatTab tab = new ChatTab(resolvedName, TabType.API,
-            saved != null ? saved.visibility : visibility);
+        java.util.Set<String> resolvedPanels;
+        if (saved != null && !saved.visibleOnPanels.isEmpty()) {
+            resolvedPanels = new java.util.LinkedHashSet<>(saved.visibleOnPanels);
+        } else {
+            resolvedPanels = TabVisibility.toPanelIds(visibility);
+        }
+        ChatTab tab = new ChatTab(resolvedName, TabType.API, resolvedPanels);
         tab.apiId    = fullId;
         tab.tabColor = saved != null ? saved.color : (color & 0xFFFFFF);
 

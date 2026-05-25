@@ -60,7 +60,7 @@ public class TabHandle {
     public ChatTab getTab()  { return tab; }
 
     private static void adjustAfterAdd(ChatTab tab, int added) {
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             int scrolled = panel.getScrolledLines(tab);
             if (scrolled > 0) panel.setScrolledLines(tab, scrolled + added);
         }
@@ -71,7 +71,7 @@ public class TabHandle {
             while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
             int removed = before - tab.messages.size();
             if (removed > 0) {
-                for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+                for (ChatPanel panel : ChatRenderer.PANELS) {
                     int scrolled = panel.getScrolledLines(tab);
                     if (scrolled > 0)
                         panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
@@ -86,7 +86,7 @@ public class TabHandle {
     }
 
     private static boolean isActiveInAnyPanel(ChatTab tab) {
-        for (ChatPanel panel : List.of(ChatRenderer.LEFT, ChatRenderer.RIGHT)) {
+        for (ChatPanel panel : ChatRenderer.PANELS) {
             List<ChatTab> visible = panel.getVisibleTabs();
             int idx = visible.indexOf(tab);
             if (idx >= 0 && panel.activeTab == idx) return true;
