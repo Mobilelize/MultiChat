@@ -30,6 +30,7 @@ public class PanelTabsScreen extends LzScreen {
     private final ChatPanel panel;
 
     private final Map<ChatTab, Set<Integer>> originals = new HashMap<>();
+    private ChatTab originalPanelContextTab = null;
 
     private int     scrollOffset       = 0;
     private boolean scrollDragging     = false;
@@ -51,18 +52,19 @@ public class PanelTabsScreen extends LzScreen {
         if (originals.isEmpty()) {
             for (ChatTab t : ChatRenderer.TABS)
                 originals.put(t, new LinkedHashSet<>(t.visibleOnPanels));
+            originalPanelContextTab = panel.panelContextTab;
         }
 
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
-        int bx = width / 2 - 130;
-        addDrawableChild(LzButton.of("Add All", bx, LIST_TOP - 22, 56, 18, b -> {
+        int btnGroupX = width / 2 - 74;
+        addDrawableChild(LzButton.of("Add All", btnGroupX, LIST_TOP - 22, 72, 18, b -> {
             for (ChatTab t : ChatRenderer.TABS) {
                 if (t.type == TabType.VANILLA && !panel.primary) continue;
                 t.visibleOnPanels.add(panel.id);
             }
         }));
-        addDrawableChild(LzButton.of("Remove All", bx + 60, LIST_TOP - 22, 72, 18, b -> {
+        addDrawableChild(LzButton.of("Remove All", btnGroupX + 76, LIST_TOP - 22, 72, 18, b -> {
             for (ChatTab t : ChatRenderer.TABS) t.visibleOnPanels.remove(Integer.valueOf(panel.id));
         }));
         addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
@@ -118,12 +120,24 @@ public class PanelTabsScreen extends LzScreen {
                     locked ? 0xFF884444 : 0xFF666666);
 
             // Toggle button
-            boolean hovBtn = hov && mouseX >= lx + 192 && mouseX < lx + 228;
-            LzDraw.fill(ctx, lx + 192, rowY1 + 2, lx + 228, rowY2 - 2,
+            boolean hovBtn = hov && mouseX >= lx + 156 && mouseX < lx + 192;
+            LzDraw.fill(ctx, lx + 156, rowY1 + 2, lx + 192, rowY2 - 2,
                 locked ? 0x22333333
                        : on ? (hovBtn ? 0xCC55AA55 : 0xAA337733) : (hovBtn ? 0xCC555555 : 0x44333333));
-            LzDraw.drawCenteredText(ctx, LzText.literal(locked ? "--" : on ? "ON" : "OFF"), lx + 210, textY,
+            LzDraw.drawCenteredText(ctx, LzText.literal(locked ? "--" : on ? "ON" : "OFF"), lx + 174, textY,
                 locked ? 0x44888888 : (on ? 0xAAFFAA : 0x888888));
+
+            // Panel Context button — FILTERED and API tabs only
+            boolean canCtx = !locked && (tab.type == TabType.FILTERED || tab.type == TabType.API);
+            if (canCtx) {
+                boolean isCtx   = panel.panelContextTab == tab;
+                boolean hovCtx  = mouseX >= lx + 194 && mouseX < lx + 258 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+                int ctxBg = isCtx ? (hovCtx ? 0xCCFFAA00 : 0xAABB7700)
+                                  : (hovCtx ? 0xAA556677 : 0x66334455);
+                LzDraw.fill(ctx, lx + 194, rowY1 + 2, lx + 258, rowY2 - 2, ctxBg);
+                LzDraw.drawCenteredText(ctx, LzText.literal(isCtx ? "● CTX" : "Set CTX"), lx + 226, textY,
+                    isCtx ? 0xFFFFCC00 : 0xFF999999);
+            }
         }
 
         LzDraw.disableScissor(ctx);
@@ -177,7 +191,16 @@ public class PanelTabsScreen extends LzScreen {
         ChatTab tab = tabList.get(idx);
         if (tab.type == TabType.VANILLA && !panel.primary) return false; // locked to main panel
 
-        if (mx >= lx && mx < lx + 260) {
+        // CTX button
+        if (mx >= lx + 194 && mx < lx + 258
+                && (tab.type == TabType.FILTERED || tab.type == TabType.API)) {
+            panel.panelContextTab = (panel.panelContextTab == tab) ? null : tab;
+            MultichatClient.saveTabsToConfig();
+            return true;
+        }
+
+        // Visibility toggle (name area + toggle button, but not CTX region)
+        if (mx >= lx && mx < lx + 194) {
             if (tab.visibleOnPanels.contains(panel.id)) tab.visibleOnPanels.remove(Integer.valueOf(panel.id));
             else                                         tab.visibleOnPanels.add(panel.id);
             return true;
@@ -222,6 +245,7 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     private boolean isDirty() {
+        if (panel.panelContextTab != originalPanelContextTab) return true;
         for (Map.Entry<ChatTab, Set<Integer>> e : originals.entrySet()) {
             if (!e.getKey().visibleOnPanels.equals(e.getValue())) return true;
         }
@@ -243,6 +267,8 @@ public class PanelTabsScreen extends LzScreen {
             e.getKey().visibleOnPanels.clear();
             e.getKey().visibleOnPanels.addAll(e.getValue());
         }
+        panel.panelContextTab = originalPanelContextTab;
+        MultichatClient.saveTabsToConfig();
         close();
     }
 

@@ -95,7 +95,7 @@ public class TabEditScreen {
         if (tab.type == TabType.FILTERED) {
             settings.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode)
                 .setDefaultValue(false)
-                .setTooltip(LzText.literal("Show only messages that don't match any other filtered tab.").mc())
+                .setTooltip(LzText.literal("Catch-all: receives messages no other active panel tab received. Only works when exactly one active tab has this enabled.").mc())
                 .setSaveConsumer(v -> tab.differenceMode = v)
                 .build());
         }

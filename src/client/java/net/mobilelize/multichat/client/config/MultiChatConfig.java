@@ -30,6 +30,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean flashOnPanelFocus       = true;
     public boolean showContextDisplay      = true;
     public boolean earlyMessageCapture    = true;
+    public boolean panelContextEnabled    = true;
 
     // Search
     public boolean      searchKeybindEnabled      = true;
@@ -68,6 +69,7 @@ public class MultiChatConfig extends LzConfig {
         public int     bgColor             = 0;
         public double  customBgOpacity     = -1;
         public double  customChatOpacity   = -1;
+        public String  panelContextTabName = "";
     }
 
     public static class TabConfig {

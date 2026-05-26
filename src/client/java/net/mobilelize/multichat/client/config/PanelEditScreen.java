@@ -83,9 +83,9 @@ public class PanelEditScreen {
             () -> LzClient.mc().setScreen(new PanelTabsScreen(LzClient.mc().currentScreen, panel))
         ));
 
-        // ── Position (non-primary only) ───────────────────────────────────
+        // ── Adjustments (non-primary only) ───────────────────────────────
         if (!panel.primary) {
-            ConfigCategory position = builder.getOrCreateCategory(LzText.literal("Position").mc());
+            ConfigCategory position = builder.getOrCreateCategory(LzText.literal("Adjustments").mc());
 
             position.addEntry(eb.startEnumSelector(LzText.literal("Anchor").mc(), ChatPanel.Anchor.class, panel.anchor)
                 .setDefaultValue(ChatPanel.Anchor.LEFT)
@@ -129,6 +129,7 @@ public class PanelEditScreen {
                 .setTooltip(LzText.literal("Text opacity. -1 = use MC default.").mc())
                 .setSaveConsumer(v -> panel.customChatOpacity = v)
                 .build());
+
         }
 
         return builder.build();

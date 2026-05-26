@@ -38,22 +38,24 @@ public class MessageRouter {
 
         String fullText = rawLzText != null ? rawLzText.mc().getString() : content.mc().getString();
 
-        ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
-        ChatTab rightActive = ChatRenderer.RIGHT.getActiveTab();
-        boolean leftDiff = leftActive != null && leftActive.type == TabType.FILTERED && leftActive.differenceMode;
-        boolean rightDiff = rightActive != null && rightActive.type == TabType.FILTERED && rightActive.differenceMode;
-        boolean activeDifference = false;
-        ChatTab diffActiveTab  = null;
-        ChatTab nonDiffActive  = null;
-        if (leftDiff ^ rightDiff) {
-            ChatTab candidate = leftDiff ? rightActive : leftActive;
-            if (candidate != null && !candidate.filterRules.whitelist.isEmpty()) {
-                activeDifference = true;
-                diffActiveTab    = leftDiff ? leftActive : rightActive;
-                nonDiffActive    = candidate;
-            }
+        // Collect the active tab for each enabled panel.
+        List<ChatTab> panelActiveTabs = new ArrayList<>();
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (!panel.enabled) continue;
+            ChatTab active = panel.getActiveTab();
+            if (active != null) panelActiveTabs.add(active);
         }
-        boolean nonDiffReceived = false;
+
+        // Difference mode: exactly one active tab has differenceMode=true.
+        // That tab only receives messages that no other active tab received.
+        ChatTab diffTab = null;
+        int diffCount = 0;
+        for (ChatTab tab : panelActiveTabs) {
+            if (tab.type == TabType.FILTERED && tab.differenceMode) { diffTab = tab; diffCount++; }
+        }
+        if (diffCount != 1) diffTab = null;
+
+        boolean anyOtherActiveReceived = false;
 
         LzText effectiveLzText = rawLzText != null ? rawLzText : content;
 
@@ -62,16 +64,18 @@ public class MessageRouter {
                 case ALL -> addLines(tab, tick, content, indicator, lines, rawLzText);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case FILTERED -> {
-                    if (activeDifference && tab == diffActiveTab) break;
+                    if (tab == diffTab) break; // handled after first pass
                     if (tab.filterRules.matches(fullText, indicator)) {
                         addLines(tab, tick, content, indicator, lines, rawLzText);
-                        if (activeDifference && tab == nonDiffActive) nonDiffReceived = true;
+                        if (diffTab != null && panelActiveTabs.contains(tab)) anyOtherActiveReceived = true;
                     }
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
-                    if (!tab.filterRules.isEmpty() && tab.filterRules.matches(fullText, indicator))
+                    if (!tab.filterRules.isEmpty() && tab.filterRules.matches(fullText, indicator)) {
                         addLines(tab, tick, content, indicator, lines, rawLzText);
+                        if (diffTab != null && panelActiveTabs.contains(tab)) anyOtherActiveReceived = true;
+                    }
                 }
                 case SEARCH -> {
                     SearchTab st = (SearchTab) tab;
@@ -105,8 +109,8 @@ public class MessageRouter {
             }
         }
 
-        if (activeDifference && !nonDiffReceived) {
-            addLines(diffActiveTab, tick, content, indicator, lines, rawLzText);
+        if (diffTab != null && !anyOtherActiveReceived && diffTab.filterRules.matches(fullText, indicator)) {
+            addLines(diffTab, tick, content, indicator, lines, rawLzText);
         }
     }
 
@@ -301,7 +305,11 @@ public class MessageRouter {
         if (allTab == null || allTab.messages.isEmpty()) return;
         List<LzChatLine> all = allTab.messages;
 
-        List<ChatTab> otherFiltered = tab.differenceMode
+        long diffCount2 = tab.differenceMode
+            ? ChatRenderer.TABS.stream().filter(t -> t.type == TabType.FILTERED && t.differenceMode).count()
+            : 0;
+        boolean effectiveDiff = tab.differenceMode && diffCount2 == 1;
+        List<ChatTab> otherFiltered = effectiveDiff
             ? ChatRenderer.TABS.stream()
                 .filter(t -> t.type == TabType.FILTERED && !t.differenceMode)
                 .toList()
@@ -330,10 +338,10 @@ public class MessageRouter {
             LzMessageIndicator indicator = all.get(start).indicator();
 
             boolean include;
-            if (tab.differenceMode) {
+            if (effectiveDiff) {
                 boolean matchedOther = otherFiltered.stream()
                     .anyMatch(ft -> ft.filterRules.matches(fullText, indicator));
-                include = !matchedOther;
+                include = !matchedOther && tab.filterRules.matches(fullText, indicator);
             } else {
                 include = tab.filterRules.matches(fullText, indicator);
             }

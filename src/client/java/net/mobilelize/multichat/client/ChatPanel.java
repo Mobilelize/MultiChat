@@ -40,6 +40,8 @@ public class ChatPanel {
     public double customBgOpacity   = -1;   // -1 = use MC default
     public double customChatOpacity = -1;   // -1 = use MC default
 
+    public ChatTab panelContextTab = null;
+
     private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();
 
     public ChatPanel() {}

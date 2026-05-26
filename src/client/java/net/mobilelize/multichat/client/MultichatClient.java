@@ -67,6 +67,7 @@ public class MultichatClient implements ClientModInitializer {
             pc.bgColor             = panel.bgColor;
             pc.customBgOpacity     = panel.customBgOpacity;
             pc.customChatOpacity   = panel.customChatOpacity;
+            pc.panelContextTabName = panel.panelContextTab != null ? panel.panelContextTab.name : "";
             panelOut.add(pc);
         }
         CONFIG.panels = panelOut;
@@ -222,6 +223,17 @@ public class MultichatClient implements ClientModInitializer {
         for (ChatPanel panel : ChatRenderer.PANELS) {
             int size = panel.getVisibleTabs().size();
             panel.activeTab = size > 0 ? Math.min(panel.activeTab, size - 1) : 0;
+        }
+
+        // Resolve panel context tabs
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            CONFIG.panels.stream().filter(pc -> pc.id == panel.id).findFirst().ifPresent(pc -> {
+                if (!pc.panelContextTabName.isEmpty()) {
+                    panel.panelContextTab = ChatRenderer.TABS.stream()
+                        .filter(t -> t.name.equals(pc.panelContextTabName))
+                        .findFirst().orElse(null);
+                }
+            });
         }
     }
 

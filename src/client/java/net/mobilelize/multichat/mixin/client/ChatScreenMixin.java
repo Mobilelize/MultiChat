@@ -6,7 +6,6 @@ import net.mobilelize.fabriclib.client.LzChatLine;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.input.LzKeys;
-import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -20,7 +19,6 @@ import net.mobilelize.multichat.client.ContextMenu;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MessageContextMenu;
 import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
@@ -143,6 +141,10 @@ public abstract class ChatScreenMixin {
                         : candidates.get((idx - 1 + candidates.size()) % candidates.size());
                     if (MultichatClient.CONFIG.flashOnPanelFocus)
                         ChatRenderer.focusedPanel.tabFlashTick = ChatRenderer.currentTick;
+                    if (MultichatClient.CONFIG.panelContextEnabled) {
+                        ChatRenderer.contextTab = ChatRenderer.focusedPanel.panelContextTab;
+                        MultichatClient.saveTabsToConfig();
+                    }
                 }
             } else {
                 // Arrow → switch tab on focused panel

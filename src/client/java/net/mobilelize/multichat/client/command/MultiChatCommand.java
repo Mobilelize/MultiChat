@@ -12,6 +12,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.config.ConfigMenu;
+import net.mobilelize.multichat.client.config.PanelListScreen;
 import net.mobilelize.multichat.client.config.TabEditScreen;
 import net.mobilelize.multichat.client.config.TabListScreen;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -32,6 +33,11 @@ public class MultiChatCommand {
                     .then(argument("tab", StringArgumentType.word())
                         .suggests(editSuggestions())
                         .executes(MultiChatCommand::editTab)))
+                .then(literal("panels")
+                    .executes(ctx -> {
+                        LzClient.send(() -> LzClient.mc().setScreen(new PanelListScreen(null)));
+                        return 1;
+                    }))
                 .then(literal("settings")
                     .executes(ctx -> {
                         LzClient.send(() -> LzClient.mc().setScreen(ConfigMenu.create(null)));

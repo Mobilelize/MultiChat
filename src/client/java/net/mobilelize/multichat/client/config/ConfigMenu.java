@@ -96,8 +96,16 @@ public class ConfigMenu {
                 LzText.literal("Server Network Message Capture").mc(),
                 MultichatClient.CONFIG.earlyMessageCapture)
                 .setDefaultValue(true)
-                .setTooltip(LzText.literal("Use Fabric API to capture server network messages before other mods modify them. Fixes filter rules when mods like Lunar Client prepend timestamps.").mc())
+                .setTooltip(LzText.literal("Use Fabric API to capture server network messages before other mods modify them. Fixes filter rules when other mods prepend text to messages (e.g. timestamps).").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.earlyMessageCapture = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
+                LzText.literal("Panel Context on Switch").mc(),
+                MultichatClient.CONFIG.panelContextEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When switching panels with Ctrl+Arrow, auto-activate the context tab assigned to that panel (if any). Set per-panel in Panel → Tabs.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.panelContextEnabled = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
@@ -208,9 +216,11 @@ public class ConfigMenu {
             "&e&lPanels&r\n" +
             "&7Panels are independent chat windows. The &fmain panel&r&7 is always on the left.\n" +
             "Additional panels can be positioned anywhere on screen.\n" +
-            "Open &fMod Menu → MultiChat → Panels&r&7 to add, configure, and arrange panels.\n" +
+            "Open &fMod Menu → MultiChat → Panels&r&7 or run &f/multichat panels&r&7 to manage panels.\n" +
             "Use &fPanel Layout&r&7 to drag and resize panels visually with snap-to-grid.\n" +
-            "&fArrow keys&r&7 switch tabs on the focused panel. &fCtrl+Arrow&r&7 cycles the focused panel."
+            "&fArrow keys&r&7 switch tabs on the focused panel. &fCtrl+Arrow&r&7 cycles the focused panel.\n" +
+            "Each panel can have a &fPanel Context Tab&r&7 — set in Panel → Tabs → &fSet CTX&r&7.\n" +
+            "When &fPanel Context on Switch&r&7 is enabled, focusing a panel via Ctrl+Arrow auto-activates its context tab."
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
@@ -223,13 +233,28 @@ public class ConfigMenu {
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lDifference Mode&r\n" +
+            "&7A filtered tab with &fDifference Mode&r&7 on acts as a catch-all for unmatched messages.\n" +
+            "When active, it receives any message that &fnone&r&7 of the other currently active panel tabs received.\n" +
+            "Rules:\n" +
+            "  &f•&r&7 Exactly &fone&r&7 active tab (the tab shown on a panel) may have Difference Mode enabled.\n" +
+            "    If zero or two or more active tabs have it on, the feature does nothing.\n" +
+            "  &f•&r&7 The check is against the &factive tab per panel&r&7 only — not all tabs in the list.\n" +
+            "  &f•&r&7 Other tabs still receive their matched messages as normal.\n" +
+            "Typical use: put your filters on other tabs, put a Difference tab on a second panel\n" +
+            "to catch everything that slipped through."
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
             "&e&lContext Tab&r\n" +
-            "&7Right-click a tab and select &fSet as Context&r&7 to make it active.\n" +
+            "&7Right-click a tab → &fToggle Context&r&7 to make it active, or use &f/multichat context <tab>&r&7.\n" +
             "While a context tab is set, messages you send are prefixed automatically.\n" +
-            "  &fContext Prefix&r&7 — text prepended to your message.\n" +
+            "  &fContext Prefix&r&7 — text prepended to your message (set in Tab Edit).\n" +
             "  &fCommand Mode ON&r&7 — sent as a command (e.g. prefix &f/tell Steve&r&7 + your message).\n" +
             "  &fCommand Mode OFF&r&7 — sent as plain chat text.\n" +
-            "The active context is shown above the chat input bar."
+            "The active context is shown above the chat input bar.\n" +
+            "&fPanel Context&r&7 — assign a context tab to a panel in Panel → Tabs → &fSet CTX&r&7.\n" +
+            "Switching to that panel via &fCtrl+Arrow&r&7 then auto-activates its context tab."
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
