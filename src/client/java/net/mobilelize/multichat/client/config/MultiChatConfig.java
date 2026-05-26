@@ -82,6 +82,7 @@ public class MultiChatConfig extends LzConfig {
         public int     messageCap        = 0;
         public List<Integer> visibleOnPanels = new java.util.ArrayList<>();
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
+        public WhitelistMode blacklistMode = WhitelistMode.ANY;
         public String contextPrefix = "";
         public boolean contextCommandMode = true;
         public List<RuleConfig> whitelist = new ArrayList<>();
@@ -94,6 +95,7 @@ public class MultiChatConfig extends LzConfig {
         public List<Integer> visibleOnPanels = new java.util.ArrayList<>();
         public int color = 0;
         public WhitelistMode whitelistMode = WhitelistMode.ANY;
+        public WhitelistMode blacklistMode = WhitelistMode.ANY;
         public String contextPrefix = "";
         public boolean contextCommandMode = true;
         public List<RuleConfig> whitelist = new ArrayList<>();

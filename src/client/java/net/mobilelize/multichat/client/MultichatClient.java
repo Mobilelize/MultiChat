@@ -87,6 +87,7 @@ public class MultichatClient implements ClientModInitializer {
             tc.collapseMatchFormatting  = tab.collapseMatchFormatting;
             tc.messageCap         = tab.messageCap;
             tc.whitelistMode      = tab.filterRules.whitelistMode;
+            tc.blacklistMode      = tab.filterRules.blacklistMode;
             tc.contextPrefix      = tab.contextPrefix;
             tc.contextCommandMode = tab.contextCommandMode;
             tc.whitelist          = serializeRules(tab.filterRules.whitelist);
@@ -104,6 +105,7 @@ public class MultichatClient implements ClientModInitializer {
             atc.visibleOnPanels    = new java.util.ArrayList<>(tab.visibleOnPanels);
             atc.color              = tab.tabColor;
             atc.whitelistMode      = tab.filterRules.whitelistMode;
+            atc.blacklistMode      = tab.filterRules.blacklistMode;
             atc.contextPrefix      = tab.contextPrefix;
             atc.contextCommandMode = tab.contextCommandMode;
             atc.whitelist          = serializeRules(tab.filterRules.whitelist);
@@ -194,6 +196,8 @@ public class MultichatClient implements ClientModInitializer {
             tab.collapseMatchFormatting   = tc.collapseMatchFormatting;
             tab.messageCap                = tc.messageCap;
             tab.filterRules.whitelistMode = tc.whitelistMode != null ? tc.whitelistMode
+                : net.mobilelize.multichat.client.filter.WhitelistMode.ANY;
+            tab.filterRules.blacklistMode = tc.blacklistMode != null ? tc.blacklistMode
                 : net.mobilelize.multichat.client.filter.WhitelistMode.ANY;
             tab.contextPrefix             = tc.contextPrefix != null ? tc.contextPrefix : "";
             tab.contextCommandMode        = tc.contextCommandMode;

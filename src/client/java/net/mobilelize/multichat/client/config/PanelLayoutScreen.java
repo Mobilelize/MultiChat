@@ -3,6 +3,7 @@ package net.mobilelize.multichat.client.config;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -52,17 +53,13 @@ public class PanelLayoutScreen extends LzScreen {
                 originals.put(p, new Object[] { p.anchor, p.customX, p.customY, p.customWidth, p.customHeightLines });
         }
 
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Save").mc(), b -> save())
-            .dimensions(width / 2 - 53, height - 26, 50, 18).build());
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> cancel())
-            .dimensions(width / 2 + 3, height - 26, 50, 18).build());
-        addDrawableChild(ButtonWidget.builder(LzText.literal(snapEnabled ? "Snap: ON" : "Snap: OFF").mc(), b -> {
+        addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
+        addDrawableChild(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> cancel()));
+        addDrawableChild(LzButton.of(snapEnabled ? "Snap: ON" : "Snap: OFF", width - 82, height - 26, 78, 18, b -> {
             snapEnabled = !snapEnabled;
             b.setMessage(LzText.literal(snapEnabled ? "Snap: ON" : "Snap: OFF").mc());
-        }).dimensions(width - 82, height - 26, 78, 18).build());
-        addDrawableChild(ButtonWidget.builder(LzText.literal("To Wall").mc(),
-            b -> snapToNearestWall(lastDragged)
-        ).dimensions(4, height - 26, 58, 18).build());
+        }));
+        addDrawableChild(LzButton.of("To Wall", 4, height - 26, 58, 18, b -> snapToNearestWall(lastDragged)));
     }
 
     // Screen-pixel bounding box [x1, y1, x2, y2]

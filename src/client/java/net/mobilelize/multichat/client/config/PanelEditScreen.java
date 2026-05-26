@@ -4,12 +4,13 @@ import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.MultichatClient;
@@ -79,10 +80,7 @@ public class PanelEditScreen {
         ConfigCategory tabs = builder.getOrCreateCategory(LzText.literal("Tabs").mc());
         tabs.addEntry(new LinkEntry(
             LzText.literal("Manage Tabs →").mc(),
-            () -> {
-                MinecraftClient mc = MinecraftClient.getInstance();
-                mc.setScreen(new PanelTabsScreen(mc.currentScreen, panel));
-            }
+            () -> LzClient.mc().setScreen(new PanelTabsScreen(LzClient.mc().currentScreen, panel))
         ));
 
         // ── Position (non-primary only) ───────────────────────────────────
@@ -142,8 +140,7 @@ public class PanelEditScreen {
 
         LinkEntry(net.minecraft.text.Text label, Runnable action) {
             super(label, false);
-            btn = ButtonWidget.builder(label, b -> action.run())
-                .dimensions(0, 0, 200, 20).build();
+            btn = LzButton.of(label, 0, 0, 200, 20, b -> action.run());
         }
 
         @Override public Void getValue()                             { return null; }

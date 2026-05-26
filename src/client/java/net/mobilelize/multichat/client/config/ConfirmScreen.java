@@ -2,7 +2,7 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
+import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -28,12 +28,9 @@ public class ConfirmScreen extends LzScreen {
     protected void init() {
         int cx = width / 2;
         int by = height / 2 + 14;
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Save").mc(),    b -> onSave.run())
-            .dimensions(cx - 95, by, 58, 20).build());
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Discard").mc(), b -> onDiscard.run())
-            .dimensions(cx - 29, by, 58, 20).build());
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(),  b -> close())
-            .dimensions(cx + 37, by, 58, 20).build());
+        addDrawableChild(LzButton.of("Save",    cx - 95, by, 58, 20, b -> onSave.run()));
+        addDrawableChild(LzButton.of("Discard", cx - 29, by, 58, 20, b -> onDiscard.run()));
+        addDrawableChild(LzButton.of("Cancel",  cx + 37, by, 58, 20, b -> close()));
     }
 
     @Override

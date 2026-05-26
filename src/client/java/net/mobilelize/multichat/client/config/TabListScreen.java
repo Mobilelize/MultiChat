@@ -2,9 +2,9 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzTextField;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzFormatting;
@@ -29,7 +29,7 @@ public class TabListScreen extends LzScreen {
     private static final int BTN_GAP    = 3;
 
     private final Screen parent;
-    private TextFieldWidget nameField;
+    private LzTextField nameField;
     private int     scrollOffset       = 0;
     private boolean scrollDragging     = false;
     private int     scrollDragStartY   = 0;
@@ -62,23 +62,14 @@ public class TabListScreen extends LzScreen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
         if (selectedIdx >= allTabs().size()) selectedIdx = -1;
 
-        nameField = new TextFieldWidget(textRenderer, width / 2 - 100, height - 50, 158, 20, LzText.empty().mc());
+        nameField = new LzTextField(width / 2 - 100, height - 50, 158, 20);
         nameField.setPlaceholder(LzText.literal("New tab name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         this.addSelectableChild(nameField);
 
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Add").mc(), btn -> addTab())
-            .dimensions(width / 2 + 62, height - 50, 40, 20).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Panels").mc(),
-                btn -> LzClient.mc().setScreen(new PanelListScreen(this)))
-            .dimensions(width / 2 - 102, height - 26, 62, 20).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Settings").mc(),
-                btn -> LzClient.mc().setScreen(ConfigMenu.create(this)))
-            .dimensions(width / 2 - 36, height - 26, 72, 20).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Done").mc(), btn -> close())
-            .dimensions(width / 2 + 40, height - 26, 62, 20).build());
+        addDrawableChild(LzButton.of("Add",      width / 2 + 62,  height - 50, 40, 20, b -> addTab()));
+        addDrawableChild(LzButton.of("Panels",   width / 2 - 102, height - 26, 62, 20, b -> LzClient.mc().setScreen(new PanelListScreen(this))));
+        addDrawableChild(LzButton.of("Settings", width / 2 - 36,  height - 26, 72, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
+        addDrawableChild(LzButton.of("Done",     width / 2 + 40,  height - 26, 62, 20, b -> close()));
     }
 
     private void addTab() {

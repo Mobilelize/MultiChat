@@ -154,6 +154,13 @@ public class TabEditScreen {
         // ── Blacklist ──────────────────────────────────────────────────────
         ConfigCategory blCat = builder.getOrCreateCategory(LzText.literal("Blacklist").mc());
 
+        blCat.addEntry(eb.startEnumSelector(LzText.literal("Blacklist Mode").mc(), WhitelistMode.class,
+                tab.filterRules.blacklistMode)
+            .setDefaultValue(WhitelistMode.ANY)
+            .setTooltip(LzText.literal("ANY: exclude if any rule matches. ALL: exclude only if all rules match.").mc())
+            .setSaveConsumer(v -> tab.filterRules.blacklistMode = v)
+            .build());
+
         blCat.addEntry(buildRuleList(eb, LzText.literal("Blacklist"), tab.filterRules.blacklist, list -> {
             tab.filterRules.blacklist.clear();
             list.forEach(mr -> tab.filterRules.blacklist.add(mr.toFilterRule()));

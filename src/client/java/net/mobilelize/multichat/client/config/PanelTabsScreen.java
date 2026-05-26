@@ -2,7 +2,7 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
+import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -56,21 +56,17 @@ public class PanelTabsScreen extends LzScreen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
         int bx = width / 2 - 130;
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Add All").mc(), b -> {
+        addDrawableChild(LzButton.of("Add All", bx, LIST_TOP - 22, 56, 18, b -> {
             for (ChatTab t : ChatRenderer.TABS) {
                 if (t.type == TabType.VANILLA && !panel.primary) continue;
                 t.visibleOnPanels.add(panel.id);
             }
-        }).dimensions(bx, LIST_TOP - 22, 56, 18).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Remove All").mc(), b -> {
+        }));
+        addDrawableChild(LzButton.of("Remove All", bx + 60, LIST_TOP - 22, 72, 18, b -> {
             for (ChatTab t : ChatRenderer.TABS) t.visibleOnPanels.remove(Integer.valueOf(panel.id));
-        }).dimensions(bx + 60, LIST_TOP - 22, 72, 18).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Save").mc(),   b -> save())
-            .dimensions(width / 2 - 53, height - 26, 50, 18).build());
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> attemptClose())
-            .dimensions(width / 2 + 3,  height - 26, 50, 18).build());
+        }));
+        addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
+        addDrawableChild(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> attemptClose()));
     }
 
     @Override

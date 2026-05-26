@@ -2,14 +2,13 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
-import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
+import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -43,15 +42,9 @@ public class PanelListScreen extends LzScreen {
     protected void init() {
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Add Panel").mc(), btn -> addPanel())
-            .dimensions(width / 2 - 154, height - 28, 98, 20).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Layout").mc(),
-                btn -> LzClient.mc().setScreen(new PanelLayoutScreen(this)))
-            .dimensions(width / 2 - 50, height - 28, 100, 20).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Done").mc(), btn -> close())
-            .dimensions(width / 2 + 56, height - 28, 98, 20).build());
+        addDrawableChild(LzButton.of("Add Panel", width / 2 - 154, height - 28, 98,  20, b -> addPanel()));
+        addDrawableChild(LzButton.of("Layout",    width / 2 - 50,  height - 28, 100, 20, b -> LzClient.mc().setScreen(new PanelLayoutScreen(this))));
+        addDrawableChild(LzButton.of("Done",      width / 2 + 56,  height - 28, 98,  20, b -> close()));
     }
 
     private void addPanel() {
@@ -64,13 +57,14 @@ public class PanelListScreen extends LzScreen {
         panel.name    = "Panel " + (ChatRenderer.PANELS.size() + 1);
         panel.enabled = true;
         panel.anchor  = ChatPanel.Anchor.CUSTOM;
+        panel.customX = 0.5f;
+        panel.customY = 0.5f;
 
-        // Default to screen center
-        float scale        = (float) LzChat.chatScale();
-        int   defaultWidth = LzMath.ceil((float) LzChat.chatWidth() / scale);
-        int   panelPxW     = Math.round(defaultWidth * scale);
-        panel.customX      = (width  - panelPxW) / 2;
-        panel.customY      = height  / 2;
+        // Add all tabs to the new panel (skip VANILLA — primary only)
+        for (ChatTab t : ChatRenderer.TABS) {
+            if (t.type == net.mobilelize.multichat.client.TabType.VANILLA) continue;
+            t.visibleOnPanels.add(id);
+        }
 
         ChatRenderer.PANELS.add(panel);
         MultichatClient.saveTabsToConfig();
@@ -105,10 +99,14 @@ public class PanelListScreen extends LzScreen {
             // Status tags
             String anchorTag = (panel.primary ? "[primary] " : "") + "[" + panel.anchor.name().toLowerCase() + "] ";
             String displayName = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
-            String nameStr = displayName + " ";
+            long tabCount = ChatRenderer.TABS.stream().filter(t -> t.visibleOnPanels.contains(panel.id)).count();
+            String nameStr  = displayName + " ";
+            String countStr = "(" + tabCount + ") ";
             int nameX = lx + 6;
             LzDraw.drawText(ctx, nameStr, nameX, textY, 0xFFFFFF);
-            int afterName = nameX + LzDraw.textWidth(nameStr);
+            int afterNameStr = nameX + LzDraw.textWidth(nameStr);
+            LzDraw.drawText(ctx, countStr, afterNameStr, textY, 0xFF888888);
+            int afterName = afterNameStr + LzDraw.textWidth(countStr);
             LzDraw.drawText(ctx, anchorTag, afterName, textY, 0xAAAAAA);
             int afterTag = afterName + LzDraw.textWidth(anchorTag);
             LzDraw.drawText(ctx, panel.enabled ? "[on]" : "[off]", afterTag, textY,

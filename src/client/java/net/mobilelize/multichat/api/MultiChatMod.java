@@ -62,6 +62,7 @@ public class MultiChatMod {
 
         if (saved != null) {
             tab.filterRules.whitelistMode = saved.whitelistMode != null ? saved.whitelistMode : WhitelistMode.ANY;
+            tab.filterRules.blacklistMode = saved.blacklistMode != null ? saved.blacklistMode : WhitelistMode.ANY;
             tab.contextPrefix      = saved.contextPrefix != null ? saved.contextPrefix : "";
             tab.contextCommandMode = saved.contextCommandMode;
             for (RuleConfig rc : saved.whitelist)

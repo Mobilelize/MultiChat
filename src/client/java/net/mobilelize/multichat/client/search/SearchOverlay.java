@@ -2,9 +2,9 @@ package net.mobilelize.multichat.client.search;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzTextField;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzFormatting;
@@ -29,9 +29,9 @@ public class SearchOverlay extends LzScreen {
     private final ChatTab sourceTab;
     private final String  initialQuery;
 
-    private TextFieldWidget queryField;
-    private TextFieldWidget fromField;
-    private TextFieldWidget toField;
+    private LzTextField queryField;
+    private LzTextField fromField;
+    private LzTextField toField;
 
     private SearchMode searchMode;
     private boolean    caseSensitive;
@@ -69,55 +69,40 @@ public class SearchOverlay extends LzScreen {
         int half = (fw - 6) / 2;
         int btnW = (fw - 4) / 2;
 
-        queryField = addDrawableChild(new TextFieldWidget(textRenderer, fx, top, fw, 20, LzText.empty().mc()));
+        queryField = addDrawableChild(new LzTextField(fx, top, fw, 20));
         queryField.setPlaceholder(LzText.literal("Search query…").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         queryField.setMaxLength(256);
         if (!initialQuery.isEmpty()) queryField.setText(initialQuery);
         this.setFocused(queryField);
 
-        fromField = addDrawableChild(new TextFieldWidget(textRenderer, fx, top + 30, half, 20, LzText.empty().mc()));
+        fromField = addDrawableChild(new LzTextField(fx, top + 30, half, 20));
         fromField.setPlaceholder(LzText.literal("e.g. 10m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         fromField.setMaxLength(32);
 
-        toField = addDrawableChild(new TextFieldWidget(textRenderer, fx + half + 6, top + 30, half, 20, LzText.empty().mc()));
+        toField = addDrawableChild(new LzTextField(fx + half + 6, top + 30, half, 20));
         toField.setPlaceholder(LzText.literal("e.g. 5m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         toField.setMaxLength(32);
 
-        addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Mode: " + searchMode.name()).mc(),
-                b -> { searchMode = cycleMode(); b.setMessage(LzText.literal("Mode: " + searchMode.name()).mc()); })
-            .dimensions(fx, top + 58, btnW, 20).build());
+        addDrawableChild(LzButton.of("Mode: " + searchMode.name(), fx, top + 58, btnW, 20,
+            b -> { searchMode = cycleMode(); b.setMessage(LzText.literal("Mode: " + searchMode.name()).mc()); }));
 
-        addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF")).mc(),
-                b -> { caseSensitive = !caseSensitive; b.setMessage(LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF")).mc()); })
-            .dimensions(fx + btnW + 4, top + 58, btnW, 20).build());
+        addDrawableChild(LzButton.of("Case: " + (caseSensitive ? "ON" : "OFF"), fx + btnW + 4, top + 58, btnW, 20,
+            b -> { caseSensitive = !caseSensitive; b.setMessage(LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF")).mc()); }));
 
-        addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Badge: " + (showBadge ? "ON" : "OFF")).mc(),
-                b -> { showBadge = !showBadge; b.setMessage(LzText.literal("Badge: " + (showBadge ? "ON" : "OFF")).mc()); })
-            .dimensions(fx, top + 84, btnW, 20).build());
+        addDrawableChild(LzButton.of("Badge: " + (showBadge ? "ON" : "OFF"), fx, top + 84, btnW, 20,
+            b -> { showBadge = !showBadge; b.setMessage(LzText.literal("Badge: " + (showBadge ? "ON" : "OFF")).mc()); }));
 
-        addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")).mc(),
-                b -> { liveUpdate = !liveUpdate; b.setMessage(LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")).mc()); })
-            .dimensions(fx + btnW + 4, top + 84, btnW, 20).build());
+        addDrawableChild(LzButton.of("Live Update: " + (liveUpdate ? "ON" : "OFF"), fx + btnW + 4, top + 84, btnW, 20,
+            b -> { liveUpdate = !liveUpdate; b.setMessage(LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")).mc()); }));
 
-        addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF")).mc(),
-                b -> { showTimestamps = !showTimestamps; b.setMessage(LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF")).mc()); })
-            .dimensions(fx, top + 110, btnW, 20).build());
+        addDrawableChild(LzButton.of("Timestamps: " + (showTimestamps ? "ON" : "OFF"), fx, top + 110, btnW, 20,
+            b -> { showTimestamps = !showTimestamps; b.setMessage(LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF")).mc()); }));
 
-        addDrawableChild(ButtonWidget.builder(
-                LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF")).mc(),
-                b -> { collapseIdentical = !collapseIdentical; b.setMessage(LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF")).mc()); })
-            .dimensions(fx + btnW + 4, top + 110, btnW, 20).build());
+        addDrawableChild(LzButton.of("Collapse: " + (collapseIdentical ? "ON" : "OFF"), fx + btnW + 4, top + 110, btnW, 20,
+            b -> { collapseIdentical = !collapseIdentical; b.setMessage(LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF")).mc()); }));
 
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Cancel").mc(), b -> close())
-            .dimensions(cx - 86, top + 138, 80, 20).build());
-
-        addDrawableChild(ButtonWidget.builder(LzText.literal("Create Search").mc(), b -> createSearch())
-            .dimensions(cx + 6, top + 138, 100, 20).build());
+        addDrawableChild(LzButton.of("Cancel",        cx - 86, top + 138, 80,  20, b -> close()));
+        addDrawableChild(LzButton.of("Create Search", cx + 6,  top + 138, 100, 20, b -> createSearch()));
     }
 
     private SearchMode cycleMode() {
