@@ -2,7 +2,6 @@ package net.mobilelize.multichat.client;
 
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchMode;
-import java.util.Collection;
 
 public class SearchTab extends ChatTab {
 

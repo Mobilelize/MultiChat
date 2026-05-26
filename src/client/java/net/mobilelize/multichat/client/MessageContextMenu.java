@@ -199,7 +199,7 @@ public class MessageContextMenu {
 
     static String extractText(LzChatLine v) {
         StringBuilder sb = new StringBuilder();
-        v.content().accept((idx, style, cp) -> { sb.appendCodePoint(cp); return true; });
+        v.content().lzAccept((idx, style, cp) -> { sb.appendCodePoint(cp); return true; });
         return sb.toString();
     }
 

@@ -235,7 +235,7 @@ public class MessageRouter {
 
             StringBuilder sb = new StringBuilder();
             for (int j = groupEnd; j >= groupStart; j--)
-                source.get(j).content().accept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
+                source.get(j).content().lzAccept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
             String plainText = sb.toString();
 
             int addedTick = source.get(groupStart).addedTime();
@@ -325,7 +325,7 @@ public class MessageRouter {
             // Plain text extracted from ALL tab (no timestamps) — used for filter AND collapse compare
             StringBuilder sb = new StringBuilder();
             for (int j = end; j >= start; j--)
-                all.get(j).content().accept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
+                all.get(j).content().lzAccept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
             String fullText = sb.toString();
             LzMessageIndicator indicator = all.get(start).indicator();
 

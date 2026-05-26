@@ -119,7 +119,7 @@ public class TabListScreen extends LzScreen {
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, 0xFFFFFF);
-        nameField.render(ctx, mouseX, mouseY, delta);
+        nameField.render(ctx.mc(), mouseX, mouseY, delta);
 
         int lx = width / 2 - 130;
 

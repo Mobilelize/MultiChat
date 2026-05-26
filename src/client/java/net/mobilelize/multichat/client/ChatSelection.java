@@ -140,7 +140,7 @@ public class ChatSelection {
         if (targetX <= 0f) return 0;
         int[]   count = {0};
         float[] cumX  = {0f};
-        text.accept((idx, style, cp) -> {
+        text.lzAccept((idx, style, cp) -> {
             float w = glyphWidth(style, cp);
             if (cumX[0] + w * 0.5f >= targetX) return false;
             cumX[0] += w;
@@ -169,7 +169,7 @@ public class ChatSelection {
         if (charIdx <= 0) return 0f;
         float[] x     = {0f};
         int[]   count = {0};
-        text.accept((idx, style, cp) -> {
+        text.lzAccept((idx, style, cp) -> {
             if (count[0] >= charIdx) return false;
             x[0] += glyphWidth(style, cp);
             count[0]++;
@@ -180,7 +180,7 @@ public class ChatSelection {
 
     private static void appendChars(StringBuilder sb, LzOrderedText text, int start, int end) {
         int[] count = {0};
-        text.accept((idx, style, cp) -> {
+        text.lzAccept((idx, style, cp) -> {
             if (count[0] >= end) return false;
             if (count[0] >= start) sb.appendCodePoint(cp);
             count[0]++;
