@@ -8,8 +8,8 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.client.LzButtonWidget;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
@@ -79,7 +79,7 @@ public class PanelEditScreen {
         // ── Tabs ──────────────────────────────────────────────────────────
         ConfigCategory tabs = builder.getOrCreateCategory(LzText.literal("Tabs").mc());
         tabs.addEntry(new LinkEntry(
-            LzText.literal("Manage Tabs →").mc(),
+            LzText.literal("Manage Tabs →"),
             () -> LzClient.mc().setScreen(new PanelTabsScreen(LzClient.mc().currentScreen, panel))
         ));
 
@@ -136,10 +136,10 @@ public class PanelEditScreen {
 
     // Renders a centered button as a ClothConfig list entry
     private static final class LinkEntry extends AbstractConfigListEntry<Void> {
-        private final ButtonWidget btn;
+        private final LzButtonWidget btn;
 
-        LinkEntry(net.minecraft.text.Text label, Runnable action) {
-            super(label, false);
+        LinkEntry(LzText label, Runnable action) {
+            super(label.mc(), false);
             btn = LzButton.of(label, 0, 0, 200, 20, b -> action.run());
         }
 

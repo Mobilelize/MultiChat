@@ -1,6 +1,5 @@
 package net.mobilelize.multichat.client;
 
-import net.minecraft.text.Style;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -189,8 +188,8 @@ public class ChatSelection {
         });
     }
 
-    private static float glyphWidth(Style style, int cp) {
-        LzMutableText t = LzText.literal(new String(Character.toChars(cp))).withStyle(new LzStyle(style));
+    private static float glyphWidth(LzStyle style, int cp) {
+        LzMutableText t = LzText.literal(new String(Character.toChars(cp))).withStyle(style);
         return LzDraw.textWidth(t);
     }
 }

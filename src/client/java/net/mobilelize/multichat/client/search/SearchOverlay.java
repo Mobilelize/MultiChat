@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.search;
 
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -84,22 +84,22 @@ public class SearchOverlay extends LzScreen {
         toField.setMaxLength(32);
 
         addDrawableChild(LzButton.of("Mode: " + searchMode.name(), fx, top + 58, btnW, 20,
-            b -> { searchMode = cycleMode(); b.setMessage(LzText.literal("Mode: " + searchMode.name()).mc()); }));
+            b -> { searchMode = cycleMode(); b.setMessage(LzText.literal("Mode: " + searchMode.name())); }));
 
         addDrawableChild(LzButton.of("Case: " + (caseSensitive ? "ON" : "OFF"), fx + btnW + 4, top + 58, btnW, 20,
-            b -> { caseSensitive = !caseSensitive; b.setMessage(LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF")).mc()); }));
+            b -> { caseSensitive = !caseSensitive; b.setMessage(LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF"))); }));
 
         addDrawableChild(LzButton.of("Badge: " + (showBadge ? "ON" : "OFF"), fx, top + 84, btnW, 20,
-            b -> { showBadge = !showBadge; b.setMessage(LzText.literal("Badge: " + (showBadge ? "ON" : "OFF")).mc()); }));
+            b -> { showBadge = !showBadge; b.setMessage(LzText.literal("Badge: " + (showBadge ? "ON" : "OFF"))); }));
 
         addDrawableChild(LzButton.of("Live Update: " + (liveUpdate ? "ON" : "OFF"), fx + btnW + 4, top + 84, btnW, 20,
-            b -> { liveUpdate = !liveUpdate; b.setMessage(LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF")).mc()); }));
+            b -> { liveUpdate = !liveUpdate; b.setMessage(LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF"))); }));
 
         addDrawableChild(LzButton.of("Timestamps: " + (showTimestamps ? "ON" : "OFF"), fx, top + 110, btnW, 20,
-            b -> { showTimestamps = !showTimestamps; b.setMessage(LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF")).mc()); }));
+            b -> { showTimestamps = !showTimestamps; b.setMessage(LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF"))); }));
 
         addDrawableChild(LzButton.of("Collapse: " + (collapseIdentical ? "ON" : "OFF"), fx + btnW + 4, top + 110, btnW, 20,
-            b -> { collapseIdentical = !collapseIdentical; b.setMessage(LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF")).mc()); }));
+            b -> { collapseIdentical = !collapseIdentical; b.setMessage(LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF"))); }));
 
         addDrawableChild(LzButton.of("Cancel",        cx - 86, top + 138, 80,  20, b -> close()));
         addDrawableChild(LzButton.of("Create Search", cx + 6,  top + 138, 100, 20, b -> createSearch()));
@@ -145,7 +145,7 @@ public class SearchOverlay extends LzScreen {
     }
 
     @Override
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         LzDraw.fill(ctx, 0, 0, width, height, 0x88000000);
 
         int H    = h();
@@ -175,8 +175,8 @@ public class SearchOverlay extends LzScreen {
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        super.render(ctx, mouseX, mouseY, delta);
+    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+        super.lzRender(ctx, mouseX, mouseY, delta);
     }
 
     @Override

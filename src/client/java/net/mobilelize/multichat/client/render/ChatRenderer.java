@@ -1,8 +1,7 @@
 package net.mobilelize.multichat.client.render;
 
-import net.minecraft.client.gui.DrawContext;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.hud.MessageIndicator;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.math.LzMath;
@@ -95,7 +94,7 @@ public class ChatRenderer {
         });
     }
 
-    public static void render(ChatHud chat, DrawContext context, int currentTick,
+    public static void render(ChatHud chat, LzDrawContext context, int currentTick,
                                int mouseX, int mouseY, boolean focused, boolean skipLeftMessages) {
         ChatHudAccessor accessor = (ChatHudAccessor) chat;
 
@@ -155,7 +154,7 @@ public class ChatRenderer {
         LzClient.mc().getProfiler().pop();
     }
 
-    private static void renderTabBar(DrawContext context,
+    private static void renderTabBar(LzDrawContext context,
                                       ChatPanel panel, int xOffset, int topY, float scale, int chatWidth) {
         LzDraw.pushMatrix(context);
         LzDraw.scale(context, scale, scale);
@@ -243,7 +242,7 @@ public class ChatRenderer {
         return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
-    private static void renderAt(DrawContext context,
+    private static void renderAt(LzDrawContext context,
                                   int currentTick, boolean focused,
                                   List<LzChatLine> visibleMessages, int totalMessages,
                                   int scrolledLines, boolean hasUnread,
@@ -387,7 +386,7 @@ public class ChatRenderer {
     }
 
     public static List<LzOrderedText> stampedLines(int creationTick, LzText originalContent,
-                                                    MessageIndicator indicator,
+                                                    LzMessageIndicator indicator,
                                                     List<LzOrderedText> fallback) {
         if (wallTimeStart < 0) return fallback;
         var chat = LzChat.chatHud();
@@ -398,10 +397,9 @@ public class ChatRenderer {
 
     /** Stamp + wrap at an explicit panel width (already in text-renderer units, indicator-unadjusted). */
     public static List<LzOrderedText> stampedLines(int creationTick, LzText originalContent,
-                                                    @org.jetbrains.annotations.Nullable MessageIndicator indicator,
+                                                    @org.jetbrains.annotations.Nullable LzMessageIndicator indicator,
                                                     int panelWidth) {
-        int indicatorW = indicator != null && indicator.icon() != null
-            ? indicator.icon().width + 4 + 2 : 0;
+        int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
         int wrapWidth = panelWidth - indicatorW;
         if (wallTimeStart < 0) return LzChat.breakLines(originalContent, wrapWidth);
         String ts = formatTimestamp(MultichatClient.CONFIG.timestampFormat, getWallTime(creationTick));
@@ -431,10 +429,9 @@ public class ChatRenderer {
 
             LzChatEntry entry = endLine.entry();
             if (entry != null) {
-                MessageIndicator ind = entry.indicator != null ? entry.indicator.mc() : null;
                 List<LzOrderedText> newLines = tab.showTimestamps
-                    ? stampedLines(entry.creationTick, entry.originalContent, ind, panelWidth)
-                    : breakLinesForPanel(entry.originalContent, ind, panelWidth);
+                    ? stampedLines(entry.creationTick, entry.originalContent, entry.indicator, panelWidth)
+                    : breakLinesForPanel(entry.originalContent, entry.indicator, panelWidth);
 
                 List<LzChatLine> group = new ArrayList<>(newLines.size());
                 for (int j = 0; j < newLines.size(); j++) {
@@ -452,10 +449,9 @@ public class ChatRenderer {
     }
 
     private static List<LzOrderedText> breakLinesForPanel(LzText content,
-                                                            @org.jetbrains.annotations.Nullable MessageIndicator indicator,
+                                                            @org.jetbrains.annotations.Nullable LzMessageIndicator indicator,
                                                             int panelWidth) {
-        int indicatorW = indicator != null && indicator.icon() != null
-            ? indicator.icon().width + 4 + 2 : 0;
+        int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
         return LzChat.breakLines(content, panelWidth - indicatorW);
     }
 

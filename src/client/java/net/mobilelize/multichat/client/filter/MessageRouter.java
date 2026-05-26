@@ -1,7 +1,5 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.client.gui.hud.ChatHudLine;
-import net.minecraft.client.gui.hud.MessageIndicator;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
@@ -32,14 +30,13 @@ public class MessageRouter {
     // Real-time routing (called per incoming message)
     // ------------------------------------------------------------------
 
-    public static void routeLines(ChatHudLine original, List<LzOrderedText> lines) {
-        if (MessageReceivedCallback.EVENT.invoker().onMessageReceived(LzText.wrapMc(original.content()))) return;
+    public static void routeLines(int tick, LzText content, LzMessageIndicator indicator, List<LzOrderedText> lines) {
+        if (MessageReceivedCallback.EVENT.invoker().onMessageReceived(content)) return;
 
         LzText rawLzText = (MultichatClient.CONFIG.earlyMessageCapture && !rawQueue.isEmpty())
             ? rawQueue.pollFirst() : null;
 
-        String fullText = rawLzText != null ? rawLzText.mc().getString() : original.content().getString();
-        MessageIndicator indicator = original.indicator();
+        String fullText = rawLzText != null ? rawLzText.mc().getString() : content.mc().getString();
 
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
         ChatTab rightActive = ChatRenderer.RIGHT.getActiveTab();
@@ -58,44 +55,43 @@ public class MessageRouter {
         }
         boolean nonDiffReceived = false;
 
-        LzText effectiveLzText = rawLzText != null ? rawLzText : LzText.wrapMc(original.content());
+        LzText effectiveLzText = rawLzText != null ? rawLzText : content;
 
         for (ChatTab tab : ChatRenderer.TABS) {
             switch (tab.type) {
-                case ALL -> addLines(tab, original, lines, rawLzText);
+                case ALL -> addLines(tab, tick, content, indicator, lines, rawLzText);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case FILTERED -> {
                     if (activeDifference && tab == diffActiveTab) break;
                     if (tab.filterRules.matches(fullText, indicator)) {
-                        addLines(tab, original, lines, rawLzText);
+                        addLines(tab, tick, content, indicator, lines, rawLzText);
                         if (activeDifference && tab == nonDiffActive) nonDiffReceived = true;
                     }
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
                     if (!tab.filterRules.isEmpty() && tab.filterRules.matches(fullText, indicator))
-                        addLines(tab, original, lines, rawLzText);
+                        addLines(tab, tick, content, indicator, lines, rawLzText);
                 }
                 case SEARCH -> {
                     SearchTab st = (SearchTab) tab;
                     if (!st.liveUpdate) break;
                     if (!st.matchesText(fullText)) break;
                     if (st.sourceTab != null && !st.sourceTab.filterRules.matches(fullText, indicator)) break;
-                    if (!st.matchesTime(original.creationTick())) break;
+                    if (!st.matchesTime(tick)) break;
                     if (st.collapseIdentical) {
                         refilterSearch(st);
                     } else {
                         ChatTab allTab = ChatRenderer.TABS.stream()
                             .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
                         if (allTab == null) break;
-                        LzMessageIndicator ind = LzMessageIndicator.wrapNullable(original.indicator());
-                        LzChatEntry searchEntry = new LzChatEntry(original.creationTick(), effectiveLzText, ind);
+                        LzChatEntry searchEntry = new LzChatEntry(tick, effectiveLzText, indicator);
                         if (st.showTimestamps) {
                             List<LzOrderedText> stamped = new ArrayList<>(ChatRenderer.stampedLines(
-                                original.creationTick(), effectiveLzText, original.indicator(), lines));
+                                tick, effectiveLzText, indicator, lines));
                             for (int j = stamped.size() - 1; j >= 0; j--)
                                 tab.messages.addFirst(LzChatLine.create(
-                                    original.creationTick(), stamped.get(j), ind, j == stamped.size() - 1, searchEntry));
+                                    tick, stamped.get(j), indicator, j == stamped.size() - 1, searchEntry));
                         } else {
                             for (int j = lines.size() - 1; j >= 0; j--)
                                 tab.messages.addFirst(allTab.messages.get(j));
@@ -110,32 +106,31 @@ public class MessageRouter {
         }
 
         if (activeDifference && !nonDiffReceived) {
-            addLines(diffActiveTab, original, lines, rawLzText);
+            addLines(diffActiveTab, tick, content, indicator, lines, rawLzText);
         }
     }
 
-    private static void addLines(ChatTab tab, ChatHudLine original, List<LzOrderedText> lines,
-                                  @org.jetbrains.annotations.Nullable LzText rawLzText) {
-        LzText effectiveText = rawLzText != null ? rawLzText : LzText.wrapMc(original.content());
+    private static void addLines(ChatTab tab, int tick, LzText content, LzMessageIndicator indicator,
+                                  List<LzOrderedText> lines, @org.jetbrains.annotations.Nullable LzText rawLzText) {
+        LzText effectiveText = rawLzText != null ? rawLzText : content;
         String text = effectiveText.mc().getString();
         boolean stamp = tab.showTimestamps;
-        LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(original.indicator());
-        LzChatEntry entry = new LzChatEntry(original.creationTick(), effectiveText, indicator);
+        LzChatEntry entry = new LzChatEntry(tick, effectiveText, indicator);
 
         int netLinesAdded;
         if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText)
-                && (!tab.collapseMatchFormatting || effectiveText.mc().equals(tab.collapseLastContent))
+                && (!tab.collapseMatchFormatting || effectiveText.mc().equals(tab.collapseLastContent != null ? tab.collapseLastContent.mc() : null))
                 && tab.collapseLastLines != null) {
             int oldCount = tab.collapseLineCount;
             for (int i = 0; i < oldCount && !tab.messages.isEmpty(); i++)
                 tab.messages.removeFirst();
 
             tab.collapseRepeat++;
-            tab.collapseLastTick  = original.creationTick();
+            tab.collapseLastTick  = tick;
             tab.collapseLastLines = new ArrayList<>(lines);
 
             List<LzOrderedText> base = stamp
-                ? ChatRenderer.stampedLines(tab.collapseLastTick, effectiveText, original.indicator(), lines)
+                ? ChatRenderer.stampedLines(tab.collapseLastTick, effectiveText, indicator, lines)
                 : new ArrayList<>(tab.collapseLastLines);
             String counterStr = " " + MultichatClient.CONFIG.collapseCounterFormat
                 .replace("{count}", String.valueOf(tab.collapseRepeat));
@@ -153,18 +148,18 @@ public class MessageRouter {
             netLinesAdded = updated.size() - oldCount;
         } else {
             tab.collapseLastText    = text;
-            tab.collapseLastContent = effectiveText.mc();
+            tab.collapseLastContent = effectiveText;
             tab.collapseRepeat      = 1;
-            tab.collapseLastTick  = original.creationTick();
+            tab.collapseLastTick  = tick;
             tab.collapseLastLines = new ArrayList<>(lines);
 
             List<LzOrderedText> active = stamp
-                ? ChatRenderer.stampedLines(original.creationTick(), effectiveText, original.indicator(), lines)
+                ? ChatRenderer.stampedLines(tick, effectiveText, indicator, lines)
                 : lines;
             tab.collapseLineCount = active.size();
             for (int j = 0; j < active.size(); j++) {
                 boolean isEnd = j == active.size() - 1;
-                LzChatLine line = LzChatLine.create(original.creationTick(), active.get(j), indicator, isEnd, entry);
+                LzChatLine line = LzChatLine.create(tick, active.get(j), indicator, isEnd, entry);
                 tab.messages.addFirst(line);
             }
             netLinesAdded = active.size();
@@ -262,14 +257,13 @@ public class MessageRouter {
             int count = dedupCounts != null ? dedupCounts.getOrDefault(g.key(), 1) : 1;
             LzChatLine endLine = source.get(g.start());
             LzMessageIndicator lzInd = endLine.indicator();
-            MessageIndicator ind = lzInd != null ? lzInd.mc() : null;
 
             LzChatEntry srcEntry = endLine.entry();
             List<LzOrderedText> lines;
             if (tab.showTimestamps && srcEntry != null) {
                 List<LzOrderedText> fallback = new ArrayList<>();
                 for (int j = g.end(); j >= g.start(); j--) fallback.add(source.get(j).content());
-                lines = new ArrayList<>(ChatRenderer.stampedLines(g.tick(), srcEntry.originalContent, ind, fallback));
+                lines = new ArrayList<>(ChatRenderer.stampedLines(g.tick(), srcEntry.originalContent, lzInd, fallback));
             } else {
                 lines = new ArrayList<>();
                 for (int j = g.end(); j >= g.start(); j--) lines.add(source.get(j).content());
@@ -333,8 +327,7 @@ public class MessageRouter {
             for (int j = end; j >= start; j--)
                 all.get(j).content().accept((idx2, style, cp) -> { sb.appendCodePoint(cp); return true; });
             String fullText = sb.toString();
-            MessageIndicator indicator = all.get(start).indicator() != null
-                ? all.get(start).indicator().mc() : null;
+            LzMessageIndicator indicator = all.get(start).indicator();
 
             boolean include;
             if (tab.differenceMode) {

@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client;
 
-import net.minecraft.client.gui.DrawContext;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.math.LzMath;
@@ -47,7 +47,7 @@ public class MessageContextMenu {
         return list;
     }
 
-    public static void render(DrawContext ctx) {
+    public static void render(LzDrawContext ctx) {
         if (!open) return;
         int menuW = menuWidth();
         int menuH = items.size() * ITEM_H + PADDING;
@@ -63,7 +63,7 @@ public class MessageContextMenu {
         int mouseY = (int)(mc.mouse.getY() / scale);
 
         LzDraw.pushMatrix(ctx);
-        ctx.getMatrices().translate(0, 0, 400);
+        LzDraw.translate(ctx, 0, 0, 400);
         LzDraw.fill(ctx, mx, my, mx + menuW, my + menuH, 0xDD111111);
         LzDraw.drawBorder(ctx, mx, my, mx + menuW, my + menuH, 0xFF666666);
         for (int i = 0; i < items.size(); i++) {

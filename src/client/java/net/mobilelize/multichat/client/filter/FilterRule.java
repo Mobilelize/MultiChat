@@ -1,6 +1,7 @@
 package net.mobilelize.multichat.client.filter;
 
 import net.minecraft.client.gui.hud.MessageIndicator;
+import net.mobilelize.fabriclib.client.LzMessageIndicator;
 
 public class FilterRule {
 
@@ -18,7 +19,7 @@ public class FilterRule {
         this.indicator = indicator;
     }
 
-    public boolean matches(String text, MessageIndicator ind) {
+    public boolean matches(String text, LzMessageIndicator ind) {
         if (!indicatorMatches(ind)) return false;
 
         String lower = text.toLowerCase();
@@ -46,14 +47,15 @@ public class FilterRule {
         return qi == query.length();
     }
 
-    private boolean indicatorMatches(MessageIndicator ind) {
+    private boolean indicatorMatches(LzMessageIndicator ind) {
+        MessageIndicator raw = ind != null ? ind.mc() : null;
         return switch (indicator) {
             case ANY        -> true;
-            case PLAYER     -> ind == null;
-            case SYSTEM     -> ind == MessageIndicator.system() || ind == MessageIndicator.singlePlayer();
-            case NOT_SECURE -> ind == MessageIndicator.notSecure();
-            case MODIFIED   -> ind != null && ind.icon() == MessageIndicator.Icon.CHAT_MODIFIED;
-            case CHAT_ERROR -> ind == MessageIndicator.chatError();
+            case PLAYER     -> raw == null;
+            case SYSTEM     -> raw == MessageIndicator.system() || raw == MessageIndicator.singlePlayer();
+            case NOT_SECURE -> raw == MessageIndicator.notSecure();
+            case MODIFIED   -> raw != null && raw.icon() == MessageIndicator.Icon.CHAT_MODIFIED;
+            case CHAT_ERROR -> raw == MessageIndicator.chatError();
         };
     }
 

@@ -1,9 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -57,7 +56,7 @@ public class PanelLayoutScreen extends LzScreen {
         addDrawableChild(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> cancel()));
         addDrawableChild(LzButton.of(snapEnabled ? "Snap: ON" : "Snap: OFF", width - 82, height - 26, 78, 18, b -> {
             snapEnabled = !snapEnabled;
-            b.setMessage(LzText.literal(snapEnabled ? "Snap: ON" : "Snap: OFF").mc());
+            b.setMessage(LzText.literal(snapEnabled ? "Snap: ON" : "Snap: OFF"));
         }));
         addDrawableChild(LzButton.of("To Wall", 4, height - 26, 58, 18, b -> snapToNearestWall(lastDragged)));
     }
@@ -112,7 +111,7 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
 
         if (snapEnabled) {
@@ -124,8 +123,8 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        super.render(ctx, mouseX, mouseY, delta);
+    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+        super.lzRender(ctx, mouseX, mouseY, delta);
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled) continue;

@@ -4,7 +4,7 @@ import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.InputUtil;
+import net.mobilelize.fabriclib.input.LzInputUtil;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
 
@@ -128,8 +128,8 @@ public class ConfigMenu {
 
         search.addEntry(eb.startKeyCodeField(
                 LzText.literal("Search Key").mc(),
-                InputUtil.fromKeyCode(MultichatClient.CONFIG.searchKeybindKey, 0))
-                .setDefaultValue(InputUtil.fromKeyCode(70, 0))
+                LzInputUtil.fromKeyCode(MultichatClient.CONFIG.searchKeybindKey, 0))
+                .setDefaultValue(LzInputUtil.fromKeyCode(70, 0))
                 .setAllowModifiers(false)
                 .setTooltip(LzText.literal("Key to open search (combine with Require Ctrl for e.g. Ctrl+F).").mc())
                 .setKeySaveConsumer(key -> MultichatClient.CONFIG.searchKeybindKey = key.getCode())

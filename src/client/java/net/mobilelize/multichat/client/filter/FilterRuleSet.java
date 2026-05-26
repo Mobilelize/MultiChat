@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.client.gui.hud.MessageIndicator;
+import net.mobilelize.fabriclib.client.LzMessageIndicator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ public class FilterRuleSet {
     public WhitelistMode whitelistMode  = WhitelistMode.ANY;
     public WhitelistMode blacklistMode  = WhitelistMode.ANY;
 
-    public boolean matches(String text, MessageIndicator indicator) {
+    public boolean matches(String text, LzMessageIndicator indicator) {
         if (!blacklist.isEmpty()) {
             if (blacklistMode == WhitelistMode.ALL) {
                 boolean allMatch = true;

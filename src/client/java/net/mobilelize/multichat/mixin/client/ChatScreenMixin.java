@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.multichat.api.MessageSentCallback;
 import net.mobilelize.multichat.api.TabChangedCallback;
 import net.mobilelize.multichat.client.ChatPanel;
@@ -45,6 +46,7 @@ public abstract class ChatScreenMixin {
     @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("RETURN"))
     private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
+        LzDrawContext lzCtx = LzDrawContext.wrap(context);
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
             long handle = LzClient.windowHandle();
             boolean held = org.lwjgl.glfw.GLFW.glfwGetMouseButton(handle,
@@ -79,12 +81,12 @@ public abstract class ChatScreenMixin {
         if (ctxTab != null && !ctxTab.contextPrefix.isEmpty()
                 && MultichatClient.CONFIG.showContextDisplay) {
             String status = ctxTab.name + " ▶ " + (ctxTab.contextCommandMode ? "/" : "") + ctxTab.contextPrefix + " <message>";
-            int screenH = LzDraw.scaledHeight(context);
-            LzDraw.drawText(context, status, 4, screenH - 26, 0xDEDEDE);
+            int screenH = LzDraw.scaledHeight(lzCtx);
+            LzDraw.drawText(lzCtx, status, 4, screenH - 26, 0xDEDEDE);
         }
 
-        ContextMenu.render(context);
-        MessageContextMenu.render(context);
+        ContextMenu.render(lzCtx);
+        MessageContextMenu.render(lzCtx);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"))

@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -34,14 +34,14 @@ public class ConfirmScreen extends LzScreen {
     }
 
     @Override
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         applyBlur(delta);
         LzDraw.fill(ctx, 0, 0, width, height, 0x88000000);
     }
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        super.render(ctx, mouseX, mouseY, delta);
+    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+        super.lzRender(ctx, mouseX, mouseY, delta);
 
         int mw  = 240, mh = 74;
         int mx1 = width  / 2 - mw / 2;

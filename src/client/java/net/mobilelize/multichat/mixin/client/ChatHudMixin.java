@@ -6,6 +6,7 @@ import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.minecraft.text.Style;
 import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -50,7 +51,7 @@ public class ChatHudMixin {
         boolean leftVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
         if (!leftVanilla) {
             ci.cancel();
-            ChatRenderer.render((ChatHud)(Object)this, context, currentTick, mouseX, mouseY, focused, false);
+            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, focused, false);
         }
     }
 
@@ -67,7 +68,7 @@ public class ChatHudMixin {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
         if (activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA) {
-            ChatRenderer.render((ChatHud)(Object)this, context, currentTick, mouseX, mouseY, focused, true);
+            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, focused, true);
         }
     }
 
@@ -144,7 +145,12 @@ public class ChatHudMixin {
 
         List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(message.content()), width);
 
-        MessageRouter.routeLines(message, lines);
+        MessageRouter.routeLines(
+            message.creationTick(),
+            LzText.wrapMc(message.content()),
+            LzMessageIndicator.wrapNullable(message.indicator()),
+            lines
+        );
     }
 
     // ------------------------------------------------------------------

@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client;
 
-import net.minecraft.text.Text;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.multichat.client.filter.FilterRuleSet;
@@ -37,7 +37,7 @@ public class ChatTab {
 
     // Collapse tracking — reset whenever messages are cleared
     public String              collapseLastText    = null;
-    public Text                collapseLastContent = null;
+    public LzText              collapseLastContent = null;
     public int                 collapseRepeat      = 0;
     public int                 collapseLineCount   = 0;
     public int                 collapseLastTick    = 0;
