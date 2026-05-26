@@ -71,7 +71,7 @@ public class ContextMenu {
         int mouseY = (int)(mc.mouse.getY() / scale);
 
         LzDraw.pushMatrix(context);
-        context.getMatrices().translate(0, 0, 400); // z-layer above chat
+        context.getMatrices().translate(0, 0, 400);
 
         LzDraw.fill(context, mx, my, mx + menuW, my + menuH, 0xDD111111);
         LzDraw.drawBorder(context, mx, my, mx + menuW, my + menuH, 0xFF666666);

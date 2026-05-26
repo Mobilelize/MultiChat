@@ -91,7 +91,7 @@ public class PanelEditScreen {
 
             position.addEntry(eb.startEnumSelector(LzText.literal("Anchor").mc(), ChatPanel.Anchor.class, panel.anchor)
                 .setDefaultValue(ChatPanel.Anchor.LEFT)
-                .setTooltip(LzText.literal("LEFT/RIGHT: snaps to that side. CUSTOM: uses Custom X/Y.").mc())
+                .setTooltip(LzText.literal("LEFT/RIGHT: snaps to that wall. CUSTOM: position set via Panel Layout editor.").mc())
                 .setSaveConsumer(v -> panel.anchor = v)
                 .build());
 
@@ -99,18 +99,6 @@ public class PanelEditScreen {
                 .setDefaultValue(0)
                 .setTooltip(LzText.literal("Offset from the anchored edge (LEFT/RIGHT anchor only).").mc())
                 .setSaveConsumer(v -> panel.margin = v)
-                .build());
-
-            position.addEntry(eb.startIntField(LzText.literal("Custom X").mc(), panel.customX)
-                .setDefaultValue(0)
-                .setTooltip(LzText.literal("Screen pixel X when anchor is CUSTOM.").mc())
-                .setSaveConsumer(v -> panel.customX = v)
-                .build());
-
-            position.addEntry(eb.startIntField(LzText.literal("Custom Y").mc(), panel.customY)
-                .setDefaultValue(0)
-                .setTooltip(LzText.literal("Screen pixel Y when anchor is CUSTOM.").mc())
-                .setSaveConsumer(v -> panel.customY = v)
                 .build());
 
             position.addEntry(eb.startIntField(LzText.literal("Custom Width").mc(), panel.customWidth)

@@ -60,8 +60,8 @@ public class MultiChatConfig extends LzConfig {
         public boolean showBadges          = true;
         public boolean showTabs            = true;
         public boolean tabsAtTop           = false;
-        public int     customX             = 0;
-        public int     customY             = 0;
+        public float   customX             = 0f;
+        public float   customY             = 0f;
         public int     customWidth         = -1;
         public int     customHeightLines   = -1;
         public float   customScale         = -1f;

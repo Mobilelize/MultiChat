@@ -28,9 +28,9 @@ public class ChatPanel {
     public int     tabLastRendered    = -1;
     public int     tabFlashTick       = -1000;
 
-    // Custom position — only used when anchor == CUSTOM and !primary (screen pixels)
-    public int customX = 0;
-    public int customY = 0;
+    // Custom position — fractions of screen dimensions (0.0–1.0), only used when anchor == CUSTOM
+    public float customX = 0f;
+    public float customY = 0f;
 
     // Per-panel display overrides — ignored on primary panel (always uses MC defaults)
     public int    customWidth       = -1;   // -1 = use MC default
@@ -120,13 +120,17 @@ public class ChatPanel {
     public int resolveTopY(int windowHeight) {
         if (primary || anchor != Anchor.CUSTOM)
             return LzMath.floor((float)(windowHeight - 40) / resolveScale());
-        return Math.round(customY / resolveScale());
+        // customY is center-Y fraction; recover topY from center
+        return (int)(customY * windowHeight / resolveScale()
+                   + resolveLines() * resolveLineHeight() / 2f
+                   - ChatRenderer.TAB_HEIGHT / 2f);
     }
 
     public int computeXOffset(int scaledWindowWidth) {
         return switch (anchor) {
             case RIGHT  -> Math.round(scaledWindowWidth / resolveScale()) - resolveWidth() - 12 - margin;
-            case CUSTOM -> !primary ? Math.round(customX / resolveScale()) : margin;
+            // customX is center-X fraction; recover x1 from center
+            case CUSTOM -> !primary ? (int)(customX * scaledWindowWidth / resolveScale() - resolveWidth() / 2f - 4) : margin;
             default     -> margin;
         };
     }

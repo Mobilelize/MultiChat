@@ -93,12 +93,6 @@ public class TabEditScreen {
         }
 
         if (tab.type == TabType.FILTERED) {
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
-                .setSaveConsumer(v -> { if (v) MessageRouter.refilterTab(tab); })
-                .build());
-
             settings.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode)
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Show only messages that don't match any other filtered tab.").mc())
@@ -129,6 +123,14 @@ public class TabEditScreen {
                 .setDefaultValue(true)
                 .setTooltip(LzText.literal("ON: sent as command. OFF: sent as chat text.").mc())
                 .setSaveConsumer(v -> tab.contextCommandMode = v)
+                .build());
+        }
+
+        if (tab.type == TabType.FILTERED) {
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
+                .setSaveConsumer(v -> { if (v) MessageRouter.refilterTab(tab); })
                 .build());
         }
 

@@ -91,6 +91,16 @@ public final class MultiChatApi {
     /** Clears the active context tab (no prefix applied to outgoing messages). */
     public static void clearContext() { ChatRenderer.contextTab = null; }
 
+    /** All currently registered panels (unmodifiable). */
+    public static List<ChatPanel> getPanels() {
+        return Collections.unmodifiableList(ChatRenderer.PANELS);
+    }
+
+    /** Panel by ID, or {@code null} if not found. */
+    public static ChatPanel getPanel(int panelId) {
+        return ChatRenderer.PANELS.stream().filter(p -> p.id == panelId).findFirst().orElse(null);
+    }
+
     public static ChatPanel getLeftPanel()  { return ChatRenderer.LEFT; }
     public static ChatPanel getRightPanel() { return ChatRenderer.RIGHT; }
 

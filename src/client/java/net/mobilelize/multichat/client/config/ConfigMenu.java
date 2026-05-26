@@ -21,14 +21,6 @@ public class ConfigMenu {
         ConfigCategory general = builder.getOrCreateCategory(LzText.literal("General").mc());
 
         general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Apply Settings on Refilter").mc(),
-                MultichatClient.CONFIG.applySettingsOnRefilter)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("When ON, refiltering a tab also applies its timestamps and collapse settings to rebuilt messages.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.applySettingsOnRefilter = v)
-                .build());
-
-        general.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Indicators").mc(),
                 MultichatClient.CONFIG.showIndicators)
                 .setDefaultValue(true)
@@ -101,11 +93,19 @@ public class ConfigMenu {
                 .build());
 
         general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Early Message Capture").mc(),
+                LzText.literal("Server Network Message Capture").mc(),
                 MultichatClient.CONFIG.earlyMessageCapture)
                 .setDefaultValue(true)
-                .setTooltip(LzText.literal("Use Fabric API to capture messages before other mods modify them. Fixes filter rules when mods like Lunar Client prepend timestamps.").mc())
+                .setTooltip(LzText.literal("Use Fabric API to capture server network messages before other mods modify them. Fixes filter rules when mods like Lunar Client prepend timestamps.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.earlyMessageCapture = v)
+                .build());
+
+        general.addEntry(eb.startBooleanToggle(
+                LzText.literal("Apply Settings on Refilter").mc(),
+                MultichatClient.CONFIG.applySettingsOnRefilter)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When ON, refiltering a tab also applies its timestamps and collapse settings to rebuilt messages.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.applySettingsOnRefilter = v)
                 .build());
 
         general.addEntry(eb.startBooleanToggle(

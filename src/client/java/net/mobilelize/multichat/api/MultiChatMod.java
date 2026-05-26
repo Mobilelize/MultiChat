@@ -1,9 +1,9 @@
 package net.mobilelize.multichat.api;
 
+import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.config.MultiChatConfig.ApiTabConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.RuleConfig;
 import net.mobilelize.multichat.client.filter.FilterRule;
@@ -13,7 +13,10 @@ import net.mobilelize.multichat.client.filter.WhitelistMode;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MultiChatMod {
 
@@ -24,46 +27,38 @@ public class MultiChatMod {
         this.modId = modId;
     }
 
-    /**
-     * Register a tab owned by this mod. If already registered, returns the existing handle.
-     * The full ID will be {@code modId:name}. If saved config exists for this ID, user
-     * customizations (visibility, color, filter rules) are restored automatically.
-     *
-     * @param name        short name within this mod's namespace (no colon)
-     * @param displayName label shown in the tab bar
-     * @param visibility  default panel visibility
-     * @param color       default tab color (0 = default gray)
-     */
+    // ------------------------------------------------------------------
+    // Tab registration
+    // ------------------------------------------------------------------
+
+    /** Register a tab visible on all panels. Use {@link TabHandle} setters to configure further. */
     public TabHandle registerTab(String name, String displayName) {
-        return registerTab(name, displayName, TabVisibility.BOTH, 0);
+        return registerTabInternal(name, displayName, allPanelIds());
     }
 
-    public TabHandle registerTab(String name, String displayName, TabVisibility visibility) {
-        return registerTab(name, displayName, visibility, 0);
+    /** Register a tab visible only on the specified panel IDs (0 = left, 1 = right, …). */
+    public TabHandle registerTab(String name, String displayName, int... panelIds) {
+        Set<Integer> ids = new LinkedHashSet<>();
+        for (int id : panelIds) ids.add(id);
+        return registerTabInternal(name, displayName, ids);
     }
 
-    public TabHandle registerTab(String name, String displayName, int color) {
-        return registerTab(name, displayName, TabVisibility.BOTH, color);
-    }
-
-    public TabHandle registerTab(String name, String displayName, TabVisibility visibility, int color) {
+    private TabHandle registerTabInternal(String name, String displayName, Set<Integer> defaultPanels) {
         if (handles.containsKey(name)) return handles.get(name);
 
         String fullId = modId + ":" + name;
-
         ApiTabConfig saved = findSaved(fullId);
 
         String resolvedName = (saved != null && saved.displayName != null && !saved.displayName.isEmpty())
             ? saved.displayName : displayName;
-        java.util.Set<Integer> resolvedPanels;
-        if (saved != null && !saved.visibleOnPanels.isEmpty()) {
-            resolvedPanels = new java.util.LinkedHashSet<>(saved.visibleOnPanels);
-        } else {
-            resolvedPanels = TabVisibility.toPanelIds(visibility);
-        }
+
+        Set<Integer> resolvedPanels = (saved != null && !saved.visibleOnPanels.isEmpty())
+            ? new LinkedHashSet<>(saved.visibleOnPanels)
+            : defaultPanels;
+
         ChatTab tab = new ChatTab(resolvedName, TabType.API, resolvedPanels);
         tab.apiId    = fullId;
-        tab.tabColor = saved != null ? saved.color : (color & 0xFFFFFF);
+        tab.tabColor = saved != null ? saved.color : 0;
 
         if (saved != null) {
             tab.filterRules.whitelistMode = saved.whitelistMode != null ? saved.whitelistMode : WhitelistMode.ANY;
@@ -85,7 +80,11 @@ public class MultiChatMod {
         return handle;
     }
 
-    /** Removes the tab from the panel and saves config. */
+    // ------------------------------------------------------------------
+    // Tab management
+    // ------------------------------------------------------------------
+
+    /** Removes the tab and saves config. */
     public void unregisterTab(String name) {
         TabHandle handle = handles.remove(name);
         if (handle == null) return;
@@ -93,16 +92,38 @@ public class MultiChatMod {
         MultichatClient.saveTabsToConfig();
     }
 
-    public TabHandle getTab(String name) {
-        return handles.get(name);
-    }
+    public TabHandle getTab(String name) { return handles.get(name); }
 
     /** All full tab IDs ({@code "modid:name"}) registered by this mod. */
-    public java.util.List<String> getTabIds() {
+    public List<String> getTabIds() {
         return handles.values().stream().map(TabHandle::getId).toList();
     }
 
     public String getModId() { return modId; }
+
+    // ------------------------------------------------------------------
+    // Panel access
+    // ------------------------------------------------------------------
+
+    /** All currently registered panels (including disabled ones). */
+    public List<ChatPanel> getPanels() {
+        return java.util.Collections.unmodifiableList(ChatRenderer.PANELS);
+    }
+
+    /** Panel by ID, or {@code null} if not found. */
+    public ChatPanel getPanel(int panelId) {
+        return ChatRenderer.PANELS.stream().filter(p -> p.id == panelId).findFirst().orElse(null);
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    private static Set<Integer> allPanelIds() {
+        Set<Integer> ids = new LinkedHashSet<>();
+        for (ChatPanel p : ChatRenderer.PANELS) ids.add(p.id);
+        return ids;
+    }
 
     private static ApiTabConfig findSaved(String fullId) {
         if (MultichatClient.CONFIG == null) return null;

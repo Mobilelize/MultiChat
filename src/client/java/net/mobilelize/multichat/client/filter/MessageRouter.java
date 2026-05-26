@@ -17,9 +17,12 @@ import java.util.List;
 
 public class MessageRouter {
 
-    // Queue of raw (pre-mod-modification) LzText captured via Fabric API events.
+    // Queue of raw (pre-mod-modification) LzText captured via Fabric server network message events.
     // Populated by MultichatClient when earlyMessageCapture is enabled.
     private static final java.util.ArrayDeque<LzText> rawQueue = new java.util.ArrayDeque<>();
+
+    // Set before routing an API-injected message to prevent double-adding to the source tab.
+    public static ChatTab skipTabOnRoute = null;
 
     public static void offerRaw(LzText raw) {
         rawQueue.addLast(raw);
@@ -69,6 +72,7 @@ public class MessageRouter {
                     }
                 }
                 case API -> {
+                    if (tab == skipTabOnRoute) break;
                     if (!tab.filterRules.isEmpty() && tab.filterRules.matches(fullText, indicator))
                         addLines(tab, original, lines, rawLzText);
                 }

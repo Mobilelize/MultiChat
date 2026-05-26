@@ -43,10 +43,11 @@ public class ChatRenderer {
         LEFT.name    = "Main";
         PANELS.add(LEFT);
 
-        RIGHT        = new ChatPanel();
-        RIGHT.anchor = ChatPanel.Anchor.RIGHT;
-        RIGHT.id     = 1;
-        RIGHT.name   = "Second Panel";
+        RIGHT         = new ChatPanel();
+        RIGHT.anchor  = ChatPanel.Anchor.RIGHT;
+        RIGHT.enabled = true;
+        RIGHT.id      = 1;
+        RIGHT.name    = "Second Panel";
         PANELS.add(RIGHT);
     }
 
