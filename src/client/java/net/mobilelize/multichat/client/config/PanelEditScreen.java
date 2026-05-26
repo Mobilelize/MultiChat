@@ -1,22 +1,12 @@
 package net.mobilelize.multichat.client.config;
 
-import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.Screen;
-import net.mobilelize.fabriclib.client.LzButton;
-import net.mobilelize.fabriclib.client.LzButtonWidget;
-import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.MultichatClient;
-
-import java.util.List;
-import java.util.Optional;
 
 public class PanelEditScreen {
 
@@ -76,13 +66,6 @@ public class PanelEditScreen {
             .setSaveConsumer(v -> panel.bgColor = v & 0xFFFFFF)
             .build());
 
-        // ── Tabs ──────────────────────────────────────────────────────────
-        ConfigCategory tabs = builder.getOrCreateCategory(LzText.literal("Tabs").mc());
-        tabs.addEntry(new LinkEntry(
-            LzText.literal("Manage Tabs →"),
-            () -> LzClient.mc().setScreen(new PanelTabsScreen(LzClient.mc().currentScreen, panel))
-        ));
-
         // ── Adjustments (non-primary only) ───────────────────────────────
         if (!panel.primary) {
             ConfigCategory position = builder.getOrCreateCategory(LzText.literal("Adjustments").mc());
@@ -133,31 +116,5 @@ public class PanelEditScreen {
         }
 
         return builder.build();
-    }
-
-    // Renders a centered button as a ClothConfig list entry
-    private static final class LinkEntry extends AbstractConfigListEntry<Void> {
-        private final LzButtonWidget btn;
-
-        LinkEntry(LzText label, Runnable action) {
-            super(label.mc(), false);
-            btn = LzButton.of(label, 0, 0, 200, 20, b -> action.run());
-        }
-
-        @Override public Void getValue()                             { return null; }
-        @Override public Optional<Void> getDefaultValue()           { return Optional.empty(); }
-        @Override public void save()                                 {}
-        @Override public boolean isEdited()                         { return false; }
-        @Override public List<? extends Element>    children()      { return List.of(btn); }
-        @Override public List<? extends Selectable> narratables()   { return List.of(btn); }
-
-        @Override
-        public void render(DrawContext ctx, int index, int y, int x,
-                           int entryWidth, int entryHeight, int mouseX, int mouseY,
-                           boolean isHovered, float delta) {
-            btn.setX(x + entryWidth / 2 - 100);
-            btn.setY(y + (entryHeight - 20) / 2);
-            btn.render(ctx, mouseX, mouseY, delta);
-        }
     }
 }

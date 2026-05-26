@@ -96,8 +96,8 @@ public class PanelListScreen extends LzScreen {
             LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, rowBg);
             LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2, rowBdr);
 
-            // Status tags
-            String anchorTag = (panel.primary ? "[primary] " : "") + "[" + panel.anchor.name().toLowerCase() + "] ";
+            // Name + tab count + anchor (anchor color = enabled status)
+            String anchorTag = "[" + panel.anchor.name().toLowerCase() + "]";
             String displayName = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
             long tabCount = ChatRenderer.TABS.stream().filter(t -> t.visibleOnPanels.contains(panel.id)).count();
             String nameStr  = displayName + " ";
@@ -107,21 +107,23 @@ public class PanelListScreen extends LzScreen {
             int afterNameStr = nameX + LzDraw.textWidth(nameStr);
             LzDraw.drawText(ctx, countStr, afterNameStr, textY, 0xFF888888);
             int afterName = afterNameStr + LzDraw.textWidth(countStr);
-            LzDraw.drawText(ctx, anchorTag, afterName, textY, 0xAAAAAA);
-            int afterTag = afterName + LzDraw.textWidth(anchorTag);
-            LzDraw.drawText(ctx, panel.enabled ? "[on]" : "[off]", afterTag, textY,
-                panel.enabled ? 0xFF55FF55 : 0xFFFF5555);
+            LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.enabled ? 0xFF55FF55 : 0xFFFF5555);
+
+            // Tabs button — always
+            boolean hoverTabs = mouseX >= lx + 148 && mouseX < lx + 183 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            LzDraw.fill(ctx, lx + 148, btnY1, lx + 183, btnY2, hoverTabs ? 0xAA336688 : 0x66224466);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Tabs"), lx + 165, textY, 0xAADDFF);
 
             // Edit button — always
-            boolean hoverEdit = mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            LzDraw.fill(ctx, lx + 186, btnY1, lx + 228, btnY2, hoverEdit ? 0xAA888888 : 0x66555555);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 207, textY, 0xFFFFFF);
+            boolean hoverEdit = mouseX >= lx + 186 && mouseX < lx + 225 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            LzDraw.fill(ctx, lx + 186, btnY1, lx + 225, btnY2, hoverEdit ? 0xAA888888 : 0x66555555);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 205, textY, 0xFFFFFF);
 
             // Remove button — only for extra panels (index >= 2)
             if (i >= 2) {
-                boolean hoverRemove = mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-                LzDraw.fill(ctx, lx + 231, btnY1, lx + 259, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
-                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 245, textY, 0xFFFFFF);
+                boolean hoverRemove = mouseX >= lx + 228 && mouseX < lx + 258 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+                LzDraw.fill(ctx, lx + 228, btnY1, lx + 258, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
+                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 243, textY, 0xFFFFFF);
             }
         }
 
@@ -177,14 +179,20 @@ public class PanelListScreen extends LzScreen {
 
         ChatPanel panel = panels.get(idx);
 
+        // Tabs button
+        if (mx >= lx + 148 && mx < lx + 183) {
+            LzClient.mc().setScreen(new PanelTabsScreen(this, panel));
+            return true;
+        }
+
         // Edit button
-        if (mx >= lx + 186 && mx < lx + 228) {
+        if (mx >= lx + 186 && mx < lx + 225) {
             LzClient.mc().setScreen(PanelEditScreen.create(this, panel));
             return true;
         }
 
         // Remove button (index >= 2 only)
-        if (idx >= 2 && mx >= lx + 231 && mx < lx + 259) {
+        if (idx >= 2 && mx >= lx + 228 && mx < lx + 258) {
             ChatRenderer.PANELS.remove(panel);
             MultichatClient.saveTabsToConfig();
             clearAndInit();
