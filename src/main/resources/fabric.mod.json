@@ -3,7 +3,7 @@
   "id": "multichat",
   "version": "${version}",
   "name": "MultiChat",
-  "description": "Made by Mobilelize",
+  "description": "Multi-panel tabbed chat for Minecraft. Filter, route, and organize messages across customizable panels with per-tab rules, badges, and timestamps.",
   "authors": [],
   "contact": {},
   "license": "All-Rights-Reserved",
@@ -30,6 +30,7 @@
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
-    "minecraft": "${minecraft_version}"
+    "minecraft": ">=${minecraft_version}",
+    "cloth-config": "*"
   }
 }

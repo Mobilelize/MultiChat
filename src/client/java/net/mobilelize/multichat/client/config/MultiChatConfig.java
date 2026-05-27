@@ -1,6 +1,7 @@
 package net.mobilelize.multichat.client.config;
 
 import net.mobilelize.fabriclib.config.LzConfig;
+import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.filter.FilterType;
 import net.mobilelize.multichat.client.filter.IndicatorFilter;
 import net.mobilelize.multichat.client.filter.WhitelistMode;
@@ -54,7 +55,7 @@ public class MultiChatConfig extends LzConfig {
         public int     id                  = 0;
         public String  name                = "";
         public boolean enabled             = true;
-        public String  anchor              = "LEFT";
+        public ChatPanel.Anchor anchor      = ChatPanel.Anchor.LEFT;
         public int     margin              = 0;
         public int     activeTab           = 0;
         public boolean showOnlyWhenFocused = false;
@@ -69,7 +70,8 @@ public class MultiChatConfig extends LzConfig {
         public int     bgColor             = 0;
         public double  customBgOpacity     = -1;
         public double  customChatOpacity   = -1;
-        public String  panelContextTabName = "";
+        public String  panelContextTabName  = "";
+        public boolean useActiveTabContext  = false;
     }
 
     public static class TabConfig {

@@ -40,7 +40,13 @@ public class ChatPanel {
     public double customBgOpacity   = -1;   // -1 = use MC default
     public double customChatOpacity = -1;   // -1 = use MC default
 
-    public ChatTab panelContextTab = null;
+    public ChatTab  panelContextTab    = null;
+    public boolean  useActiveTabContext = false;
+
+    public ChatTab resolveContextTab() {
+        if (useActiveTabContext) return getActiveTab();
+        return panelContextTab;
+    }
 
     private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();
 

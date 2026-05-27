@@ -52,7 +52,7 @@ public class MultichatClient implements ClientModInitializer {
             pc.id                  = panel.id;
             pc.name                = panel.name;
             pc.enabled             = panel.enabled;
-            pc.anchor              = panel.anchor.name();
+            pc.anchor              = panel.anchor;
             pc.margin              = panel.margin;
             pc.activeTab           = panel.activeTab;
             pc.showOnlyWhenFocused = panel.showOnlyWhenFocused;
@@ -67,7 +67,8 @@ public class MultichatClient implements ClientModInitializer {
             pc.bgColor             = panel.bgColor;
             pc.customBgOpacity     = panel.customBgOpacity;
             pc.customChatOpacity   = panel.customChatOpacity;
-            pc.panelContextTabName = panel.panelContextTab != null ? panel.panelContextTab.name : "";
+            pc.panelContextTabName  = panel.panelContextTab != null ? panel.panelContextTab.name : "";
+            pc.useActiveTabContext   = panel.useActiveTabContext;
             panelOut.add(pc);
         }
         CONFIG.panels = panelOut;
@@ -156,8 +157,7 @@ public class MultichatClient implements ClientModInitializer {
         panel.id   = pc.id;
         panel.name = pc.name.isEmpty() ? panel.name : pc.name;
         panel.enabled = pc.enabled;
-        try { panel.anchor = ChatPanel.Anchor.valueOf(pc.anchor); }
-        catch (Exception e) { panel.anchor = ChatPanel.Anchor.LEFT; }
+        panel.anchor = pc.anchor != null ? pc.anchor : ChatPanel.Anchor.LEFT;
         panel.margin              = pc.margin;
         panel.activeTab           = pc.activeTab;
         panel.showOnlyWhenFocused = pc.showOnlyWhenFocused;
@@ -172,6 +172,7 @@ public class MultichatClient implements ClientModInitializer {
         panel.bgColor             = pc.bgColor;
         panel.customBgOpacity     = pc.customBgOpacity;
         panel.customChatOpacity   = pc.customChatOpacity;
+        panel.useActiveTabContext  = pc.useActiveTabContext;
     }
 
     private static void restoreTabsFromConfig() {

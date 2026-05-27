@@ -60,6 +60,12 @@ public class PanelEditScreen {
             .setSaveConsumer(v -> panel.showBadges = v)
             .build());
 
+        settings.addEntry(eb.startBooleanToggle(LzText.literal("Active Tab as Context").mc(), panel.useActiveTabContext)
+            .setDefaultValue(false)
+            .setTooltip(LzText.literal("Use this panel's active tab as its context tab. Switches automatically when you change tabs. Overrides the pinned context set in Panel → Tabs.").mc())
+            .setSaveConsumer(v -> panel.useActiveTabContext = v)
+            .build());
+
         settings.addEntry(eb.startColorField(LzText.literal("BG Color").mc(), panel.bgColor)
             .setDefaultValue(0)
             .setTooltip(LzText.literal("Background tint for message lines. 000000 = default black.").mc())

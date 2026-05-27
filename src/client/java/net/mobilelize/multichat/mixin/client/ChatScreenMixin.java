@@ -142,7 +142,7 @@ public abstract class ChatScreenMixin {
                     if (MultichatClient.CONFIG.flashOnPanelFocus)
                         ChatRenderer.focusedPanel.tabFlashTick = ChatRenderer.currentTick;
                     if (MultichatClient.CONFIG.panelContextEnabled) {
-                        ChatRenderer.contextTab = ChatRenderer.focusedPanel.panelContextTab;
+                        ChatRenderer.contextTab = ChatRenderer.focusedPanel.resolveContextTab();
                         MultichatClient.saveTabsToConfig();
                     }
                 }
@@ -161,6 +161,8 @@ public abstract class ChatScreenMixin {
                         panel.tabFlashTick = ChatRenderer.currentTick;
                     panel.scrollActiveTabIntoView();
                     TabChangedCallback.EVENT.invoker().onTabChanged(panel, nowActive);
+                    if (MultichatClient.CONFIG.panelContextEnabled && panel.useActiveTabContext && panel == ChatRenderer.focusedPanel)
+                        ChatRenderer.contextTab = nowActive;
                 }
             }
             cir.setReturnValue(true);
@@ -316,6 +318,8 @@ public abstract class ChatScreenMixin {
                         panel.activeTab = i;
                         tab.unreadCount = 0;
                         TabChangedCallback.EVENT.invoker().onTabChanged(panel, tab);
+                        if (MultichatClient.CONFIG.panelContextEnabled && panel.useActiveTabContext && panel == ChatRenderer.focusedPanel)
+                            ChatRenderer.contextTab = tab;
                     } else if (button == 1) {
                         MessageContextMenu.close();
                         ContextMenu.open(panel, tab, (int) mouseX, (int) mouseY);
