@@ -13,49 +13,106 @@ public class ChatPanel {
 
     public enum Anchor { LEFT, RIGHT, CUSTOM }
 
-    public Anchor  anchor             = Anchor.LEFT;
-    public boolean primary            = false;
-    public int     id                 = 0;
-    public String  name               = "";
-    public int     margin             = 0;
-    public int     activeTab          = 0;
-    private ChatTab activeTabRef      = null;
-    public boolean enabled            = false;
-    public boolean showOnlyWhenFocused = false;
-    public boolean showBadges         = true;
-    public boolean showTabs           = true;
-    public boolean tabsAtTop          = false;
-    public int     tabScrollOffset    = 0;
-    public int     tabLastRendered    = -1;
-    public int     tabFlashTick       = -1000;
+    private Anchor  anchor             = Anchor.LEFT;
+    private boolean primary            = false;
+    private int     id                 = 0;
+    private String  name               = "";
+    private int     margin             = 0;
+    private int     activeTab          = 0;
+    private ChatTab activeTabRef       = null;
+    private boolean enabled            = false;
+    private boolean showOnlyWhenFocused = false;
+    private boolean showBadges         = true;
+    private boolean showTabs           = true;
+    private boolean tabsAtTop          = false;
+    private int     tabScrollOffset    = 0;
+    private int     tabLastRendered    = -1;
+    private int     tabFlashTick       = -1000;
 
-    // Custom position — fractions of screen dimensions (0.0–1.0), only used when anchor == CUSTOM
-    public float customX = 0f;
-    public float customY = 0f;
+    private float  customX            = 0f;
+    private float  customY            = 0f;
+    private int    customWidth        = -1;
+    private int    customHeightLines  = -1;
+    private float  customScale        = -1f;
+    private int    bgColor            = 0;
+    private double customBgOpacity    = -1;
+    private double customChatOpacity  = -1;
 
-    // Per-panel display overrides — ignored on primary panel (always uses MC defaults)
-    public int    customWidth       = -1;   // -1 = use MC default
-    public int    customHeightLines = -1;   // -1 = use MC default
-    public float  customScale       = -1f;  // -1 = use MC default
-    public int    bgColor           = 0;    // 0 = transparent
-    public double customBgOpacity   = -1;   // -1 = use MC default
-    public double customChatOpacity = -1;   // -1 = use MC default
+    private ChatTab panelContextTab    = null;
+    private boolean useActiveTabContext = false;
 
-    public ChatTab  panelContextTab    = null;
-    public boolean  useActiveTabContext = false;
+    private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();
+
+    public ChatPanel() {}
+
+    // ── Identity ───────────────────────────────────────────────────────────────
+    public Anchor  anchor()             { return anchor; }
+    public void    setAnchor(Anchor v)  { anchor = v; }
+    public boolean primary()            { return primary; }
+    public void    setPrimary(boolean v) { primary = v; }
+    public int     id()                 { return id; }
+    public void    setId(int v)         { id = v; }
+    public String  name()               { return name; }
+    public void    setName(String v)    { name = v != null ? v : ""; }
+    public int     margin()             { return margin; }
+    public void    setMargin(int v)     { margin = v; }
+
+    // ── State ──────────────────────────────────────────────────────────────────
+    public boolean enabled()                    { return enabled; }
+    public void    setEnabled(boolean v)        { enabled = v; }
+    public boolean showOnlyWhenFocused()        { return showOnlyWhenFocused; }
+    public void    setShowOnlyWhenFocused(boolean v) { showOnlyWhenFocused = v; }
+    public boolean showBadges()                 { return showBadges; }
+    public void    setShowBadges(boolean v)     { showBadges = v; }
+    public boolean showTabs()                   { return showTabs; }
+    public void    setShowTabs(boolean v)       { showTabs = v; }
+    public boolean tabsAtTop()                  { return tabsAtTop; }
+    public void    setTabsAtTop(boolean v)      { tabsAtTop = v; }
+
+    // ── Render state ───────────────────────────────────────────────────────────
+    public int  tabScrollOffset()           { return tabScrollOffset; }
+    public void setTabScrollOffset(int v)   { tabScrollOffset = v; }
+    public int  tabLastRendered()           { return tabLastRendered; }
+    public void setTabLastRendered(int v)   { tabLastRendered = v; }
+    public int  tabFlashTick()              { return tabFlashTick; }
+
+    public void flash(int currentTick) { tabFlashTick = currentTick; }
+
+    // ── Custom layout ──────────────────────────────────────────────────────────
+    public float  customX()                   { return customX; }
+    public void   setCustomX(float v)         { customX = v; }
+    public float  customY()                   { return customY; }
+    public void   setCustomY(float v)         { customY = v; }
+    public int    customWidth()               { return customWidth; }
+    public void   setCustomWidth(int v)       { customWidth = v; }
+    public int    customHeightLines()         { return customHeightLines; }
+    public void   setCustomHeightLines(int v) { customHeightLines = v; }
+    public float  customScale()               { return customScale; }
+    public void   setCustomScale(float v)     { customScale = v; }
+    public int    bgColor()                   { return bgColor; }
+    public void   setBgColor(int v)           { bgColor = v & 0xFFFFFF; }
+    public double customBgOpacity()               { return customBgOpacity; }
+    public void   setCustomBgOpacity(double v)    { customBgOpacity = v; }
+    public double customChatOpacity()             { return customChatOpacity; }
+    public void   setCustomChatOpacity(double v)  { customChatOpacity = v; }
+
+    // ── Context ────────────────────────────────────────────────────────────────
+    public ChatTab panelContextTab()               { return panelContextTab; }
+    public void    setPanelContextTab(ChatTab v)   { panelContextTab = v; }
+    public boolean useActiveTabContext()            { return useActiveTabContext; }
+    public void    setUseActiveTabContext(boolean v) { useActiveTabContext = v; }
 
     public ChatTab resolveContextTab() {
         if (useActiveTabContext) return getActiveTab();
         return panelContextTab;
     }
 
-    private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();
+    // ── Visibility ─────────────────────────────────────────────────────────────
+    public boolean isVisibleInChat(boolean chatFocused) {
+        return enabled && (!showOnlyWhenFocused || chatFocused);
+    }
 
-    public ChatPanel() {}
-
-    // -----------------------------------------------------------------------
-    // Resolvers — primary panel always uses MC defaults; others use override if set
-    // -----------------------------------------------------------------------
+    // ── Resolvers ──────────────────────────────────────────────────────────────
 
     public float resolveScale() {
         if (primary || customScale <= 0) return (float) LzChat.chatScale();
@@ -88,13 +145,11 @@ public class ChatPanel {
         return customChatOpacity;
     }
 
-    // -----------------------------------------------------------------------
-    // Tab helpers
-    // -----------------------------------------------------------------------
+    // ── Tab helpers ────────────────────────────────────────────────────────────
 
     public List<ChatTab> getVisibleTabs() {
         return ChatRenderer.TABS.stream()
-            .filter(t -> t.visibleOnPanels.contains(this.id))
+            .filter(t -> t.visibleOnPanels().contains(this.id))
             .toList();
     }
 
@@ -110,6 +165,9 @@ public class ChatPanel {
         return activeTabRef;
     }
 
+    /** Returns the raw active-tab index (for serialization). */
+    public int activeTabIndex() { return activeTab; }
+
     public void setActiveTab(int index) {
         List<ChatTab> visible = getVisibleTabs();
         if (visible.isEmpty()) { activeTab = 0; activeTabRef = null; return; }
@@ -117,17 +175,10 @@ public class ChatPanel {
         activeTabRef = visible.get(activeTab);
     }
 
-    public int getScrolledLines(ChatTab tab) {
-        return scrollPositions.getOrDefault(tab, 0);
-    }
-
-    public void setScrolledLines(ChatTab tab, int lines) {
-        scrollPositions.put(tab, lines);
-    }
-
-    public void resetScrollPositions() {
-        scrollPositions.clear();
-    }
+    /** Scroll position in visual line index (0 = no scroll, newest at bottom — mirrors vanilla). */
+    public int  getScrolledLines(ChatTab tab)               { return scrollPositions.getOrDefault(tab, 0); }
+    public void setScrolledLines(ChatTab tab, int lines)    { scrollPositions.put(tab, lines); }
+    public void resetScrollPositions()                      { scrollPositions.clear(); }
 
     public void scrollActiveTabIntoView() {
         if (activeTab < tabScrollOffset) {
@@ -141,7 +192,6 @@ public class ChatPanel {
     public int resolveTopY(int windowHeight) {
         if (primary || anchor != Anchor.CUSTOM)
             return LzMath.floor((float)(windowHeight - 40) / resolveScale());
-        // customY is center-Y fraction; recover topY from center
         return (int)(customY * windowHeight / resolveScale()
                    + resolveLines() * resolveLineHeight() / 2f
                    - ChatRenderer.TAB_HEIGHT / 2f);
@@ -150,7 +200,6 @@ public class ChatPanel {
     public int computeXOffset(int scaledWindowWidth) {
         return switch (anchor) {
             case RIGHT  -> Math.round(scaledWindowWidth / resolveScale()) - resolveWidth() - 12 - margin;
-            // customX is center-X fraction; recover x1 from center
             case CUSTOM -> !primary ? (int)(customX * scaledWindowWidth / resolveScale() - resolveWidth() / 2f - 4) : margin;
             default     -> margin;
         };

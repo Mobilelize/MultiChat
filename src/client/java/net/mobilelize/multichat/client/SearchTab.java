@@ -5,15 +5,15 @@ import net.mobilelize.multichat.client.search.SearchMode;
 
 public class SearchTab extends ChatTab {
 
-    public final String     query;
-    public final SearchMode searchMode;
-    public final boolean    caseSensitive;
-    public final int        creationTick;
-    public final int        timeFromTicks; // max age in ticks (0 = no max)
-    public final int        timeToTicks;   // min age in ticks (0 = no min)
-    public final ChatTab    sourceTab;     // null = search all messages
-    public       boolean    liveUpdate;
-    public       boolean    collapseIdentical;
+    private final String     query;
+    private final SearchMode searchMode;
+    private final boolean    caseSensitive;
+    private final int        creationTick;
+    private final int        timeFromTicks;
+    private final int        timeToTicks;
+    private final ChatTab    sourceTab;
+    private boolean          liveUpdate;
+    private boolean          collapseIdentical;
 
     public SearchTab(String name, String query, SearchMode searchMode, boolean caseSensitive,
                      int timeFromTicks, int timeToTicks, ChatTab sourceTab, boolean liveUpdate,
@@ -28,6 +28,18 @@ public class SearchTab extends ChatTab {
         this.sourceTab     = sourceTab;
         this.liveUpdate    = liveUpdate;
     }
+
+    public String     query()           { return query; }
+    public SearchMode searchMode()      { return searchMode; }
+    public boolean    caseSensitive()   { return caseSensitive; }
+    public int        creationTick()    { return creationTick; }
+    public int        timeFromTicks()   { return timeFromTicks; }
+    public int        timeToTicks()     { return timeToTicks; }
+    public ChatTab    sourceTab()       { return sourceTab; }
+    public boolean    liveUpdate()      { return liveUpdate; }
+    public void       setLiveUpdate(boolean v)        { liveUpdate = v; }
+    public boolean    collapseIdentical()             { return collapseIdentical; }
+    public void       setCollapseIdentical(boolean v) { collapseIdentical = v; }
 
     public boolean matchesText(String text) {
         if (query.isEmpty()) return true;
@@ -59,13 +71,10 @@ public class SearchTab extends ChatTab {
         };
     }
 
-    // timeFromTicks = max age (older messages excluded); 0 = no max
-    // timeToTicks   = min age (newer messages excluded); 0 = no min
-    // "From: 10m, To: 5m" → messages 5–10 minutes old at creation time
     public boolean matchesTime(int addedTime) {
         if (timeFromTicks == 0 && timeToTicks == 0) return true;
         int age = creationTick - addedTime;
-        if (age < 0) return true; // message arrived after search created — always include
+        if (age < 0) return true;
         if (timeFromTicks > 0 && age > timeFromTicks) return false;
         if (timeToTicks   > 0 && age < timeToTicks)   return false;
         return true;

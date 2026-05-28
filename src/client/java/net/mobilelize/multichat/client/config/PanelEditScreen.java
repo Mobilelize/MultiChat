@@ -12,7 +12,7 @@ import net.mobilelize.multichat.client.render.ChatRenderer;
 public class PanelEditScreen {
 
     public static Screen create(Screen parent, ChatPanel panel) {
-        String title = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
+        String title = panel.name().isEmpty() ? String.valueOf(panel.id()) : panel.name();
         ConfigBuilder builder = ConfigBuilder.create()
             .setParentScreen(parent)
             .setTitle(LzText.literal("Edit Panel: " + title).mc())
@@ -20,114 +20,111 @@ public class PanelEditScreen {
 
         ConfigEntryBuilder eb = builder.entryBuilder();
 
-        // ── Settings ──────────────────────────────────────────────────────
         ConfigCategory settings = builder.getOrCreateCategory(LzText.literal("Settings").mc());
 
-        settings.addEntry(eb.startStrField(LzText.literal("Name").mc(), panel.name)
-            .setDefaultValue(panel.name)
+        settings.addEntry(eb.startStrField(LzText.literal("Name").mc(), panel.name())
+            .setDefaultValue(panel.name())
             .setTooltip(LzText.literal("Display name for this panel.").mc())
             .setSaveConsumer(v -> {
-                String trimmed = v.trim().isEmpty() ? String.valueOf(panel.id) : v.trim();
+                String trimmed = v.trim().isEmpty() ? String.valueOf(panel.id()) : v.trim();
                 java.util.Set<String> others = ChatRenderer.PANELS.stream()
-                    .filter(p -> p != panel).map(p -> p.name).collect(java.util.stream.Collectors.toSet());
+                    .filter(p -> p != panel).map(ChatPanel::name).collect(java.util.stream.Collectors.toSet());
                 String unique = trimmed;
                 int n = 2;
                 while (others.contains(unique)) unique = trimmed + " (" + n++ + ")";
-                panel.name = unique;
+                panel.setName(unique);
             })
             .build());
 
-        if (!panel.primary) {
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Enabled").mc(), panel.enabled)
+        if (!panel.primary()) {
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Enabled").mc(), panel.enabled())
                 .setDefaultValue(true)
                 .setTooltip(LzText.literal("Show this panel.").mc())
-                .setSaveConsumer(v -> panel.enabled = v)
+                .setSaveConsumer(panel::setEnabled)
                 .build());
         }
 
-        settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Only When Focused").mc(), panel.showOnlyWhenFocused)
+        settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Only When Focused").mc(), panel.showOnlyWhenFocused())
             .setDefaultValue(false)
             .setTooltip(LzText.literal("Only render this panel when the chat screen is open.").mc())
-            .setSaveConsumer(v -> panel.showOnlyWhenFocused = v)
+            .setSaveConsumer(panel::setShowOnlyWhenFocused)
             .build());
 
-        settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Tabs").mc(), panel.showTabs)
+        settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Tabs").mc(), panel.showTabs())
             .setDefaultValue(true)
             .setTooltip(LzText.literal("Show the tab bar on this panel.").mc())
-            .setSaveConsumer(v -> panel.showTabs = v)
+            .setSaveConsumer(panel::setShowTabs)
             .build());
 
-        settings.addEntry(eb.startBooleanToggle(LzText.literal("Tabs at Top").mc(), panel.tabsAtTop)
+        settings.addEntry(eb.startBooleanToggle(LzText.literal("Tabs at Top").mc(), panel.tabsAtTop())
             .setDefaultValue(false)
             .setTooltip(LzText.literal("Show tabs above messages instead of below.").mc())
-            .setSaveConsumer(v -> panel.tabsAtTop = v)
+            .setSaveConsumer(panel::setTabsAtTop)
             .build());
 
-        settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Badges").mc(), panel.showBadges)
+        settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Badges").mc(), panel.showBadges())
             .setDefaultValue(true)
             .setTooltip(LzText.literal("Show unread message counts on inactive tabs.").mc())
-            .setSaveConsumer(v -> panel.showBadges = v)
+            .setSaveConsumer(panel::setShowBadges)
             .build());
 
-        settings.addEntry(eb.startBooleanToggle(LzText.literal("Active Tab as Context").mc(), panel.useActiveTabContext)
+        settings.addEntry(eb.startBooleanToggle(LzText.literal("Active Tab as Context").mc(), panel.useActiveTabContext())
             .setDefaultValue(false)
-            .setTooltip(LzText.literal("Use this panel's active tab as its context tab. Switches automatically when you change tabs. Overrides the pinned context set in Panel → Tabs.").mc())
-            .setSaveConsumer(v -> panel.useActiveTabContext = v)
+            .setTooltip(LzText.literal("Use this panel's active tab as its context tab.").mc())
+            .setSaveConsumer(panel::setUseActiveTabContext)
             .build());
 
-        settings.addEntry(eb.startColorField(LzText.literal("BG Color").mc(), panel.bgColor)
+        settings.addEntry(eb.startColorField(LzText.literal("BG Color").mc(), panel.bgColor())
             .setDefaultValue(0)
             .setTooltip(LzText.literal("Background tint for message lines. 000000 = default black.").mc())
-            .setSaveConsumer(v -> panel.bgColor = v & 0xFFFFFF)
+            .setSaveConsumer(panel::setBgColor)
             .build());
 
-        // ── Adjustments (non-primary only) ───────────────────────────────
-        if (!panel.primary) {
+        if (!panel.primary()) {
             ConfigCategory position = builder.getOrCreateCategory(LzText.literal("Adjustments").mc());
 
-            position.addEntry(eb.startEnumSelector(LzText.literal("Anchor").mc(), ChatPanel.Anchor.class, panel.anchor)
+            position.addEntry(eb.startEnumSelector(LzText.literal("Anchor").mc(), ChatPanel.Anchor.class, panel.anchor())
                 .setDefaultValue(ChatPanel.Anchor.LEFT)
                 .setTooltip(LzText.literal("LEFT/RIGHT: snaps to that wall. CUSTOM: position set via Panel Layout editor.").mc())
-                .setSaveConsumer(v -> panel.anchor = v)
+                .setSaveConsumer(panel::setAnchor)
                 .build());
 
-            position.addEntry(eb.startIntField(LzText.literal("Margin").mc(), panel.margin)
+            position.addEntry(eb.startIntField(LzText.literal("Margin").mc(), panel.margin())
                 .setDefaultValue(0)
                 .setTooltip(LzText.literal("Offset from the anchored edge (LEFT/RIGHT anchor only).").mc())
-                .setSaveConsumer(v -> panel.margin = v)
+                .setSaveConsumer(panel::setMargin)
                 .build());
 
-            position.addEntry(eb.startIntField(LzText.literal("Custom Width").mc(), panel.customWidth)
+            position.addEntry(eb.startIntField(LzText.literal("Custom Width").mc(), panel.customWidth())
                 .setDefaultValue(-1)
                 .setTooltip(LzText.literal("Chat width in panel units. -1 = use MC default.").mc())
-                .setSaveConsumer(v -> panel.customWidth = v)
+                .setSaveConsumer(panel::setCustomWidth)
                 .build());
 
-            position.addEntry(eb.startIntField(LzText.literal("Custom Height Lines").mc(), panel.customHeightLines)
+            position.addEntry(eb.startIntField(LzText.literal("Custom Height Lines").mc(), panel.customHeightLines())
                 .setDefaultValue(-1)
                 .setTooltip(LzText.literal("Visible line count. -1 = use MC default.").mc())
-                .setSaveConsumer(v -> panel.customHeightLines = v)
+                .setSaveConsumer(panel::setCustomHeightLines)
                 .build());
 
             position.addEntry(eb.startDoubleField(LzText.literal("Custom Scale").mc(),
-                    panel.customScale < 0 ? -1.0 : panel.customScale)
+                    panel.customScale() < 0 ? -1.0 : panel.customScale())
                 .setDefaultValue(-1.0)
                 .setTooltip(LzText.literal("Render scale. -1 = use MC default.").mc())
-                .setSaveConsumer(v -> panel.customScale = v.floatValue())
+                .setSaveConsumer(v -> panel.setCustomScale(v.floatValue()))
                 .build());
 
-            position.addEntry(eb.startDoubleField(LzText.literal("BG Opacity").mc(), panel.customBgOpacity)
+            position.addEntry(eb.startDoubleField(LzText.literal("BG Opacity").mc(), panel.customBgOpacity())
                 .setDefaultValue(-1.0)
                 .setTooltip(LzText.literal("Background opacity. -1 = use MC default.").mc())
-                .setSaveConsumer(v -> panel.customBgOpacity = v)
+                .setSaveConsumer(panel::setCustomBgOpacity)
                 .build());
 
-            position.addEntry(eb.startDoubleField(LzText.literal("Chat Opacity").mc(), panel.customChatOpacity)
+            position.addEntry(eb.startDoubleField(LzText.literal("Chat Opacity").mc(), panel.customChatOpacity())
                 .setDefaultValue(-1.0)
                 .setTooltip(LzText.literal("Text opacity. -1 = use MC default.").mc())
-                .setSaveConsumer(v -> panel.customChatOpacity = v)
+                .setSaveConsumer(panel::setCustomChatOpacity)
                 .build());
-
         }
 
         return builder.build();

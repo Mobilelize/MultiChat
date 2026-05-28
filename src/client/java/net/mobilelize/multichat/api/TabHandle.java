@@ -48,7 +48,7 @@ public class TabHandle {
         List<LzChatLine> created = new ArrayList<>(lines.size());
         for (int j = 0; j < lines.size(); j++) {
             LzChatLine cl = LzChatLine.create(tick, lines.get(j), null, j == lines.size() - 1);
-            tab.messages.addFirst(cl);
+            tab.addFirst(cl);
             created.add(cl);
         }
         adjustAfterAdd(tab, created.size());
@@ -63,7 +63,7 @@ public class TabHandle {
                 MessageRouter.skipTabOnRoute = null;
             }
         } else if (MultichatClient.CONFIG.logApiMessages) {
-            MultichatClient.LOGGER.info("[{}] {}", tab.name, message.mc().getString());
+            MultichatClient.LOGGER.info("[{}] {}", tab.name(), message.mc().getString());
         }
 
         return true;
@@ -94,47 +94,47 @@ public class TabHandle {
     // ------------------------------------------------------------------
 
     public TabHandle setName(String name) {
-        tab.name = name != null ? name : "";
+        tab.setName(name);
         return this;
     }
 
     public TabHandle setColor(int argbOrRgb) {
-        tab.tabColor = argbOrRgb & 0xFFFFFF;
+        tab.setTabColor(argbOrRgb);
         return this;
     }
 
     public TabHandle setMessageCap(int cap) {
-        tab.messageCap = Math.max(0, cap);
+        tab.setMessageCap(cap);
         return this;
     }
 
     public TabHandle setShowBadge(boolean show) {
-        tab.showBadge = show;
+        tab.setShowBadge(show);
         return this;
     }
 
     /** Replace the full set of panels this tab is visible on by panel IDs (0 = left, 1 = right). */
     public TabHandle setVisibleOnPanels(int... panelIds) {
-        tab.visibleOnPanels.clear();
-        for (int id : panelIds) tab.visibleOnPanels.add(id);
+        tab.visibleOnPanels().clear();
+        for (int id : panelIds) tab.visibleOnPanels().add(id);
         return this;
     }
 
     /** Convenience overload using {@link TabVisibility} enum. */
     public TabHandle setVisibleOnPanels(TabVisibility visibility) {
-        tab.visibleOnPanels.clear();
-        tab.visibleOnPanels.addAll(TabVisibility.toPanelIds(visibility));
+        tab.visibleOnPanels().clear();
+        tab.visibleOnPanels().addAll(TabVisibility.toPanelIds(visibility));
         return this;
     }
 
     /** Add or remove this tab from a single panel without affecting others. */
     public TabHandle setVisibleOnPanel(int panelId, boolean visible) {
-        if (visible) tab.visibleOnPanels.add(panelId);
-        else         tab.visibleOnPanels.remove(panelId);
+        if (visible) tab.visibleOnPanels().add(panelId);
+        else         tab.visibleOnPanels().remove(panelId);
         return this;
     }
 
-    public Set<Integer> getVisiblePanels() { return tab.visibleOnPanels; }
+    public Set<Integer> getVisiblePanels() { return tab.visibleOnPanels(); }
 
     // ------------------------------------------------------------------
     // Context
@@ -144,16 +144,16 @@ public class TabHandle {
     public TabHandle clearContext()   { if (ChatRenderer.contextTab == tab) ChatRenderer.contextTab = null; return this; }
 
     public TabHandle setContextPrefix(String prefix) {
-        tab.contextPrefix = prefix != null ? prefix : "";
+        tab.setContextPrefix(prefix);
         return this;
     }
 
     public TabHandle setContextCommandMode(boolean asCmd) {
-        tab.contextCommandMode = asCmd;
+        tab.setContextCommandMode(asCmd);
         return this;
     }
 
-    public String getContextPrefix() { return tab.contextPrefix; }
+    public String getContextPrefix() { return tab.contextPrefix(); }
 
     // ------------------------------------------------------------------
     // Accessors
@@ -171,58 +171,33 @@ public class TabHandle {
     // Internal helpers
     // ------------------------------------------------------------------
 
-    private static void adjustAfterAdd(ChatTab tab, int primaryAdded) {
-        java.util.Map<ChatPanel, Integer> preAddSizes = null;
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.primary && panel.getScrolledLines(tab) > 0) {
-                if (preAddSizes == null) preAddSizes = new java.util.HashMap<>();
-                preAddSizes.put(panel, ChatRenderer.getMessages(panel, tab).size());
-            }
-        }
-
+    private static void adjustAfterAdd(ChatTab tab, int linesAdded) {
         tab.clearWidthCaches();
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
             int scrolled = panel.getScrolledLines(tab);
             if (scrolled <= 0) continue;
-            if (panel.primary) {
-                panel.setScrolledLines(tab, scrolled + primaryAdded);
-            } else if (preAddSizes != null && preAddSizes.containsKey(panel)) {
-                int delta = ChatRenderer.getMessages(panel, tab).size() - preAddSizes.get(panel);
-                if (delta != 0) panel.setScrolledLines(tab, Math.max(0, scrolled + delta));
-            }
+            panel.setScrolledLines(tab, scrolled + linesAdded);
         }
-        ChatSelection.shiftLines(tab, primaryAdded);
+        ChatSelection.shiftLines(tab, linesAdded);
 
-        if (tab.messageCap > 0) {
-            java.util.Map<ChatPanel, Integer> preCapSizes = null;
-            for (ChatPanel panel : ChatRenderer.PANELS) {
-                if (!panel.primary && panel.getScrolledLines(tab) > 0) {
-                    if (preCapSizes == null) preCapSizes = new java.util.HashMap<>();
-                    preCapSizes.put(panel, ChatRenderer.getMessages(panel, tab).size());
-                }
-            }
-            int primaryBefore = tab.messages.size();
-            while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
-            int primaryRemoved = primaryBefore - tab.messages.size();
-            if (primaryRemoved > 0) {
+        if (tab.messageCap() > 0) {
+            int before = tab.messageCount();
+            while (tab.messageCount() > tab.messageCap()) tab.removeLast();
+            int removed = before - tab.messageCount();
+            if (removed > 0) {
                 tab.clearWidthCaches();
                 for (ChatPanel panel : ChatRenderer.PANELS) {
                     int scrolled = panel.getScrolledLines(tab);
                     if (scrolled <= 0) continue;
-                    if (panel.primary) {
-                        panel.setScrolledLines(tab, Math.max(0, scrolled - primaryRemoved));
-                    } else if (preCapSizes != null && preCapSizes.containsKey(panel)) {
-                        int removed = preCapSizes.get(panel) - ChatRenderer.getMessages(panel, tab).size();
-                        if (removed > 0) panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
-                    }
+                    panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
                 }
                 ChatSelection.clampOrClear(tab);
             }
         }
 
-        if (!ChatRenderer.isActiveInAnyPanel(tab)) tab.unreadCount++;
-        if (!tab.messages.isEmpty())
-            MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.getFirst());
+        if (!ChatRenderer.isActiveInAnyPanel(tab)) tab.incrementUnread();
+        if (tab.hasMessages())
+            MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.getFirstMessage());
     }
 }

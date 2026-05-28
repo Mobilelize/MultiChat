@@ -5,9 +5,9 @@ import net.mobilelize.fabriclib.client.LzMessageIndicator;
 
 public class FilterRule {
 
-    public final FilterType      type;
-    public final String          value;
-    public final IndicatorFilter indicator;
+    private final FilterType      type;
+    private final String          value;
+    private final IndicatorFilter indicator;
 
     public FilterRule(FilterType type, String value) {
         this(type, value, IndicatorFilter.ANY);
@@ -18,6 +18,10 @@ public class FilterRule {
         this.value     = value;
         this.indicator = indicator;
     }
+
+    public FilterType      type()      { return type; }
+    public String          value()     { return value; }
+    public IndicatorFilter indicator() { return indicator; }
 
     public boolean matches(String text, LzMessageIndicator ind) {
         if (!indicatorMatches(ind)) return false;

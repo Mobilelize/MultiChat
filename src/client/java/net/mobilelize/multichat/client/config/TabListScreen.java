@@ -47,7 +47,7 @@ public class TabListScreen extends LzScreen {
     private int maxScroll()         { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
     private boolean isMoveable(ChatTab tab) {
-        return tab.type == TabType.FILTERED || tab.type == TabType.API || tab.type == TabType.SEARCH;
+        return tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.SEARCH;
     }
 
     private int firstMoveableIdx() {
@@ -75,7 +75,7 @@ public class TabListScreen extends LzScreen {
     private void addTab() {
         String name = nameField.getText().trim();
         if (name.isEmpty()) return;
-        if (ChatRenderer.TABS.stream().anyMatch(t -> t.type == TabType.FILTERED && t.name.equalsIgnoreCase(name))) return;
+        if (ChatRenderer.TABS.stream().anyMatch(t -> t.type() == TabType.FILTERED && t.name().equalsIgnoreCase(name))) return;
         ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, java.util.List.of(0, 1)));
         MultichatClient.saveTabsToConfig();
         clearAndInit();
@@ -169,13 +169,13 @@ public class TabListScreen extends LzScreen {
             int btnY1 = y + 3, btnY2 = y + ROW_HEIGHT - 3;
             int textY = y + (ROW_HEIGHT - 8) / 2;
 
-            int rowBg = switch (tab.type) {
+            int rowBg = switch (tab.type()) {
                 case FILTERED -> 0x55FFFFFF;
                 case SEARCH   -> 0x4400FFAA;
                 case API      -> 0x44FF9900;
                 default       -> 0x44AAAAFF;
             };
-            int rowBdr = switch (tab.type) {
+            int rowBdr = switch (tab.type()) {
                 case FILTERED -> 0x88AAAAAA;
                 case SEARCH   -> 0x8800CC88;
                 case API      -> 0x88CC6600;
@@ -192,7 +192,7 @@ public class TabListScreen extends LzScreen {
                 LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, 0x3300FFAA);
             }
 
-            int nameColor = switch (tab.type) {
+            int nameColor = switch (tab.type()) {
                 case FILTERED -> 0xFFFFFF;
                 case SEARCH   -> 0xAAFFDD;
                 case API      -> 0xFFCC88;
@@ -200,20 +200,20 @@ public class TabListScreen extends LzScreen {
             };
 
             // Name
-            String nameStr = tab.name + " ";
+            String nameStr = tab.name() + " ";
             LzDraw.drawText(ctx, nameStr, lx + 6, textY, nameColor);
 
             int infoX = lx + 6 + LzDraw.textWidth(nameStr);
 
             // Tab color swatch
-            if (tab.tabColor != 0) {
-                LzDraw.fill(ctx, infoX, textY + 1, infoX + 7, textY + 7, 0xFF000000 | (tab.tabColor & 0xFFFFFF));
+            if (tab.tabColor() != 0) {
+                LzDraw.fill(ctx, infoX, textY + 1, infoX + 7, textY + 7, 0xFF000000 | (tab.tabColor() & 0xFFFFFF));
                 infoX += 10;
             }
 
-            if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
-                int wlCount = tab.filterRules.whitelist.size();
-                int blCount = tab.filterRules.blacklist.size();
+            if (tab.type() == TabType.FILTERED || tab.type() == TabType.API) {
+                int wlCount = tab.filterRules().whitelist().size();
+                int blCount = tab.filterRules().blacklist().size();
 
                 String wlStr = "WL:" + wlCount + " ";
                 String blStr = "BL:" + blCount;
@@ -224,15 +224,15 @@ public class TabListScreen extends LzScreen {
 
                 // Settings flags: T=timestamps C=collapse D=diff B=badge-off P=prefix
                 StringBuilder flags = new StringBuilder();
-                if (tab.showTimestamps)          flags.append("T");
-                if (tab.collapseRepeating)       flags.append("C");
-                if (tab.differenceMode)          flags.append("D");
-                if (!tab.showBadge)              flags.append("B");
-                if (!tab.contextPrefix.isEmpty()) flags.append("P");
+                if (tab.showTimestamps())          flags.append("T");
+                if (tab.collapseRepeating())       flags.append("C");
+                if (tab.differenceMode())          flags.append("D");
+                if (!tab.showBadge())              flags.append("B");
+                if (!tab.contextPrefix().isEmpty()) flags.append("P");
                 if (!flags.isEmpty())
                     LzDraw.drawText(ctx, "  " + flags, infoX, textY, 0xFF9999CC);
             } else {
-                String typeTag = switch (tab.type) {
+                String typeTag = switch (tab.type()) {
                     case ALL     -> "[all]";
                     case VANILLA -> "[vanilla]";
                     case SEARCH  -> "[search]";
@@ -242,8 +242,8 @@ public class TabListScreen extends LzScreen {
                     LzDraw.drawText(ctx, typeTag, infoX, textY, 0xFF666666);
             }
 
-            boolean canEdit   = tab.type == TabType.FILTERED || tab.type == TabType.API;
-            boolean canRemove = tab.type == TabType.FILTERED || tab.type == TabType.SEARCH;
+            boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API;
+            boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH;
             boolean hoverEdit   = canEdit   && mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverRemove = canRemove && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
@@ -344,18 +344,18 @@ public class TabListScreen extends LzScreen {
 
         // Edit button
         if (mx >= lx + 186 && mx < lx + 228) {
-            if (tab.type == TabType.FILTERED || tab.type == TabType.API)
+            if (tab.type() == TabType.FILTERED || tab.type() == TabType.API)
                 LzClient.mc().setScreen(TabEditScreen.create(this, tab));
             return true;
         }
 
         // Remove button
-        if ((tab.type == TabType.FILTERED || tab.type == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
+        if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
             if (idx == selectedIdx) selectedIdx = -1;
             else if (idx < selectedIdx) selectedIdx--;
             swapPending = false;
             ChatRenderer.TABS.remove(tab);
-            if (tab.type == TabType.FILTERED) MultichatClient.saveTabsToConfig();
+            if (tab.type() == TabType.FILTERED) MultichatClient.saveTabsToConfig();
             clearAndInit();
             return true;
         }

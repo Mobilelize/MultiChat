@@ -49,7 +49,7 @@ public class PanelLayoutScreen extends LzScreen {
     protected void init() {
         if (originals.isEmpty()) {
             for (ChatPanel p : ChatRenderer.PANELS)
-                originals.put(p, new Object[] { p.anchor, p.customX, p.customY, p.customWidth, p.customHeightLines });
+                originals.put(p, new Object[] { p.anchor(), p.customX(), p.customY(), p.customWidth(), p.customHeightLines() });
         }
 
         addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
@@ -83,31 +83,31 @@ public class PanelLayoutScreen extends LzScreen {
 
     // Docks the panel to LEFT or RIGHT anchor based on which side its center is closer to.
     private void snapToNearestWall(ChatPanel panel) {
-        if (panel == null || panel.primary) return;
+        if (panel == null || panel.primary()) return;
         int[] b = bounds(panel);
         int cx = (b[0] + b[2]) / 2;
-        panel.anchor = cx <= width / 2 ? ChatPanel.Anchor.LEFT : ChatPanel.Anchor.RIGHT;
+        panel.setAnchor(cx <= width / 2 ? ChatPanel.Anchor.LEFT : ChatPanel.Anchor.RIGHT);
     }
 
     private boolean isDirty() {
         for (Map.Entry<ChatPanel, Object[]> e : originals.entrySet()) {
             ChatPanel p = e.getKey();
             Object[]  o = e.getValue();
-            if (p.anchor            != (ChatPanel.Anchor) o[0]) return true;
-            if (p.customX           != (float) o[1])             return true;
-            if (p.customY           != (float) o[2])             return true;
-            if (p.customWidth       != (int) o[3])              return true;
-            if (p.customHeightLines != (int) o[4])              return true;
+            if (p.anchor()            != (ChatPanel.Anchor) o[0]) return true;
+            if (p.customX()           != (float) o[1])            return true;
+            if (p.customY()           != (float) o[2])            return true;
+            if (p.customWidth()       != (int) o[3])              return true;
+            if (p.customHeightLines() != (int) o[4])              return true;
         }
         return false;
     }
 
     // Convert panel from wall-anchor to CUSTOM at its current visual position (center stored as screen fractions).
     private void pinToCustom(ChatPanel panel, int[] b) {
-        if (panel.anchor == ChatPanel.Anchor.CUSTOM) return;
-        panel.customX = (b[0] + b[2]) / 2f / width;
-        panel.customY = (b[1] + b[3]) / 2f / height;
-        panel.anchor  = ChatPanel.Anchor.CUSTOM;
+        if (panel.anchor() == ChatPanel.Anchor.CUSTOM) return;
+        panel.setCustomX((b[0] + b[2]) / 2f / width);
+        panel.setCustomY((b[1] + b[3]) / 2f / height);
+        panel.setAnchor(ChatPanel.Anchor.CUSTOM);
     }
 
     @Override
@@ -127,7 +127,7 @@ public class PanelLayoutScreen extends LzScreen {
         super.lzRender(ctx, mouseX, mouseY, delta);
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled) continue;
+            if (!panel.enabled()) continue;
             int[] b  = bounds(panel);
             int   x1 = b[0], y1 = b[1], x2 = b[2], y2 = b[3];
             int   cx = (x1 + x2) / 2;
@@ -135,14 +135,14 @@ public class PanelLayoutScreen extends LzScreen {
             boolean hov = mouseX >= x1 && mouseX < x2 && mouseY >= y1 && mouseY < y2;
 
             // Outer border extends left/right to show true rendered panel extent
-            int outerCol = panel.primary ? 0x55446699 : 0x55FF8800;
+            int outerCol = panel.primary() ? 0x55446699 : 0x55FF8800;
             LzDraw.drawBorder(ctx, x1 - OUTER_PAD, y1, x2 + OUTER_PAD, y2, outerCol);
 
-            if (panel.primary) {
+            if (panel.primary()) {
                 LzDraw.fill(ctx, x1, y1, x2, y2, 0x1A4488FF);
                 LzDraw.drawBorder(ctx, x1, y1, x2, y2, 0xFF4488FF);
-                LzDraw.drawCenteredText(ctx, LzText.literal(panel.name + " (locked)"), cx, cy - 4, 0xFF88AAFF);
-                LzDraw.drawCenteredText(ctx, LzText.literal("primary panel"),           cx, cy + 5, 0x884488FF);
+                LzDraw.drawCenteredText(ctx, LzText.literal(panel.name() + " (locked)"), cx, cy - 4, 0xFF88AAFF);
+                LzDraw.drawCenteredText(ctx, LzText.literal("primary panel"),            cx, cy + 5, 0x884488FF);
             } else {
                 boolean drag  = dragging == panel;
                 boolean resiz = resizing == panel;
@@ -153,10 +153,10 @@ public class PanelLayoutScreen extends LzScreen {
                 LzDraw.fill(ctx, x1, y1, x2, y2, fillCol);
                 LzDraw.drawBorder(ctx, x1, y1, x2, y2, borderCol);
 
-                String name   = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
-                String anchor = panel.anchor == ChatPanel.Anchor.CUSTOM
-                    ? String.format("%.2f, %.2f", panel.customX, panel.customY)
-                    : panel.anchor.name().toLowerCase() + (panel.margin != 0 ? " +" + panel.margin : "");
+                String name   = panel.name().isEmpty() ? String.valueOf(panel.id()) : panel.name();
+                String anchor = panel.anchor() == ChatPanel.Anchor.CUSTOM
+                    ? String.format("%.2f, %.2f", panel.customX(), panel.customY())
+                    : panel.anchor().name().toLowerCase() + (panel.margin() != 0 ? " +" + panel.margin() : "");
 
                 LzDraw.drawCenteredText(ctx, LzText.literal(name),   cx, cy - 4, labelCol);
                 LzDraw.drawCenteredText(ctx, LzText.literal(anchor), cx, cy + 5, 0x88FFFFFF);
@@ -193,7 +193,7 @@ public class PanelLayoutScreen extends LzScreen {
 
         // Resize handles take priority over drag
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (panel.primary || !panel.enabled) continue;
+            if (panel.primary() || !panel.enabled()) continue;
             int[] b = bounds(panel);
             int x1 = b[0], y1 = b[1], x2 = b[2], y2 = b[3];
 
@@ -217,7 +217,7 @@ public class PanelLayoutScreen extends LzScreen {
         // Drag
         ChatPanel hit = null;
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (panel.primary || !panel.enabled) continue;
+            if (panel.primary() || !panel.enabled()) continue;
             int[] b = bounds(panel);
             if (mouseX >= b[0] && mouseX < b[2] && mouseY >= b[1] && mouseY < b[3]) hit = panel;
         }
@@ -230,8 +230,8 @@ public class PanelLayoutScreen extends LzScreen {
         int[] nb    = bounds(hit);
         int initCX  = snap((nb[0] + nb[2]) / 2);
         int initCY  = snap((nb[1] + nb[3]) / 2);
-        hit.customX = initCX / (float) width;
-        hit.customY = initCY / (float) height;
+        hit.setCustomX(initCX / (float) width);
+        hit.setCustomY(initCY / (float) height);
         dragging    = hit;
         lastDragged = hit;
         dragOffsetX = (int) mouseX - initCX;
@@ -246,15 +246,15 @@ public class PanelLayoutScreen extends LzScreen {
 
             if (resizeDir == ResizeDir.WIDTH) {
                 // Left edge (x1) stays fixed; right edge follows mouse. Center shifts.
-                resizing.customWidth = Math.max(40, (int)((mouseX - resizeAnchorX1) / scale));
-                resizing.customX = (resizeAnchorX1 + resizing.customWidth * scale / 2f) / width;
+                resizing.setCustomWidth(Math.max(40, (int)((mouseX - resizeAnchorX1) / scale)));
+                resizing.setCustomX((resizeAnchorX1 + resizing.customWidth() * scale / 2f) / width);
             } else {
                 // Top (y1) stays fixed; bottom follows mouse. Center shifts.
                 int   lh         = resizing.resolveLineHeight();
                 float y1Unscaled = resizeAnchorY1 / scale;
                 float newTopY    = (float)(mouseY / scale) - ChatRenderer.TAB_HEIGHT;
-                resizing.customHeightLines = Math.max(2, (int)((newTopY - y1Unscaled) / lh));
-                resizing.customY = (resizeAnchorY1 + (resizing.customHeightLines * lh + ChatRenderer.TAB_HEIGHT) * scale / 2f) / height;
+                resizing.setCustomHeightLines(Math.max(2, (int)((newTopY - y1Unscaled) / lh)));
+                resizing.setCustomY((resizeAnchorY1 + (resizing.customHeightLines() * lh + ChatRenderer.TAB_HEIGHT) * scale / 2f) / height);
             }
             return true;
         }
@@ -277,8 +277,8 @@ public class PanelLayoutScreen extends LzScreen {
                 finalCX = rawCX;
             }
 
-            dragging.customX = finalCX / (float) width;
-            dragging.customY = snap(rawCY) / (float) height;
+            dragging.setCustomX(finalCX / (float) width);
+            dragging.setCustomY(snap(rawCY) / (float) height);
             return true;
         }
 
@@ -314,11 +314,11 @@ public class PanelLayoutScreen extends LzScreen {
         for (Map.Entry<ChatPanel, Object[]> e : originals.entrySet()) {
             ChatPanel p = e.getKey();
             Object[]  o = e.getValue();
-            p.anchor            = (ChatPanel.Anchor) o[0];
-            p.customX           = (float) o[1];
-            p.customY           = (float) o[2];
-            p.customWidth       = (int) o[3];
-            p.customHeightLines = (int) o[4];
+            p.setAnchor((ChatPanel.Anchor) o[0]);
+            p.setCustomX((float) o[1]);
+            p.setCustomY((float) o[2]);
+            p.setCustomWidth((int) o[3]);
+            p.setCustomHeightLines((int) o[4]);
         }
         close();
     }

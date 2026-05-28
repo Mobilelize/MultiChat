@@ -57,19 +57,19 @@ public class MultiChatMod {
             : defaultPanels;
 
         ChatTab tab = new ChatTab(resolvedName, TabType.API, resolvedPanels);
-        tab.apiId    = fullId;
-        tab.tabColor = saved != null ? saved.color : 0;
+        tab.setApiId(fullId);
+        tab.setTabColor(saved != null ? saved.color : 0);
 
         if (saved != null) {
-            tab.filterRules.whitelistMode = saved.whitelistMode != null ? saved.whitelistMode : WhitelistMode.ANY;
-            tab.filterRules.blacklistMode = saved.blacklistMode != null ? saved.blacklistMode : WhitelistMode.ANY;
-            tab.contextPrefix      = saved.contextPrefix != null ? saved.contextPrefix : "";
-            tab.contextCommandMode = saved.contextCommandMode;
+            tab.filterRules().setWhitelistMode(saved.whitelistMode != null ? saved.whitelistMode : WhitelistMode.ANY);
+            tab.filterRules().setBlacklistMode(saved.blacklistMode != null ? saved.blacklistMode : WhitelistMode.ANY);
+            tab.setContextPrefix(saved.contextPrefix != null ? saved.contextPrefix : "");
+            tab.setContextCommandMode(saved.contextCommandMode);
             for (RuleConfig rc : saved.whitelist)
-                if (rc.type != null) tab.filterRules.whitelist.add(
+                if (rc.type != null) tab.filterRules().whitelist().add(
                     new FilterRule(rc.type, rc.value, rc.indicator != null ? rc.indicator : IndicatorFilter.ANY));
             for (RuleConfig rc : saved.blacklist)
-                if (rc.type != null) tab.filterRules.blacklist.add(
+                if (rc.type != null) tab.filterRules().blacklist().add(
                     new FilterRule(rc.type, rc.value, rc.indicator != null ? rc.indicator : IndicatorFilter.ANY));
         }
 
@@ -113,7 +113,7 @@ public class MultiChatMod {
 
     /** Panel by ID, or {@code null} if not found. */
     public ChatPanel getPanel(int panelId) {
-        return ChatRenderer.PANELS.stream().filter(p -> p.id == panelId).findFirst().orElse(null);
+        return ChatRenderer.PANELS.stream().filter(p -> p.id() == panelId).findFirst().orElse(null);
     }
 
     // ------------------------------------------------------------------
@@ -122,7 +122,7 @@ public class MultiChatMod {
 
     private static Set<Integer> allPanelIds() {
         Set<Integer> ids = new LinkedHashSet<>();
-        for (ChatPanel p : ChatRenderer.PANELS) ids.add(p.id);
+        for (ChatPanel p : ChatRenderer.PANELS) ids.add(p.id());
         return ids;
     }
 

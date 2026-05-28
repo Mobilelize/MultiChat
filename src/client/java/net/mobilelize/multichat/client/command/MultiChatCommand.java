@@ -69,7 +69,7 @@ public class MultiChatCommand {
     private static int openPanel(CommandContext<FabricClientCommandSource> ctx) {
         String name = StringArgumentType.getString(ctx, "name");
         ChatPanel panel = ChatRenderer.PANELS.stream()
-            .filter(p -> p.name.equalsIgnoreCase(name)).findFirst().orElse(null);
+            .filter(p -> p.name().equalsIgnoreCase(name)).findFirst().orElse(null);
         if (panel == null) { feedback(ctx, "Panel '" + name + "' not found."); return 0; }
         LzClient.send(() -> LzClient.mc().setScreen(PanelEditScreen.create(null, panel)));
         return 1;
@@ -89,8 +89,8 @@ public class MultiChatCommand {
         if (tab == null) { feedback(ctx, "Tab '" + name + "' not found."); return 0; }
         ChatRenderer.contextTab = tab;
         MultichatClient.saveTabsToConfig();
-        String prefix = tab.contextPrefix.isEmpty() ? "(none)" : tab.contextPrefix;
-        feedback(ctx, "Context → [" + tab.name + "] prefix: " + prefix);
+        String prefix = tab.contextPrefix().isEmpty() ? "(none)" : tab.contextPrefix();
+        feedback(ctx, "Context → [" + tab.name() + "] prefix: " + prefix);
         return 1;
     }
 
@@ -101,8 +101,8 @@ public class MultiChatCommand {
     private static SuggestionProvider<FabricClientCommandSource> panelSuggestions() {
         return (ctx, builder) -> {
             for (ChatPanel panel : ChatRenderer.PANELS)
-                if (CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), panel.name.toLowerCase()))
-                    builder.suggest(panel.name);
+                if (CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), panel.name().toLowerCase()))
+                    builder.suggest(panel.name());
             return builder.buildFuture();
         };
     }
@@ -110,9 +110,9 @@ public class MultiChatCommand {
     private static SuggestionProvider<FabricClientCommandSource> editSuggestions() {
         return (ctx, builder) -> {
             for (ChatTab tab : ChatRenderer.TABS)
-                if ((tab.type == TabType.FILTERED || tab.type == TabType.API)
-                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name.toLowerCase()))
-                    builder.suggest(tab.name);
+                if ((tab.type() == TabType.FILTERED || tab.type() == TabType.API)
+                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
+                    builder.suggest(tab.name());
             return builder.buildFuture();
         };
     }
@@ -120,9 +120,9 @@ public class MultiChatCommand {
     private static SuggestionProvider<FabricClientCommandSource> contextSuggestions() {
         return (ctx, builder) -> {
             for (ChatTab tab : ChatRenderer.TABS)
-                if ((tab.type == TabType.FILTERED || tab.type == TabType.API)
-                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name.toLowerCase()))
-                    builder.suggest(tab.name);
+                if ((tab.type() == TabType.FILTERED || tab.type() == TabType.API)
+                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
+                    builder.suggest(tab.name());
             return builder.buildFuture();
         };
     }
@@ -135,9 +135,9 @@ public class MultiChatCommand {
     private static ChatTab findEditableTab(String name) {
         ChatTab api = null;
         for (ChatTab tab : ChatRenderer.TABS) {
-            if (!tab.name.equalsIgnoreCase(name)) continue;
-            if (tab.type == TabType.FILTERED) return tab;
-            if (tab.type == TabType.API) api = tab;
+            if (!tab.name().equalsIgnoreCase(name)) continue;
+            if (tab.type() == TabType.FILTERED) return tab;
+            if (tab.type() == TabType.API) api = tab;
         }
         return api;
     }
@@ -145,9 +145,9 @@ public class MultiChatCommand {
     private static ChatTab findContextTab(String name) {
         ChatTab api = null;
         for (ChatTab tab : ChatRenderer.TABS) {
-            if (!tab.name.equalsIgnoreCase(name)) continue;
-            if (tab.type == TabType.FILTERED) return tab;
-            if (tab.type == TabType.API) api = tab;
+            if (!tab.name().equalsIgnoreCase(name)) continue;
+            if (tab.type() == TabType.FILTERED) return tab;
+            if (tab.type() == TabType.API) api = tab;
         }
         return api;
     }

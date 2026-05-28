@@ -42,8 +42,8 @@ public class MessageContextMenu {
         list.add("Copy");
         list.add("Search for this");
         ChatTab active = panel.getActiveTab();
-        if (active != null && active.type != TabType.ALL) list.add("Jump to All");
-        if (active != null && active.type != TabType.ALL) list.add("Delete message");
+        if (active != null && active.type() != TabType.ALL) list.add("Jump to All");
+        if (active != null && active.type() != TabType.ALL) list.add("Delete message");
         return list;
     }
 
@@ -117,16 +117,17 @@ public class MessageContextMenu {
 
     private static void jumpToAll() {
         ChatTab allTab = ChatRenderer.TABS.stream()
-            .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
+            .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (allTab == null) return;
 
-        int allIdx = allTab.messages.indexOf(line);
+        List<LzChatLine> allMsgs = allTab.messages();
+        int allIdx = allMsgs.indexOf(line);
 
         if (allIdx < 0) {
             String text = extractText(line);
             int tick = line.addedTime();
-            for (int i = 0; i < allTab.messages.size(); i++) {
-                LzChatLine v = allTab.messages.get(i);
+            for (int i = 0; i < allMsgs.size(); i++) {
+                LzChatLine v = allMsgs.get(i);
                 if (v.addedTime() == tick && extractText(v).equals(text)) {
                     allIdx = i;
                     break;
@@ -135,8 +136,8 @@ public class MessageContextMenu {
         }
         if (allIdx < 0) {
             int tick = line.addedTime();
-            for (int i = 0; i < allTab.messages.size(); i++) {
-                if (allTab.messages.get(i).addedTime() == tick && allTab.messages.get(i).endOfEntry()) {
+            for (int i = 0; i < allMsgs.size(); i++) {
+                if (allMsgs.get(i).addedTime() == tick && allMsgs.get(i).endOfEntry()) {
                     allIdx = i;
                     break;
                 }
@@ -149,12 +150,12 @@ public class MessageContextMenu {
         if (allPanelIdx < 0) return;
 
         sourcePanel.setActiveTab(allPanelIdx);
-        allTab.unreadCount = 0;
-        int maxScroll = Math.max(0, allTab.messages.size() - LzChat.visibleLineCount());
+        allTab.clearUnread();
+        int maxScroll = Math.max(0, allTab.messageCount() - LzChat.visibleLineCount());
         sourcePanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));
 
         // Highlight via entry so all panels (any width) light up the same message
-        LzChatEntry targetEntry = allTab.messages.get(allIdx).entry();
+        LzChatEntry targetEntry = allMsgs.get(allIdx).entry();
         if (targetEntry != null) {
             ChatRenderer.highlightEntries   = java.util.Collections.singleton(targetEntry);
             ChatRenderer.highlightUntilTick = ChatRenderer.currentTick + 60;
@@ -167,8 +168,8 @@ public class MessageContextMenu {
 
     private static void deleteMessage(ChatPanel panel) {
         ChatTab active = panel.getActiveTab();
-        if (active == null || active.type == TabType.ALL) return;
-        List<LzChatLine> msgs = active.messages; // always delete from primary list
+        if (active == null || active.type() == TabType.ALL) return;
+        List<LzChatLine> msgs = active.messages(); // always delete from primary list
         LzChatEntry targetEntry = line.entry();
         int idx = -1;
         if (targetEntry != null) {
@@ -195,7 +196,7 @@ public class MessageContextMenu {
             for (ChatPanel p : ChatRenderer.PANELS) {
                 int scrolled = p.getScrolledLines(active);
                 if (scrolled <= groupStart) continue;
-                if (p.primary) {
+                if (p.primary()) {
                     p.setScrolledLines(active, Math.max(0, scrolled - primaryRemoved));
                 } else if (preSizes.containsKey(p)) {
                     int removed = preSizes.get(p) - ChatRenderer.getMessages(p, active).size();

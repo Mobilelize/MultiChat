@@ -42,7 +42,7 @@ public class TabEditScreen {
     public static Screen create(Screen parent, ChatTab tab) {
         ConfigBuilder builder = ConfigBuilder.create()
             .setParentScreen(parent)
-            .setTitle(LzText.literal("Edit Tab: " + tab.name).mc())
+            .setTitle(LzText.literal("Edit Tab: " + tab.name()).mc())
             .setSavingRunnable(MultichatClient::saveTabsToConfig);
 
         ConfigEntryBuilder eb = builder.entryBuilder();
@@ -50,83 +50,83 @@ public class TabEditScreen {
         // ── Settings ──────────────────────────────────────────────────────
         ConfigCategory settings = builder.getOrCreateCategory(LzText.literal("Settings").mc());
 
-        if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
-            settings.addEntry(eb.startStrField(LzText.literal("Name").mc(), tab.name)
-                .setDefaultValue(tab.name)
+        if (tab.type() == TabType.FILTERED || tab.type() == TabType.API) {
+            settings.addEntry(eb.startStrField(LzText.literal("Name").mc(), tab.name())
+                .setDefaultValue(tab.name())
                 .setErrorSupplier(v -> {
                     if (v.trim().isEmpty()) return Optional.of(LzText.literal("Name cannot be empty.").mc());
-                    if (tab.apiId == null) {
+                    if (tab.apiId() == null) {
                         boolean clash = ChatRenderer.TABS.stream()
-                            .filter(t -> t != tab && t.type == TabType.FILTERED)
-                            .anyMatch(t -> t.name.equalsIgnoreCase(v.trim()));
+                            .filter(t -> t != tab && t.type() == TabType.FILTERED)
+                            .anyMatch(t -> t.name().equalsIgnoreCase(v.trim()));
                         if (clash) return Optional.of(LzText.literal("A tab with that name already exists.").mc());
                     }
                     return Optional.empty();
                 })
-                .setSaveConsumer(v -> tab.name = v.trim())
+                .setSaveConsumer(v -> tab.setName(v.trim()))
                 .build());
 
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Timestamps").mc(), tab.showTimestamps)
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Timestamps").mc(), tab.showTimestamps())
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Prepend a timestamp to each message.").mc())
-                .setSaveConsumer(v -> tab.showTimestamps = v)
+                .setSaveConsumer(tab::setShowTimestamps)
                 .build());
 
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Collapse Repeating").mc(), tab.collapseRepeating)
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Collapse Repeating").mc(), tab.collapseRepeating())
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Stack identical messages with a counter.").mc())
-                .setSaveConsumer(v -> tab.collapseRepeating = v)
+                .setSaveConsumer(tab::setCollapseRepeating)
                 .build());
 
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Collapse: Match Formatting").mc(), tab.collapseMatchFormatting)
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Collapse: Match Formatting").mc(), tab.collapseMatchFormatting())
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Only collapse if formatting is also identical.").mc())
-                .setSaveConsumer(v -> tab.collapseMatchFormatting = v)
+                .setSaveConsumer(tab::setCollapseMatchFormatting)
                 .build());
 
-            settings.addEntry(eb.startIntField(LzText.literal("Message Cap").mc(), tab.messageCap)
+            settings.addEntry(eb.startIntField(LzText.literal("Message Cap").mc(), tab.messageCap())
                 .setDefaultValue(0)
                 .setMin(0)
                 .setTooltip(LzText.literal("Max messages stored. 0 = unlimited.").mc())
-                .setSaveConsumer(v -> tab.messageCap = v)
+                .setSaveConsumer(tab::setMessageCap)
                 .build());
         }
 
-        if (tab.type == TabType.FILTERED) {
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode)
+        if (tab.type() == TabType.FILTERED) {
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode())
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Catch-all: receives messages no other active panel tab received. Only works when exactly one active tab has this enabled.").mc())
-                .setSaveConsumer(v -> tab.differenceMode = v)
+                .setSaveConsumer(tab::setDifferenceMode)
                 .build());
         }
 
-        if (tab.type == TabType.FILTERED || tab.type == TabType.API) {
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Badge").mc(), tab.showBadge)
+        if (tab.type() == TabType.FILTERED || tab.type() == TabType.API) {
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Badge").mc(), tab.showBadge())
                 .setDefaultValue(true)
                 .setTooltip(LzText.literal("Show unread count badge on this tab.").mc())
-                .setSaveConsumer(v -> tab.showBadge = v)
+                .setSaveConsumer(tab::setShowBadge)
                 .build());
 
-            settings.addEntry(eb.startColorField(LzText.literal("Tab Color").mc(), tab.tabColor)
+            settings.addEntry(eb.startColorField(LzText.literal("Tab Color").mc(), tab.tabColor())
                 .setDefaultValue(0)
                 .setTooltip(LzText.literal("Custom tab color. 000000 = default gray.").mc())
-                .setSaveConsumer(v -> tab.tabColor = v & 0xFFFFFF)
+                .setSaveConsumer(tab::setTabColor)
                 .build());
 
-            settings.addEntry(eb.startStrField(LzText.literal("Context Prefix").mc(), tab.contextPrefix)
+            settings.addEntry(eb.startStrField(LzText.literal("Context Prefix").mc(), tab.contextPrefix())
                 .setDefaultValue("")
                 .setTooltip(LzText.literal("Prefix prepended when this tab's context is active.").mc())
-                .setSaveConsumer(v -> tab.contextPrefix = v.trim())
+                .setSaveConsumer(v -> tab.setContextPrefix(v.trim()))
                 .build());
 
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Context Command Mode").mc(), tab.contextCommandMode)
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Context Command Mode").mc(), tab.contextCommandMode())
                 .setDefaultValue(true)
                 .setTooltip(LzText.literal("ON: sent as command. OFF: sent as chat text.").mc())
-                .setSaveConsumer(v -> tab.contextCommandMode = v)
+                .setSaveConsumer(tab::setContextCommandMode)
                 .build());
         }
 
-        if (tab.type == TabType.FILTERED) {
+        if (tab.type() == TabType.FILTERED) {
             settings.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
@@ -134,36 +134,36 @@ public class TabEditScreen {
                 .build());
         }
 
-        if (tab.type != TabType.FILTERED && tab.type != TabType.API) return builder.build();
+        if (tab.type() != TabType.FILTERED && tab.type() != TabType.API) return builder.build();
 
         // ── Whitelist ──────────────────────────────────────────────────────
         ConfigCategory wlCat = builder.getOrCreateCategory(LzText.literal("Whitelist").mc());
 
         wlCat.addEntry(eb.startEnumSelector(LzText.literal("Whitelist Mode").mc(), WhitelistMode.class,
-                tab.filterRules.whitelistMode)
+                tab.filterRules().whitelistMode())
             .setDefaultValue(WhitelistMode.ANY)
             .setTooltip(LzText.literal("ANY: match any rule. ALL: must match every rule.").mc())
-            .setSaveConsumer(v -> tab.filterRules.whitelistMode = v)
+            .setSaveConsumer(tab.filterRules()::setWhitelistMode)
             .build());
 
-        wlCat.addEntry(buildRuleList(eb, LzText.literal("Whitelist"), tab.filterRules.whitelist, list -> {
-            tab.filterRules.whitelist.clear();
-            list.forEach(mr -> tab.filterRules.whitelist.add(mr.toFilterRule()));
+        wlCat.addEntry(buildRuleList(eb, LzText.literal("Whitelist"), tab.filterRules().whitelist(), list -> {
+            tab.filterRules().whitelist().clear();
+            list.forEach(mr -> tab.filterRules().whitelist().add(mr.toFilterRule()));
         }));
 
         // ── Blacklist ──────────────────────────────────────────────────────
         ConfigCategory blCat = builder.getOrCreateCategory(LzText.literal("Blacklist").mc());
 
         blCat.addEntry(eb.startEnumSelector(LzText.literal("Blacklist Mode").mc(), WhitelistMode.class,
-                tab.filterRules.blacklistMode)
+                tab.filterRules().blacklistMode())
             .setDefaultValue(WhitelistMode.ANY)
             .setTooltip(LzText.literal("ANY: exclude if any rule matches. ALL: exclude only if all rules match.").mc())
-            .setSaveConsumer(v -> tab.filterRules.blacklistMode = v)
+            .setSaveConsumer(tab.filterRules()::setBlacklistMode)
             .build());
 
-        blCat.addEntry(buildRuleList(eb, LzText.literal("Blacklist"), tab.filterRules.blacklist, list -> {
-            tab.filterRules.blacklist.clear();
-            list.forEach(mr -> tab.filterRules.blacklist.add(mr.toFilterRule()));
+        blCat.addEntry(buildRuleList(eb, LzText.literal("Blacklist"), tab.filterRules().blacklist(), list -> {
+            tab.filterRules().blacklist().clear();
+            list.forEach(mr -> tab.filterRules().blacklist().add(mr.toFilterRule()));
         }));
 
         return builder.build();
@@ -173,7 +173,7 @@ public class TabEditScreen {
             ConfigEntryBuilder eb, LzText label, List<FilterRule> source, Consumer<List<MutableRule>> saveConsumer) {
 
         List<MutableRule> rules = source.stream()
-            .map(r -> new MutableRule(r.type, r.value, r.indicator))
+            .map(r -> new MutableRule(r.type(), r.value(), r.indicator()))
             .collect(Collectors.toCollection(ArrayList::new));
 
         return new NestedListListEntry<>(

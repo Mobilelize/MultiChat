@@ -7,10 +7,17 @@ import java.util.List;
 
 public class FilterRuleSet {
 
-    public final List<FilterRule> whitelist = new ArrayList<>();
-    public final List<FilterRule> blacklist = new ArrayList<>();
-    public WhitelistMode whitelistMode  = WhitelistMode.ANY;
-    public WhitelistMode blacklistMode  = WhitelistMode.ANY;
+    private final List<FilterRule> whitelist = new ArrayList<>();
+    private final List<FilterRule> blacklist = new ArrayList<>();
+    private WhitelistMode whitelistMode = WhitelistMode.ANY;
+    private WhitelistMode blacklistMode = WhitelistMode.ANY;
+
+    public List<FilterRule>  whitelist()                        { return whitelist; }
+    public List<FilterRule>  blacklist()                        { return blacklist; }
+    public WhitelistMode     whitelistMode()                    { return whitelistMode; }
+    public void              setWhitelistMode(WhitelistMode v)  { whitelistMode = v; }
+    public WhitelistMode     blacklistMode()                    { return blacklistMode; }
+    public void              setBlacklistMode(WhitelistMode v)  { blacklistMode = v; }
 
     public boolean matches(String text, LzMessageIndicator indicator) {
         if (!blacklist.isEmpty()) {

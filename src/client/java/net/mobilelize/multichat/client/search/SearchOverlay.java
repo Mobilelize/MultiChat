@@ -122,21 +122,21 @@ public class SearchOverlay extends LzScreen {
         String name = "Search: " + (query.isEmpty() ? "(all)"
                       : query.length() > 14 ? query.substring(0, 14) + "…" : query);
 
-        ChatRenderer.TABS.removeIf(t -> t.type == net.mobilelize.multichat.client.TabType.SEARCH);
+        ChatRenderer.TABS.removeIf(t -> t.type() == net.mobilelize.multichat.client.TabType.SEARCH);
 
         java.util.Set<Integer> allPanelIds = new java.util.LinkedHashSet<>();
-        for (ChatPanel p : ChatRenderer.PANELS) { if (p.enabled) allPanelIds.add(p.id); }
+        for (ChatPanel p : ChatRenderer.PANELS) { if (p.enabled()) allPanelIds.add(p.id()); }
 
         SearchTab tab = new SearchTab(name, query, searchMode, caseSensitive,
             fromTicks, toTicks, sourceTab, liveUpdate, allPanelIds);
-        tab.showBadge         = showBadge;
-        tab.showTimestamps    = showTimestamps;
-        tab.collapseIdentical = collapseIdentical;
+        tab.setShowBadge(showBadge);
+        tab.setShowTimestamps(showTimestamps);
+        tab.setCollapseIdentical(collapseIdentical);
         ChatRenderer.TABS.add(tab);
         MessageRouter.refilterSearch(tab);
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled) continue;
+            if (!panel.enabled()) continue;
             int idx = panel.getVisibleTabs().indexOf(tab);
             if (idx >= 0) { panel.setActiveTab(idx); panel.scrollActiveTabIntoView(); break; }
         }
@@ -165,7 +165,7 @@ public class SearchOverlay extends LzScreen {
             LzDraw.drawCenteredText(ctx,
                 LzText.empty()
                     .append(LzText.literal("Scope: ").withStyle(LzStyle.ofFormatting(LzFormatting.GRAY)))
-                    .append(LzText.literal(sourceTab.name).withStyle(LzStyle.ofFormatting(LzFormatting.YELLOW))),
+                    .append(LzText.literal(sourceTab.name()).withStyle(LzStyle.ofFormatting(LzFormatting.YELLOW))),
                 cx, by + 16, 0xFFFFFF);
         }
 

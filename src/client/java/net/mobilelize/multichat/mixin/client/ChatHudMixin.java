@@ -48,7 +48,7 @@ public class ChatHudMixin {
                                  boolean focused, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
-        boolean leftVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
+        boolean leftVanilla = activeLeft != null && ChatRenderer.LEFT.enabled() && activeLeft.type() == TabType.VANILLA;
         if (!leftVanilla) {
             ci.cancel();
             ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, focused, false);
@@ -67,7 +67,7 @@ public class ChatHudMixin {
                                    boolean focused, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
-        if (activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA) {
+        if (activeLeft != null && ChatRenderer.LEFT.enabled() && activeLeft.type() == TabType.VANILLA) {
             ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, focused, true);
         }
     }
@@ -85,7 +85,7 @@ public class ChatHudMixin {
     private void scrollPanel(int scroll, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab activeLeft = ChatRenderer.LEFT.getActiveTab();
-        boolean leftIsVanilla = activeLeft != null && ChatRenderer.LEFT.enabled && activeLeft.type == TabType.VANILLA;
+        boolean leftIsVanilla = activeLeft != null && ChatRenderer.LEFT.enabled() && activeLeft.type() == TabType.VANILLA;
         if (!leftIsVanilla) ci.cancel();
 
         int windowWidth  = LzClient.scaledWindowWidth();
@@ -94,10 +94,10 @@ public class ChatHudMixin {
         double mouseY    = LzClient.mc().mouse.getY() / sf;
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled) continue;
+            if (!panel.enabled()) continue;
             ChatTab active = panel.getActiveTab();
-            if (active == null || active.type == TabType.VANILLA) continue;
-            if (active.messages.isEmpty()) continue;
+            if (active == null || active.type() == TabType.VANILLA) continue;
+            if (!active.hasMessages()) continue;
 
             float scale      = panel.resolveScale();
             int   chatWidth  = panel.resolveWidth();
@@ -164,16 +164,16 @@ public class ChatHudMixin {
         if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); return; }
 
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
-        boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled && leftActive.type == TabType.VANILLA;
+        boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled() && leftActive.type() == TabType.VANILLA;
         if (!MultichatClient.CONFIG.showIndicators) { if (!leftIsVanilla) cir.setReturnValue(null); return; }
 
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled) continue;
+            if (!panel.enabled()) continue;
             ChatTab active = panel.getActiveTab();
-            if (active == null || active.type == TabType.VANILLA || active.messages.isEmpty()) continue;
+            if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
 
             float scale          = panel.resolveScale();
             int chatWidth        = panel.resolveWidth();
@@ -192,7 +192,6 @@ public class ChatHudMixin {
             int lineIdx = LzMath.floor(chatLineY + panel.getScrolledLines(active));
             if (lineIdx < 0 || lineIdx >= panelMsgs.size()) continue;
 
-            // getMessageIndex: walk back to endOfEntry
             while (lineIdx >= 0 && !panelMsgs.get(lineIdx).endOfEntry()) lineIdx--;
             if (lineIdx < 0) continue;
 
@@ -231,17 +230,17 @@ public class ChatHudMixin {
     private void getTextStyleAtAllPanels(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
-        boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled
-            && leftActive.type == TabType.VANILLA;
+        boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled()
+            && leftActive.type() == TabType.VANILLA;
 
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled) continue;
+            if (!panel.enabled()) continue;
 
             ChatTab active = panel.getActiveTab();
-            if (active == null || active.type == TabType.VANILLA || active.messages.isEmpty()) continue;
+            if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
 
             float scale    = panel.resolveScale();
             int chatWidth  = panel.resolveWidth();

@@ -48,27 +48,27 @@ public class PanelListScreen extends LzScreen {
     }
 
     private void addPanel() {
-        Set<Integer> ids = ChatRenderer.PANELS.stream().map(p -> p.id).collect(Collectors.toSet());
+        Set<Integer> ids = ChatRenderer.PANELS.stream().map(ChatPanel::id).collect(Collectors.toSet());
         int id = 0;
         while (ids.contains(id)) id++;
 
         ChatPanel panel = new ChatPanel();
-        panel.id      = id;
+        panel.setId(id);
         String baseName = "Panel " + (ChatRenderer.PANELS.size() + 1);
-        java.util.Set<String> usedNames = ChatRenderer.PANELS.stream().map(p -> p.name).collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> usedNames = ChatRenderer.PANELS.stream().map(ChatPanel::name).collect(java.util.stream.Collectors.toSet());
         String uniqueName = baseName;
         int suffix = 2;
         while (usedNames.contains(uniqueName)) uniqueName = baseName + " (" + suffix++ + ")";
-        panel.name    = uniqueName;
-        panel.enabled = true;
-        panel.anchor  = ChatPanel.Anchor.CUSTOM;
-        panel.customX = 0.5f;
-        panel.customY = 0.5f;
+        panel.setName(uniqueName);
+        panel.setEnabled(true);
+        panel.setAnchor(ChatPanel.Anchor.CUSTOM);
+        panel.setCustomX(0.5f);
+        panel.setCustomY(0.5f);
 
         // Add all tabs to the new panel (skip VANILLA — primary only)
         for (ChatTab t : ChatRenderer.TABS) {
-            if (t.type == net.mobilelize.multichat.client.TabType.VANILLA) continue;
-            t.visibleOnPanels.add(id);
+            if (t.type() == net.mobilelize.multichat.client.TabType.VANILLA) continue;
+            t.visibleOnPanels().add(id);
         }
 
         ChatRenderer.PANELS.add(panel);
@@ -102,9 +102,9 @@ public class PanelListScreen extends LzScreen {
             LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2, rowBdr);
 
             // Name + tab count + anchor (anchor color = enabled status)
-            String anchorTag = "[" + panel.anchor.name().toLowerCase() + "]";
-            String displayName = panel.name.isEmpty() ? String.valueOf(panel.id) : panel.name;
-            long tabCount = ChatRenderer.TABS.stream().filter(t -> t.visibleOnPanels.contains(panel.id)).count();
+            String anchorTag = "[" + panel.anchor().name().toLowerCase() + "]";
+            String displayName = panel.name().isEmpty() ? String.valueOf(panel.id()) : panel.name();
+            long tabCount = ChatRenderer.TABS.stream().filter(t -> t.visibleOnPanels().contains(panel.id())).count();
             String nameStr  = displayName + " ";
             String countStr = "(" + tabCount + ") ";
             int nameX = lx + 6;
@@ -112,7 +112,7 @@ public class PanelListScreen extends LzScreen {
             int afterNameStr = nameX + LzDraw.textWidth(nameStr);
             LzDraw.drawText(ctx, countStr, afterNameStr, textY, 0xFF888888);
             int afterName = afterNameStr + LzDraw.textWidth(countStr);
-            LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.enabled ? 0xFF55FF55 : 0xFFFF5555);
+            LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.enabled() ? 0xFF55FF55 : 0xFFFF5555);
 
             // Tabs button — always
             boolean hoverTabs = mouseX >= lx + 148 && mouseX < lx + 183 && mouseY >= y && mouseY < y + ROW_HEIGHT;

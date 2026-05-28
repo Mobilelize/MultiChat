@@ -79,7 +79,7 @@ public final class MultiChatApi {
     /** Find a tab by its full API id ({@code "modid:name"}), or {@code null}. */
     public static ChatTab getTab(String fullId) {
         return ChatRenderer.TABS.stream()
-            .filter(t -> fullId.equals(t.apiId))
+            .filter(t -> fullId.equals(t.apiId()))
             .findFirst().orElse(null);
     }
 
@@ -98,7 +98,7 @@ public final class MultiChatApi {
 
     /** Panel by ID, or {@code null} if not found. */
     public static ChatPanel getPanel(int panelId) {
-        return ChatRenderer.PANELS.stream().filter(p -> p.id == panelId).findFirst().orElse(null);
+        return ChatRenderer.PANELS.stream().filter(p -> p.id() == panelId).findFirst().orElse(null);
     }
 
     public static ChatPanel getLeftPanel()  { return ChatRenderer.LEFT; }
@@ -107,6 +107,6 @@ public final class MultiChatApi {
     /** Returns the All tab, or {@code null} if not found. */
     public static ChatTab getAllTab() {
         return ChatRenderer.TABS.stream()
-            .filter(t -> t.type == TabType.ALL).findFirst().orElse(null);
+            .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
     }
 }

@@ -35,18 +35,18 @@ public class ChatRenderer {
     public static final ChatPanel RIGHT;
 
     static {
-        LEFT         = new ChatPanel();
-        LEFT.primary = true;
-        LEFT.enabled = true;
-        LEFT.id      = 0;
-        LEFT.name    = "Main";
+        LEFT = new ChatPanel();
+        LEFT.setPrimary(true);
+        LEFT.setEnabled(true);
+        LEFT.setId(0);
+        LEFT.setName("Main");
         PANELS.add(LEFT);
 
-        RIGHT         = new ChatPanel();
-        RIGHT.anchor  = ChatPanel.Anchor.RIGHT;
-        RIGHT.enabled = true;
-        RIGHT.id      = 1;
-        RIGHT.name    = "Second Panel";
+        RIGHT = new ChatPanel();
+        RIGHT.setAnchor(ChatPanel.Anchor.RIGHT);
+        RIGHT.setEnabled(true);
+        RIGHT.setId(1);
+        RIGHT.setName("Second Panel");
         PANELS.add(RIGHT);
     }
 
@@ -76,21 +76,20 @@ public class ChatRenderer {
     private static final int FLASH_TICKS = 12;
 
     public static int getTabBarY(ChatPanel panel, int topY, int visibleLineCount, int lineHeight) {
-        return panel.tabsAtTop ? topY - visibleLineCount * lineHeight - TAB_HEIGHT : topY;
+        return panel.tabsAtTop() ? topY - visibleLineCount * lineHeight - TAB_HEIGHT : topY;
     }
 
     public static String getTabLabel(ChatPanel panel, ChatTab tab) {
-        if (panel.showBadges && tab.showBadge && tab.unreadCount > 0)
-            return tab.name + " [" + tab.unreadCount + "]";
-        return tab.name;
+        if (panel.showBadges() && tab.showBadge() && tab.hasUnread())
+            return tab.name() + " [" + tab.unreadCount() + "]";
+        return tab.name();
     }
 
     public static void resetForRefresh() {
         PANELS.forEach(ChatPanel::resetScrollPositions);
         TABS.forEach(t -> {
-            t.messages.clear();
-            t.unreadCount = 0;
-            t.resetCollapse();
+            t.clearMessages();
+            t.clearUnread();
         });
     }
 
@@ -104,8 +103,7 @@ public class ChatRenderer {
 
         if (LzOptions.chatVisibility() == LzChatVisibility.HIDDEN) return;
 
-        boolean anyVisible = PANELS.stream()
-            .anyMatch(p -> p.enabled && (!p.showOnlyWhenFocused || focused));
+        boolean anyVisible = PANELS.stream().anyMatch(p -> p.isVisibleInChat(focused));
         if (!anyVisible) return;
 
         LzClient.mc().getProfiler().push("multichat");
@@ -116,8 +114,7 @@ public class ChatRenderer {
         boolean hasUnread  = accessor.getHasUnreadNewMessages();
 
         for (ChatPanel panel : PANELS) {
-            if (!panel.enabled) continue;
-            if (panel.showOnlyWhenFocused && !focused) continue;
+            if (!panel.isVisibleInChat(focused)) continue;
 
             ChatTab activeTab = panel.getActiveTab();
             if (activeTab == null) continue;
@@ -133,9 +130,9 @@ public class ChatRenderer {
             int xOffset          = panel.computeXOffset(windowWidth);
 
             int tabY = getTabBarY(panel, topY, visibleLineCount, lineHeight);
-            if (focused && panel.showTabs) renderTabBar(context, panel, xOffset, tabY, scale, chatWidth);
+            if (focused && panel.showTabs()) renderTabBar(context, panel, xOffset, tabY, scale, chatWidth);
 
-            if (activeTab.type == TabType.VANILLA) continue;
+            if (activeTab.type() == TabType.VANILLA) continue;
             if (panel == LEFT && skipLeftMessages) continue;
 
             List<LzChatLine> msgs = getMessages(panel, activeTab);
@@ -144,7 +141,7 @@ public class ChatRenderer {
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
 
-            int lineBgRgb = (activeTab.msgBgColor != 0 ? activeTab.msgBgColor : panel.bgColor) & 0xFFFFFF;
+            int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panel.bgColor()) & 0xFFFFFF;
             renderAt(context, currentTick, focused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
@@ -161,14 +158,14 @@ public class ChatRenderer {
         LzDraw.translate(context, 4.0F + xOffset, 0.0F);
 
         List<ChatTab> visibleTabs = panel.getVisibleTabs();
-        panel.tabScrollOffset = LzMath.clamp(panel.tabScrollOffset, 0, Math.max(0, visibleTabs.size() - 1));
+        panel.setTabScrollOffset(LzMath.clamp(panel.tabScrollOffset(), 0, Math.max(0, visibleTabs.size() - 1)));
 
-        boolean hasLeft = panel.tabScrollOffset > 0;
+        boolean hasLeft = panel.tabScrollOffset() > 0;
 
         int simX = hasLeft ? -4 + ARROW_W : -4;
         int simEnd = chatWidth + 4 - ARROW_W;
         boolean hasRight = false;
-        for (int i = panel.tabScrollOffset; i < visibleTabs.size(); i++) {
+        for (int i = panel.tabScrollOffset(); i < visibleTabs.size(); i++) {
             int tw = LzDraw.textWidth(getTabLabel(panel, visibleTabs.get(i))) + 8;
             if (simX + tw > simEnd) { hasRight = true; break; }
             simX += tw + 1;
@@ -183,20 +180,20 @@ public class ChatRenderer {
             x += ARROW_W;
         }
 
-        int lastRendered = panel.tabScrollOffset - 1;
-        for (int i = panel.tabScrollOffset; i < visibleTabs.size(); i++) {
+        int lastRendered = panel.tabScrollOffset() - 1;
+        for (int i = panel.tabScrollOffset(); i < visibleTabs.size(); i++) {
             ChatTab tab = visibleTabs.get(i);
             String label = getTabLabel(panel, tab);
             int tabWidth = LzDraw.textWidth(label) + 8;
             if (x + tabWidth > tabAreaEnd) break;
 
-            boolean active = (i == panel.activeTab);
+            boolean active = (i == panel.activeTabIndex());
             LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(tab, active));
             LzDraw.drawText(context, label, x + 4, topY + 1, tabFgColor(tab, active));
             x += tabWidth + 1;
             lastRendered = i;
         }
-        panel.tabLastRendered = lastRendered;
+        panel.setTabLastRendered(lastRendered);
 
         if (hasRight && lastRendered + 1 < visibleTabs.size()) {
             int remaining = tabAreaEnd - x;
@@ -204,7 +201,7 @@ public class ChatRenderer {
                 ChatTab nextTab = visibleTabs.get(lastRendered + 1);
                 String label = getTabLabel(panel, nextTab);
                 int tabWidth = LzDraw.textWidth(label) + 8;
-                boolean active = (lastRendered + 1 == panel.activeTab);
+                boolean active = (lastRendered + 1 == panel.activeTabIndex());
 
                 int sx1 = Math.round((x + 4 + xOffset) * scale);
                 int sy1 = Math.round(topY * scale);
@@ -228,14 +225,14 @@ public class ChatRenderer {
     }
 
     private static int tabBgColor(ChatTab tab, boolean active) {
-        if (tab.tabColor == 0) return active ? 0xBB888888 : 0x88444444;
-        return active ? (0xCC000000 | (tab.tabColor & 0xFFFFFF)) : (0x55000000 | (tab.tabColor & 0xFFFFFF));
+        if (tab.tabColor() == 0) return active ? 0xBB888888 : 0x88444444;
+        return active ? (0xCC000000 | (tab.tabColor() & 0xFFFFFF)) : (0x55000000 | (tab.tabColor() & 0xFFFFFF));
     }
 
     private static int tabFgColor(ChatTab tab, boolean active) {
-        if (tab.tabColor == 0) return active ? 0xFFFFFFFF : 0xFF999999;
+        if (tab.tabColor() == 0) return active ? 0xFFFFFFFF : 0xFF999999;
         if (active) return 0xFFFFFFFF;
-        int rgb = tab.tabColor & 0xFFFFFF;
+        int rgb = tab.tabColor() & 0xFFFFFF;
         int r = ((rgb >> 16) & 0xFF) * 3 / 5;
         int g = ((rgb >> 8)  & 0xFF) * 3 / 5;
         int b = ( rgb        & 0xFF) * 3 / 5;
@@ -293,7 +290,7 @@ public class ChatRenderer {
                 LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x0055CC55);
             }
 
-            int flashAge = currentTick - panel.tabFlashTick;
+            int flashAge = currentTick - panel.tabFlashTick();
             if (flashAge >= 0 && flashAge < FLASH_TICKS) {
                 float t = (float) flashAge / FLASH_TICKS;
                 int flashAlpha = (int)(80 * (1f - t) * (1f - t));
@@ -337,17 +334,17 @@ public class ChatRenderer {
             LzDraw.popMatrix(context);
         }
 
-        if (focused) {
+        if (focused && totalMessages > 0) {
             int totalHeight = totalMessages * lineHeight;
             int drawnHeight = linesDrawn * lineHeight;
             if (totalHeight != drawnHeight) {
                 int scrollPos   = scrolledLines * drawnHeight / totalMessages - topY;
-                int thumbHeight = drawnHeight * drawnHeight / totalHeight;
+                int thumbHeight = Math.max(4, drawnHeight * drawnHeight / totalHeight);
                 int scrollX     = chatWidth + 4;
                 int alpha       = scrollPos > 0 ? 170 : 96;
                 int barColor    = hasUnread ? 13382451 : 3355562;
                 LzDraw.fill(context, scrollX,     -scrollPos, scrollX + 2, -scrollPos - thumbHeight, 100, barColor  + (alpha << 24));
-                LzDraw.fill(context, scrollX + 2, -scrollPos, scrollX + 1, -scrollPos - thumbHeight, 100, 13421772 + (alpha << 24));
+                LzDraw.fill(context, scrollX + 1, -scrollPos, scrollX + 2, -scrollPos - thumbHeight, 100, 13421772 + (alpha << 24));
             }
         }
 
@@ -409,11 +406,22 @@ public class ChatRenderer {
 
     // ── Per-panel message list ─────────────────────────────────────────────────
 
-    /** Returns the message list appropriate for this panel (primary uses tab.messages; others use width cache). */
+    /**
+     * Lines the given message produces at a specific panel width.
+     * Used for secondary-panel scroll adjustment — much cheaper than rebuilding the full width cache.
+     */
+    public static int lineCountAtWidth(LzText text, @org.jetbrains.annotations.Nullable LzMessageIndicator indicator,
+                                        boolean stamped, int tick, int panelWidth) {
+        if (stamped) return stampedLines(tick, text, indicator, panelWidth).size();
+        int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
+        return LzChat.breakLines(text, panelWidth - indicatorW).size();
+    }
+
+    /** Returns the right message list for this panel: primary uses tab.messages(), secondary uses width cache. */
     public static List<LzChatLine> getMessages(ChatPanel panel, ChatTab tab) {
-        if (panel.primary) return tab.messages;
+        if (panel.primary()) return tab.messages();
         int width = panel.resolveWidth();
-        return tab.messagesByWidth.computeIfAbsent(width, w -> buildForWidth(tab, w));
+        return tab.getOrBuildWidth(width, w -> buildForWidth(tab, w));
     }
 
     public static boolean isActiveInAnyPanel(ChatTab tab) {
@@ -423,9 +431,10 @@ public class ChatRenderer {
         return false;
     }
 
+    /** Builds a secondary panel's wrapped message list at {@code panelWidth} from the primary list. */
     private static List<LzChatLine> buildForWidth(ChatTab tab, int panelWidth) {
         List<LzChatLine> result = new ArrayList<>();
-        List<LzChatLine> src   = tab.messages;
+        List<LzChatLine> src   = tab.messages();
         int i = 0;
         while (i < src.size()) {
             LzChatLine endLine = src.get(i);
@@ -436,16 +445,15 @@ public class ChatRenderer {
 
             LzChatEntry entry = endLine.entry();
             if (entry != null) {
-                List<LzOrderedText> newLines = tab.showTimestamps
+                List<LzOrderedText> newLines = tab.showTimestamps()
                     ? stampedLines(entry.creationTick, entry.originalContent, entry.indicator, panelWidth)
                     : breakLinesForPanel(entry.originalContent, entry.indicator, panelWidth);
 
                 List<LzChatLine> group = new ArrayList<>(newLines.size());
-                for (int j = 0; j < newLines.size(); j++) {
+                for (int j = 0; j < newLines.size(); j++)
                     group.add(LzChatLine.create(entry.creationTick, newLines.get(j),
                             entry.indicator, j == newLines.size() - 1, entry));
-                }
-                Collections.reverse(group); // endOfEntry line at front, matching tab.messages order
+                Collections.reverse(group);
                 result.addAll(group);
             } else {
                 for (int k = i; k < groupEnd; k++) result.add(src.get(k));

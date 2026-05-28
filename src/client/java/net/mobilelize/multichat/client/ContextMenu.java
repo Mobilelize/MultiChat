@@ -28,7 +28,7 @@ public class ContextMenu {
         tab         = t;
         anchorX     = x;
         anchorY     = y;
-        anchorRight = p.anchor == ChatPanel.Anchor.RIGHT;
+        anchorRight = p.anchor() == ChatPanel.Anchor.RIGHT;
         items       = buildItems(t);
     }
 
@@ -37,12 +37,12 @@ public class ContextMenu {
 
     private static List<String> buildItems(ChatTab t) {
         List<String> list = new ArrayList<>();
-        if (t.type != TabType.SEARCH) list.add("Toggle Context");
+        if (t.type() != TabType.SEARCH) list.add("Toggle Context");
         list.add("Clear Messages");
         list.add("Clear Badge");
-        if (t.type != TabType.SEARCH) list.add("Toggle Badge");
-        if (t.type == TabType.ALL || t.type == TabType.FILTERED) list.add("Search in tab…");
-        if (t.type == TabType.SEARCH) list.add("Close Search");
+        if (t.type() != TabType.SEARCH) list.add("Toggle Badge");
+        if (t.type() == TabType.ALL || t.type() == TabType.FILTERED) list.add("Search in tab…");
+        if (t.type() == TabType.SEARCH) list.add("Close Search");
         return list;
     }
 
@@ -113,14 +113,13 @@ public class ContextMenu {
                 MultichatClient.saveTabsToConfig();
             }
             case "Clear Messages" -> {
-                tab.messages.clear();
-                tab.resetCollapse();
+                tab.clearMessages();
                 for (ChatPanel p : ChatRenderer.PANELS) p.setScrolledLines(tab, 0);
                 ChatSelection.clear();
             }
-            case "Clear Badge"    -> tab.unreadCount = 0;
+            case "Clear Badge"    -> tab.clearUnread();
             case "Toggle Badge"   -> {
-                tab.showBadge = !tab.showBadge;
+                tab.setShowBadge(!tab.showBadge());
                 MultichatClient.saveTabsToConfig();
             }
             case "Search in tab…" -> LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), tab));
