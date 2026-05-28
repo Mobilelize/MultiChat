@@ -294,8 +294,7 @@ public class MessageRouter {
     }
 
     public static void refilterTab(ChatTab tab) {
-        if (tab.type != TabType.FILTERED && tab.type != TabType.API) return;
-        if (tab.type == TabType.API) return;
+        if (tab.type != TabType.FILTERED) return;
         tab.messages.clear();
         tab.resetCollapse();
 

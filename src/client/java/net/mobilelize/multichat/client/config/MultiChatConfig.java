@@ -32,6 +32,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean showContextDisplay      = true;
     public boolean earlyMessageCapture    = true;
     public boolean panelContextEnabled    = true;
+    public boolean logApiMessages         = true;
 
     // Search
     public boolean      searchKeybindEnabled      = true;

@@ -8,10 +8,13 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.command.CommandSource;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.config.ConfigMenu;
+import net.mobilelize.multichat.client.config.PanelEditScreen;
+import net.mobilelize.multichat.client.config.PanelLayoutScreen;
 import net.mobilelize.multichat.client.config.PanelListScreen;
 import net.mobilelize.multichat.client.config.TabEditScreen;
 import net.mobilelize.multichat.client.config.TabListScreen;
@@ -37,6 +40,14 @@ public class MultiChatCommand {
                     .executes(ctx -> {
                         LzClient.send(() -> LzClient.mc().setScreen(new PanelListScreen(null)));
                         return 1;
+                    })
+                    .then(argument("name", StringArgumentType.greedyString())
+                        .suggests(panelSuggestions())
+                        .executes(MultiChatCommand::openPanel)))
+                .then(literal("layout")
+                    .executes(ctx -> {
+                        LzClient.send(() -> LzClient.mc().setScreen(new PanelLayoutScreen(null)));
+                        return 1;
                     }))
                 .then(literal("settings")
                     .executes(ctx -> {
@@ -53,6 +64,15 @@ public class MultiChatCommand {
                     .then(argument("tab", StringArgumentType.word())
                         .suggests(contextSuggestions())
                         .executes(MultiChatCommand::setContext)))));
+    }
+
+    private static int openPanel(CommandContext<FabricClientCommandSource> ctx) {
+        String name = StringArgumentType.getString(ctx, "name");
+        ChatPanel panel = ChatRenderer.PANELS.stream()
+            .filter(p -> p.name.equalsIgnoreCase(name)).findFirst().orElse(null);
+        if (panel == null) { feedback(ctx, "Panel '" + name + "' not found."); return 0; }
+        LzClient.send(() -> LzClient.mc().setScreen(PanelEditScreen.create(null, panel)));
+        return 1;
     }
 
     private static int editTab(CommandContext<FabricClientCommandSource> ctx) {
@@ -77,6 +97,15 @@ public class MultiChatCommand {
     // ------------------------------------------------------------------
     // Suggestions
     // ------------------------------------------------------------------
+
+    private static SuggestionProvider<FabricClientCommandSource> panelSuggestions() {
+        return (ctx, builder) -> {
+            for (ChatPanel panel : ChatRenderer.PANELS)
+                if (CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), panel.name.toLowerCase()))
+                    builder.suggest(panel.name);
+            return builder.buildFuture();
+        };
+    }
 
     private static SuggestionProvider<FabricClientCommandSource> editSuggestions() {
         return (ctx, builder) -> {

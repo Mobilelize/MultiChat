@@ -54,7 +54,12 @@ public class PanelListScreen extends LzScreen {
 
         ChatPanel panel = new ChatPanel();
         panel.id      = id;
-        panel.name    = "Panel " + (ChatRenderer.PANELS.size() + 1);
+        String baseName = "Panel " + (ChatRenderer.PANELS.size() + 1);
+        java.util.Set<String> usedNames = ChatRenderer.PANELS.stream().map(p -> p.name).collect(java.util.stream.Collectors.toSet());
+        String uniqueName = baseName;
+        int suffix = 2;
+        while (usedNames.contains(uniqueName)) uniqueName = baseName + " (" + suffix++ + ")";
+        panel.name    = uniqueName;
         panel.enabled = true;
         panel.anchor  = ChatPanel.Anchor.CUSTOM;
         panel.customX = 0.5f;

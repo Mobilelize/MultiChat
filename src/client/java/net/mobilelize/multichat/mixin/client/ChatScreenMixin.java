@@ -210,7 +210,7 @@ public abstract class ChatScreenMixin {
                 if (hIdx < 0) continue;
 
                 ContextMenu.close();
-                LzChatLine clicked = active.messages.get(hIdx);
+                LzChatLine clicked = ChatRenderer.getMessages(panel, active).get(hIdx);
                 MessageContextMenu.open(clicked, panel, (int) mouseX, (int) mouseY);
                 cir.setReturnValue(true);
                 return;

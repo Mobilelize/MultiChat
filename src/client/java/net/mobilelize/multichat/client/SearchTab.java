@@ -34,7 +34,7 @@ public class SearchTab extends ChatTab {
         int flags = caseSensitive ? 0 : java.util.regex.Pattern.CASE_INSENSITIVE;
         return switch (searchMode) {
             case CONTAINS -> caseSensitive ? text.contains(query)
-                                           : text.equalsIgnoreCase(query);
+                                           : text.toLowerCase().contains(query.toLowerCase());
             case WORD -> {
                 try {
                     yield java.util.regex.Pattern

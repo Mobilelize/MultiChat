@@ -164,8 +164,8 @@ public class ChatHudMixin {
         if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); return; }
 
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
-        if (leftActive != null && ChatRenderer.LEFT.enabled && leftActive.type == TabType.VANILLA) return;
-        if (!MultichatClient.CONFIG.showIndicators) { cir.setReturnValue(null); return; }
+        boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled && leftActive.type == TabType.VANILLA;
+        if (!MultichatClient.CONFIG.showIndicators) { if (!leftIsVanilla) cir.setReturnValue(null); return; }
 
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
@@ -209,7 +209,7 @@ public class ChatHudMixin {
             return;
         }
 
-        cir.setReturnValue(null);
+        if (!leftIsVanilla) cir.setReturnValue(null);
     }
 
     @Unique
@@ -233,7 +233,6 @@ public class ChatHudMixin {
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
         boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled
             && leftActive.type == TabType.VANILLA;
-        if (cir.getReturnValue() != null && leftIsVanilla) return;
 
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
@@ -242,8 +241,7 @@ public class ChatHudMixin {
             if (!panel.enabled) continue;
 
             ChatTab active = panel.getActiveTab();
-            if (active == null || active.type == TabType.VANILLA) continue;
-            if (active.messages.isEmpty()) continue;
+            if (active == null || active.type == TabType.VANILLA || active.messages.isEmpty()) continue;
 
             float scale    = panel.resolveScale();
             int chatWidth  = panel.resolveWidth();
@@ -272,5 +270,8 @@ public class ChatHudMixin {
                 return;
             }
         }
+
+        // Suppress vanilla only when left panel is non-vanilla (empty tab or no clickable text found)
+        if (!leftIsVanilla) cir.setReturnValue(null);
     }
 }

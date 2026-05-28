@@ -8,6 +8,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -61,6 +62,8 @@ public class TabHandle {
             } finally {
                 MessageRouter.skipTabOnRoute = null;
             }
+        } else if (MultichatClient.CONFIG.logApiMessages) {
+            MultichatClient.LOGGER.info("[{}] {}", tab.name, message.mc().getString());
         }
 
         return true;

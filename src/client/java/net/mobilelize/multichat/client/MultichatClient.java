@@ -20,6 +20,7 @@ import java.util.List;
 
 public class MultichatClient implements ClientModInitializer {
 
+    public static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("multichat");
     public static MultiChatConfig CONFIG;
 
     @Override
