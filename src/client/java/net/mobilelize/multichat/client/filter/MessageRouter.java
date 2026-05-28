@@ -104,7 +104,7 @@ public class MessageRouter {
                             while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
                         tab.clearWidthCaches();
                     }
-                    if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
+                    if (!ChatRenderer.isActiveInAnyPanel(tab)) tab.unreadCount++;
                 }
             }
         }
@@ -120,6 +120,15 @@ public class MessageRouter {
         String text = effectiveText.mc().getString();
         boolean stamp = tab.showTimestamps;
         LzChatEntry entry = new LzChatEntry(tick, effectiveText, indicator);
+
+        // Capture pre-sizes for secondary panels that are scrolled so we can compute per-panel deltas.
+        java.util.Map<ChatPanel, Integer> preAddSizes = null;
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (!panel.primary && panel.getScrolledLines(tab) > 0) {
+                if (preAddSizes == null) preAddSizes = new java.util.HashMap<>();
+                preAddSizes.put(panel, ChatRenderer.getMessages(panel, tab).size());
+            }
+        }
 
         int netLinesAdded;
         if (tab.type != TabType.ALL && tab.collapseRepeating && text.equals(tab.collapseLastText)
@@ -173,37 +182,48 @@ public class MessageRouter {
         if (netLinesAdded != 0) {
             for (ChatPanel panel : ChatRenderer.PANELS) {
                 int scrolled = panel.getScrolledLines(tab);
-                if (scrolled > 0) panel.setScrolledLines(tab, scrolled + netLinesAdded);
+                if (scrolled <= 0) continue;
+                if (panel.primary) {
+                    panel.setScrolledLines(tab, scrolled + netLinesAdded);
+                } else if (preAddSizes != null && preAddSizes.containsKey(panel)) {
+                    int delta = ChatRenderer.getMessages(panel, tab).size() - preAddSizes.get(panel);
+                    if (delta != 0) panel.setScrolledLines(tab, Math.max(0, scrolled + delta));
+                }
             }
             ChatSelection.shiftLines(tab, netLinesAdded);
         }
 
         if (tab.messageCap > 0) {
-            int before = tab.messages.size();
+            java.util.Map<ChatPanel, Integer> preCapSizes = null;
+            for (ChatPanel panel : ChatRenderer.PANELS) {
+                if (!panel.primary && panel.getScrolledLines(tab) > 0) {
+                    if (preCapSizes == null) preCapSizes = new java.util.HashMap<>();
+                    preCapSizes.put(panel, ChatRenderer.getMessages(panel, tab).size());
+                }
+            }
+            int primaryBefore = tab.messages.size();
             while (tab.messages.size() > tab.messageCap) tab.messages.removeLast();
-            int removed = before - tab.messages.size();
-            if (removed > 0) {
+            int primaryRemoved = primaryBefore - tab.messages.size();
+            if (primaryRemoved > 0) {
+                tab.clearWidthCaches();
                 for (ChatPanel panel : ChatRenderer.PANELS) {
                     int scrolled = panel.getScrolledLines(tab);
-                    if (scrolled > 0)
-                        panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
+                    if (scrolled <= 0) continue;
+                    if (panel.primary) {
+                        panel.setScrolledLines(tab, Math.max(0, scrolled - primaryRemoved));
+                    } else if (preCapSizes != null && preCapSizes.containsKey(panel)) {
+                        int removed = preCapSizes.get(panel) - ChatRenderer.getMessages(panel, tab).size();
+                        if (removed > 0) panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
+                    }
                 }
                 ChatSelection.clampOrClear(tab);
             }
         }
-        if (!isActiveInAnyPanel(tab)) tab.unreadCount++;
+        if (!ChatRenderer.isActiveInAnyPanel(tab)) tab.unreadCount++;
         if (!tab.messages.isEmpty())
             MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.messages.getFirst());
     }
 
-    private static boolean isActiveInAnyPanel(ChatTab tab) {
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            List<ChatTab> visible = panel.getVisibleTabs();
-            int idx = visible.indexOf(tab);
-            if (idx >= 0 && panel.activeTab == idx) return true;
-        }
-        return false;
-    }
 
     // ------------------------------------------------------------------
     // Refilter (called on tab create or rule change)

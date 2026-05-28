@@ -19,6 +19,7 @@ public class ChatPanel {
     public String  name               = "";
     public int     margin             = 0;
     public int     activeTab          = 0;
+    private ChatTab activeTabRef      = null;
     public boolean enabled            = false;
     public boolean showOnlyWhenFocused = false;
     public boolean showBadges         = true;
@@ -73,8 +74,8 @@ public class ChatPanel {
     }
 
     public int resolveLineHeight() {
-        // TODO: compute from customScale when non-primary panels have custom scale set
-        return LzChat.chatLineHeight();
+        if (primary || customScale <= 0) return LzChat.chatLineHeight();
+        return Math.round(LzChat.chatLineHeight() * customScale / (float) LzChat.chatScale());
     }
 
     public double resolveBgOpacity() {
@@ -99,9 +100,21 @@ public class ChatPanel {
 
     public ChatTab getActiveTab() {
         List<ChatTab> visible = getVisibleTabs();
-        if (visible.isEmpty()) return null;
+        if (visible.isEmpty()) { activeTabRef = null; return null; }
+        if (activeTabRef != null) {
+            int idx = visible.indexOf(activeTabRef);
+            if (idx >= 0) { activeTab = idx; return activeTabRef; }
+        }
         if (activeTab >= visible.size()) activeTab = 0;
-        return visible.get(activeTab);
+        activeTabRef = visible.get(activeTab);
+        return activeTabRef;
+    }
+
+    public void setActiveTab(int index) {
+        List<ChatTab> visible = getVisibleTabs();
+        if (visible.isEmpty()) { activeTab = 0; activeTabRef = null; return; }
+        activeTab = Math.max(0, Math.min(index, visible.size() - 1));
+        activeTabRef = visible.get(activeTab);
     }
 
     public int getScrolledLines(ChatTab tab) {

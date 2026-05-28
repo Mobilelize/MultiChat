@@ -221,10 +221,9 @@ public class MultichatClient implements ClientModInitializer {
                 .findFirst().orElse(null);
         }
 
-        // Clamp each panel's activeTab to the valid visible-tab range
+        // Clamp each panel's activeTab to the valid visible-tab range and seed the ref
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            int size = panel.getVisibleTabs().size();
-            panel.activeTab = size > 0 ? Math.min(panel.activeTab, size - 1) : 0;
+            panel.setActiveTab(panel.activeTab);
         }
 
         // Resolve panel context tabs

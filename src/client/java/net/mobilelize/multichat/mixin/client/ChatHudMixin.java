@@ -257,7 +257,7 @@ public class ChatHudMixin {
 
             int scrolledLines = panel.getScrolledLines(active);
             List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
-            int maxLines = Math.min(LzChat.visibleLineCount(), panelMsgs.size());
+            int maxLines = Math.min(panel.resolveLines(), panelMsgs.size());
             if (chatY < 0.0 || chatY >= maxLines) continue;
 
             int lineIdx = LzMath.floor(chatY + scrolledLines);

@@ -65,7 +65,7 @@ public abstract class ChatScreenMixin {
                         if (idx >= 0) {
                             float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
                             int charIdx  = ChatSelection.charIndexAtX(
-                                active.messages.get(idx).content(), localX);
+                                ChatRenderer.getMessages(selPanel, active).get(idx).content(), localX);
                             ChatSelection.extend(selPanel, idx, charIdx);
                         }
                     }
@@ -152,9 +152,9 @@ public abstract class ChatScreenMixin {
                 if (!panel.enabled || panel.getVisibleTabs().isEmpty()) panel = ChatRenderer.LEFT;
                 List<ChatTab> visible = panel.getVisibleTabs();
                 if (visible.size() > 1) {
-                    panel.activeTab = goRight
+                    panel.setActiveTab(goRight
                         ? (panel.activeTab + 1) % visible.size()
-                        : (panel.activeTab - 1 + visible.size()) % visible.size();
+                        : (panel.activeTab - 1 + visible.size()) % visible.size());
                     ChatTab nowActive = panel.getActiveTab();
                     nowActive.unreadCount = 0;
                     if (MultichatClient.CONFIG.flashOnTabSwitch)
@@ -246,7 +246,7 @@ public abstract class ChatScreenMixin {
 
                 float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
                 int charIdx  = ChatSelection.charIndexAtX(
-                    active.messages.get(exactIdx).content(), localX);
+                    ChatRenderer.getMessages(panel, active).get(exactIdx).content(), localX);
                 ChatSelection.start(panel, exactIdx, charIdx);
                 cir.setReturnValue(true);
                 return;
@@ -315,7 +315,7 @@ public abstract class ChatScreenMixin {
 
                 if (mouseX >= screenStart && mouseX < screenEnd) {
                     if (button == 0) {
-                        panel.activeTab = i;
+                        panel.setActiveTab(i);
                         tab.unreadCount = 0;
                         TabChangedCallback.EVENT.invoker().onTabChanged(panel, tab);
                         if (MultichatClient.CONFIG.panelContextEnabled && panel.useActiveTabContext && panel == ChatRenderer.focusedPanel)

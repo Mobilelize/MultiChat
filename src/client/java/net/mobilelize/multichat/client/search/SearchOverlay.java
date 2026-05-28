@@ -138,7 +138,7 @@ public class SearchOverlay extends LzScreen {
         for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled) continue;
             int idx = panel.getVisibleTabs().indexOf(tab);
-            if (idx >= 0) { panel.activeTab = idx; panel.scrollActiveTabIntoView(); break; }
+            if (idx >= 0) { panel.setActiveTab(idx); panel.scrollActiveTabIntoView(); break; }
         }
 
         close();

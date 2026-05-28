@@ -416,6 +416,13 @@ public class ChatRenderer {
         return tab.messagesByWidth.computeIfAbsent(width, w -> buildForWidth(tab, w));
     }
 
+    public static boolean isActiveInAnyPanel(ChatTab tab) {
+        for (ChatPanel panel : PANELS) {
+            if (panel.getActiveTab() == tab) return true;
+        }
+        return false;
+    }
+
     private static List<LzChatLine> buildForWidth(ChatTab tab, int panelWidth) {
         List<LzChatLine> result = new ArrayList<>();
         List<LzChatLine> src   = tab.messages;

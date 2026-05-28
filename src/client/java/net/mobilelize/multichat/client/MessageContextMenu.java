@@ -148,7 +148,7 @@ public class MessageContextMenu {
         int allPanelIdx = panelTabs.indexOf(allTab);
         if (allPanelIdx < 0) return;
 
-        sourcePanel.activeTab = allPanelIdx;
+        sourcePanel.setActiveTab(allPanelIdx);
         allTab.unreadCount = 0;
         int maxScroll = Math.max(0, allTab.messages.size() - LzChat.visibleLineCount());
         sourcePanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));
@@ -184,9 +184,26 @@ public class MessageContextMenu {
         while (groupEnd < msgs.size() && !msgs.get(groupEnd).endOfEntry()) groupEnd++;
         groupEnd--;
         if (groupEnd >= groupStart) {
+            java.util.Map<ChatPanel, Integer> preSizes = new java.util.HashMap<>();
+            for (ChatPanel p : ChatRenderer.PANELS) {
+                if (p.getScrolledLines(active) > 0)
+                    preSizes.put(p, ChatRenderer.getMessages(p, active).size());
+            }
+            int primaryRemoved = groupEnd - groupStart + 1;
             msgs.subList(groupStart, groupEnd + 1).clear();
+            active.clearWidthCaches();
+            for (ChatPanel p : ChatRenderer.PANELS) {
+                int scrolled = p.getScrolledLines(active);
+                if (scrolled <= groupStart) continue;
+                if (p.primary) {
+                    p.setScrolledLines(active, Math.max(0, scrolled - primaryRemoved));
+                } else if (preSizes.containsKey(p)) {
+                    int removed = preSizes.get(p) - ChatRenderer.getMessages(p, active).size();
+                    if (removed > 0) p.setScrolledLines(active, Math.max(0, scrolled - removed));
+                }
+            }
+            ChatSelection.clampOrClear(active);
         }
-        active.clearWidthCaches();
     }
 
     private static void flashGreen(LzChatLine target, ChatPanel panel) {
