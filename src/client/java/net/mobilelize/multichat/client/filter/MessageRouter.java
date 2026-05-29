@@ -138,46 +138,48 @@ public class MessageRouter {
         int netLinesAdded;
         boolean wasCollapse;
 
-        if (tab.type() != TabType.ALL && tab.collapseRepeating() && text.equals(tab.collapse().lastText)
-                && (!tab.collapseMatchFormatting() || effectiveText.mc().equals(tab.collapse().lastContent != null ? tab.collapse().lastContent.mc() : null))
-                && tab.collapse().lastLines != null) {
+        ChatTab.CollapseState cs = tab.collapse();
+
+        if (tab.type() != TabType.ALL && tab.collapseRepeating() && text.equals(cs.lastText())
+                && (!tab.collapseMatchFormatting() || effectiveText.mc().equals(cs.lastContent() != null ? cs.lastContent().mc() : null))
+                && cs.hasLastLines()) {
             wasCollapse = true;
-            int oldCount = tab.collapse().lineCount;
+            int oldCount = cs.lineCount();
             for (int i = 0; i < oldCount && tab.hasMessages(); i++)
                 tab.removeFirst();
 
-            tab.collapse().repeat++;
-            tab.collapse().lastTick  = tick;
-            tab.collapse().lastLines = new ArrayList<>(lines);
+            cs.incrementRepeat();
+            cs.setLastTick(tick);
+            cs.setLastLines(new ArrayList<>(lines));
 
             List<LzOrderedText> base = stamp
-                ? ChatRenderer.stampedLines(tab.collapse().lastTick, effectiveText, indicator, lines)
-                : new ArrayList<>(tab.collapse().lastLines);
+                ? ChatRenderer.stampedLines(cs.lastTick(), effectiveText, indicator, lines)
+                : new ArrayList<>(cs.lastLines());
             String counterStr = " " + MultichatClient.CONFIG.collapseCounterFormat
-                .replace("{count}", String.valueOf(tab.collapse().repeat));
+                .replace("{count}", String.valueOf(cs.repeat()));
             LzOrderedText suffix = LzText.format(counterStr).ordered();
             List<LzOrderedText> updated = new ArrayList<>(base);
             int last = updated.size() - 1;
             updated.set(last, LzOrderedText.concat(updated.get(last), suffix));
 
-            tab.collapse().lineCount = updated.size();
+            cs.setLineCount(updated.size());
             for (int j = 0; j < updated.size(); j++) {
                 boolean isEnd = j == updated.size() - 1;
-                tab.addFirst(LzChatLine.create(tab.collapse().lastTick, updated.get(j), indicator, isEnd, entry));
+                tab.addFirst(LzChatLine.create(cs.lastTick(), updated.get(j), indicator, isEnd, entry));
             }
             netLinesAdded = updated.size() - oldCount;
         } else {
             wasCollapse = false;
-            tab.collapse().lastText    = text;
-            tab.collapse().lastContent = effectiveText;
-            tab.collapse().repeat      = 1;
-            tab.collapse().lastTick    = tick;
-            tab.collapse().lastLines   = new ArrayList<>(lines);
+            cs.setLastText(text);
+            cs.setLastContent(effectiveText);
+            cs.setRepeat(1);
+            cs.setLastTick(tick);
+            cs.setLastLines(new ArrayList<>(lines));
 
             List<LzOrderedText> active = stamp
                 ? ChatRenderer.stampedLines(tick, effectiveText, indicator, lines)
                 : lines;
-            tab.collapse().lineCount = active.size();
+            cs.setLineCount(active.size());
             for (int j = 0; j < active.size(); j++) {
                 boolean isEnd = j == active.size() - 1;
                 tab.addFirst(LzChatLine.create(tick, active.get(j), indicator, isEnd, entry));

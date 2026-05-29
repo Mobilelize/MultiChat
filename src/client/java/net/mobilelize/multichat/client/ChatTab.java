@@ -18,12 +18,27 @@ public class ChatTab {
 
     // ── Collapse state ─────────────────────────────────────────────────────────
     public static class CollapseState {
-        public String              lastText    = null;
-        public LzText              lastContent = null;
-        public int                 repeat      = 0;
-        public int                 lineCount   = 0;
-        public int                 lastTick    = 0;
-        public List<LzOrderedText> lastLines   = null;
+        private String              lastText    = null;
+        private LzText              lastContent = null;
+        private int                 repeat      = 0;
+        private int                 lineCount   = 0;
+        private int                 lastTick    = 0;
+        private List<LzOrderedText> lastLines   = null;
+
+        public String              lastText()                          { return lastText; }
+        public void                setLastText(String v)              { lastText = v; }
+        public LzText              lastContent()                      { return lastContent; }
+        public void                setLastContent(LzText v)           { lastContent = v; }
+        public int                 repeat()                           { return repeat; }
+        public void                setRepeat(int v)                   { repeat = v; }
+        public void                incrementRepeat()                  { repeat++; }
+        public int                 lineCount()                        { return lineCount; }
+        public void                setLineCount(int v)                { lineCount = v; }
+        public int                 lastTick()                         { return lastTick; }
+        public void                setLastTick(int v)                 { lastTick = v; }
+        public List<LzOrderedText> lastLines()                        { return lastLines; }
+        public void                setLastLines(List<LzOrderedText> v) { lastLines = v; }
+        public boolean             hasLastLines()                     { return lastLines != null; }
 
         public void reset() {
             lastText    = null;
