@@ -123,6 +123,19 @@ public class MessageContextMenu {
         List<LzChatLine> allMsgs = allTab.messages();
         int allIdx = allMsgs.indexOf(line);
 
+        // Entry-reference search: shared entry means we find the exact message even when
+        // multiple messages have identical tick+text.
+        if (allIdx < 0 && line.entry() != null) {
+            LzChatEntry target = line.entry();
+            for (int i = 0; i < allMsgs.size(); i++) {
+                if (allMsgs.get(i).endOfEntry() && allMsgs.get(i).entry() == target) {
+                    allIdx = i;
+                    break;
+                }
+            }
+        }
+
+        // Fallback: tick + text (for messages from before shared-entry was applied)
         if (allIdx < 0) {
             String text = extractText(line);
             int tick = line.addedTime();

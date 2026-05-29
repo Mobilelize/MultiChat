@@ -59,21 +59,26 @@ public class MessageRouter {
 
         LzText effectiveLzText = rawLzText != null ? rawLzText : content;
 
+        // One entry per message, shared across ALL tabs that receive it.
+        // This lets jumpToAll find the exact message by reference (==) instead of by tick+text,
+        // fixing wrong jumps when identical messages share the same tick.
+        LzChatEntry sharedEntry = new LzChatEntry(tick, effectiveLzText, indicator);
+
         for (ChatTab tab : ChatRenderer.TABS) {
             switch (tab.type()) {
-                case ALL -> addLines(tab, tick, content, indicator, lines, rawLzText);
+                case ALL -> addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case FILTERED -> {
                     if (tab == diffTab) break; // handled after first pass
                     if (tab.filterRules().matches(fullText, indicator)) {
-                        addLines(tab, tick, content, indicator, lines, rawLzText);
+                        addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
                         if (diffTab != null && panelActiveTabs.contains(tab)) anyOtherActiveReceived = true;
                     }
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
                     if (!tab.filterRules().isEmpty() && tab.filterRules().matches(fullText, indicator)) {
-                        addLines(tab, tick, content, indicator, lines, rawLzText);
+                        addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
                         if (diffTab != null && panelActiveTabs.contains(tab)) anyOtherActiveReceived = true;
                     }
                 }
@@ -89,14 +94,13 @@ public class MessageRouter {
                         ChatTab allTab = ChatRenderer.TABS.stream()
                             .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
                         if (allTab == null) break;
-                        LzChatEntry searchEntry = new LzChatEntry(tick, effectiveLzText, indicator);
                         int linesAdded;
                         if (st.showTimestamps()) {
                             List<LzOrderedText> stamped = new ArrayList<>(ChatRenderer.stampedLines(
                                 tick, effectiveLzText, indicator, lines));
                             for (int j = stamped.size() - 1; j >= 0; j--)
                                 tab.addFirst(LzChatLine.create(
-                                    tick, stamped.get(j), indicator, j == stamped.size() - 1, searchEntry));
+                                    tick, stamped.get(j), indicator, j == stamped.size() - 1, sharedEntry));
                             linesAdded = stamped.size();
                         } else {
                             for (int j = lines.size() - 1; j >= 0; j--)
@@ -120,16 +124,16 @@ public class MessageRouter {
         }
 
         if (diffTab != null && !anyOtherActiveReceived && diffTab.filterRules().matches(fullText, indicator)) {
-            addLines(diffTab, tick, content, indicator, lines, rawLzText);
+            addLines(diffTab, tick, content, indicator, lines, rawLzText, sharedEntry);
         }
     }
 
     private static void addLines(ChatTab tab, int tick, LzText content, LzMessageIndicator indicator,
-                                  List<LzOrderedText> lines, @org.jetbrains.annotations.Nullable LzText rawLzText) {
+                                  List<LzOrderedText> lines, @org.jetbrains.annotations.Nullable LzText rawLzText,
+                                  LzChatEntry entry) {
         LzText effectiveText = rawLzText != null ? rawLzText : content;
         String text = effectiveText.mc().getString();
         boolean stamp = tab.showTimestamps();
-        LzChatEntry entry = new LzChatEntry(tick, effectiveText, indicator);
 
         int netLinesAdded;
         boolean wasCollapse;
