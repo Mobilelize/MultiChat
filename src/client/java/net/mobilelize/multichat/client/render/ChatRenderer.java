@@ -20,6 +20,9 @@ import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
+import net.minecraft.text.Style;
+import net.minecraft.client.gui.hud.MessageIndicator;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -140,6 +143,7 @@ public class ChatRenderer {
 
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
+            updateCursor(context, panel, hoveredIndex);
 
             int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panel.bgColor()) & 0xFFFFFF;
             renderAt(context, currentTick, focused,
@@ -415,6 +419,118 @@ public class ChatRenderer {
         if (stamped) return stampedLines(tick, text, indicator, panelWidth).size();
         int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
         return LzChat.breakLines(text, panelWidth - indicatorW).size();
+    }
+
+    // ── Version-sensitive API isolation ────────────────────────────────────────
+    // All logic that depends on specific vanilla methods lives here.
+    // When upgrading MC, only update the mixin injection descriptors and these methods.
+
+    /**
+     * Result of an indicator hit-test across our panels.
+     * NOT_IN_PANEL  → fell through; caller decides based on leftIsVanilla.
+     * found=true    → hit a panel (indicator may be null = suppress vanilla).
+     */
+    public record IndicatorResult(boolean found, @org.jetbrains.annotations.Nullable LzMessageIndicator indicator) {
+        public static final IndicatorResult NOT_IN_PANEL = new IndicatorResult(false, null);
+    }
+
+    /**
+     * Hit-tests all custom panels for a text style at (x, y).
+     * Returns the style if found, null otherwise.
+     * Caller suppresses vanilla based on leftIsVanilla when null is returned.
+     * MC-VERSION-SENSITIVE: called from ChatHudMixin getTextStyleAt injection.
+     * If that method is removed, move the call to the replacement hook.
+     */
+    @org.jetbrains.annotations.Nullable
+    public static Style resolveStyleAt(double x, double y, int windowWidth, int windowHeight) {
+        for (ChatPanel panel : PANELS) {
+            if (!panel.enabled()) continue;
+            ChatTab active = panel.getActiveTab();
+            if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
+
+            float scale    = panel.resolveScale();
+            int chatWidth  = panel.resolveWidth();
+            int lineHeight = panel.resolveLineHeight();
+            int panelTopY  = panel.resolveTopY(windowHeight);
+            int xOffset    = panel.computeXOffset(windowWidth);
+
+            double localChatX = x / scale - 4.0 - xOffset;
+            double chatY      = (panelTopY * (double) scale - y) / (scale * lineHeight);
+
+            if (localChatX < -4.0 || localChatX > chatWidth) continue;
+
+            List<LzChatLine> msgs = getMessages(panel, active);
+            int maxLines = Math.min(panel.resolveLines(), msgs.size());
+            if (chatY < 0.0 || chatY >= maxLines) continue;
+
+            int lineIdx = LzMath.floor(chatY + panel.getScrolledLines(active));
+            if (lineIdx < 0 || lineIdx >= msgs.size()) continue;
+
+            Style style = LzDraw.textHandler()
+                .getStyleAt(msgs.get(lineIdx).content().mc(), LzMath.floor(localChatX));
+            if (style != null) return style;
+        }
+        return null;
+    }
+
+    /**
+     * Hit-tests all custom panels for a message indicator at (mouseX, mouseY).
+     * Returns NOT_IN_PANEL if no panel was hit; otherwise returns the indicator result
+     * (indicator may be null meaning "in panel, suppress vanilla").
+     * MC-VERSION-SENSITIVE: called from ChatHudMixin getIndicatorAt injection.
+     * If that method is removed, move the call to the replacement hook.
+     */
+    public static IndicatorResult resolveIndicatorAt(double mouseX, double mouseY,
+                                                      int windowWidth, int windowHeight) {
+        for (ChatPanel panel : PANELS) {
+            if (!panel.enabled()) continue;
+            ChatTab active = panel.getActiveTab();
+            if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
+
+            float scale          = panel.resolveScale();
+            int chatWidth        = panel.resolveWidth();
+            int lineHeight       = panel.resolveLineHeight();
+            int visibleLineCount = panel.resolveLines();
+            int xOffset          = panel.computeXOffset(windowWidth);
+            int topY             = panel.resolveTopY(windowHeight);
+
+            double chatLineY = (topY * (double) scale - mouseY) / (scale * lineHeight);
+            double chatLineX = mouseX / scale - 4.0 - xOffset;
+            if (chatLineX < -4.0 || chatLineX > chatWidth) continue;
+
+            List<LzChatLine> panelMsgs = getMessages(panel, active);
+            int maxLines = Math.min(visibleLineCount, panelMsgs.size());
+            if (chatLineY < 0.0 || chatLineY >= maxLines) continue;
+
+            int lineIdx = LzMath.floor(chatLineY + panel.getScrolledLines(active));
+            if (lineIdx < 0 || lineIdx >= panelMsgs.size()) continue;
+
+            while (lineIdx >= 0 && !panelMsgs.get(lineIdx).endOfEntry()) lineIdx--;
+            if (lineIdx < 0) continue;
+
+            LzChatLine line = panelMsgs.get(lineIdx);
+            LzMessageIndicator indicator = line.indicator();
+            if (indicator == null) return new IndicatorResult(true, null);
+
+            if (chatLineX < 0.0) return new IndicatorResult(true, indicator); // over color strip
+            if (!indicator.hasIcon()) return new IndicatorResult(true, null);
+            int indicatorX = LzDraw.textWidth(line.content()) + 4;
+            int iconW = indicator.mc().icon() != null ? indicator.mc().icon().width : 0;
+            boolean inside = chatLineX >= indicatorX && chatLineX <= indicatorX + iconW;
+            return new IndicatorResult(true, inside ? indicator : null);
+        }
+        return IndicatorResult.NOT_IN_PANEL;
+    }
+
+    /**
+     * Called each frame after the hovered message index is known.
+     * Currently a no-op placeholder.
+     * MC-VERSION-SENSITIVE: in newer MC (StandardCursors API), call
+     *   context.setCursor(StandardCursors.POINTING_HAND) when hoveredIndex >= 0
+     *   and the hovered line has a clickable/hoverable style.
+     */
+    public static void updateCursor(LzDrawContext context, ChatPanel panel, int hoveredIndex) {
+        // TODO MC upgrade: implement cursor change via StandardCursors when available
     }
 
     /** Returns the right message list for this panel: primary uses tab.messages(), secondary uses width cache. */

@@ -9,7 +9,6 @@ import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzClient;
-import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
@@ -32,12 +31,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
+// =============================================================================
+// MC-VERSION-SENSITIVE FILE
+// When upgrading Minecraft, check every @Inject descriptor below.
+// All rendering and hit-test logic has been moved to ChatRenderer so only the
+// hook descriptors and thin glue need updating here.
+// =============================================================================
 @Mixin(ChatHud.class)
 public class ChatHudMixin {
 
-    // ------------------------------------------------------------------
-    // Render — HEAD: cancel vanilla and render ourselves unless VANILLA tab
-    // ------------------------------------------------------------------
+    // ── Render ────────────────────────────────────────────────────────────────
+    // MC-VERSION-SENSITIVE: descriptor "render(Lnet/minecraft/client/gui/DrawContext;IIIZ)V"
+    // New MC adds TextRenderer + extra boolean → update to:
+    //   "render(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;IIIZZ)V"
+    // and update callback params: (DrawContext, TextRenderer, int, int, int, boolean interactable, boolean bl)
+    // The `focused` param is renamed `interactable`; `bl` is new.
 
     @Inject(
         method = "render(Lnet/minecraft/client/gui/DrawContext;IIIZ)V",
@@ -55,10 +63,6 @@ public class ChatHudMixin {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Render — RETURN: fires only when vanilla ran (VANILLA tab active on left)
-    // ------------------------------------------------------------------
-
     @Inject(
         method = "render(Lnet/minecraft/client/gui/DrawContext;IIIZ)V",
         at = @At("RETURN")
@@ -72,9 +76,7 @@ public class ChatHudMixin {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Scroll
-    // ------------------------------------------------------------------
+    // ── Scroll ────────────────────────────────────────────────────────────────
 
     @Inject(method = "resetScroll", at = @At("HEAD"))
     private void resetPanelScroll(CallbackInfo ci) {
@@ -122,26 +124,22 @@ public class ChatHudMixin {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Refresh
-    // ------------------------------------------------------------------
+    // ── Refresh ───────────────────────────────────────────────────────────────
 
     @Inject(method = "refresh", at = @At("HEAD"))
     private void onRefresh(CallbackInfo ci) {
         ChatRenderer.resetForRefresh();
     }
 
-    // ------------------------------------------------------------------
-    // Route incoming messages globally
-    // ------------------------------------------------------------------
+    // ── Route incoming messages ───────────────────────────────────────────────
 
     @Inject(method = "addVisibleMessage", at = @At("HEAD"))
     private void routeGlobally(ChatHudLine message, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
 
-        float scale  = (float) LzChat.chatScale();
+        float scale   = (float) LzChat.chatScale();
         int baseWidth = LzMath.floor((double) LzChat.chatWidth() / scale);
-        int width = baseWidth - getIndicatorWidth(LzMessageIndicator.wrapNullable(message.indicator()));
+        int width     = baseWidth - getIndicatorWidth(LzMessageIndicator.wrapNullable(message.indicator()));
 
         List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(message.content()), width);
 
@@ -153,9 +151,11 @@ public class ChatHudMixin {
         );
     }
 
-    // ------------------------------------------------------------------
-    // Indicator hover tooltip — use our panels instead of vanilla messages
-    // ------------------------------------------------------------------
+    // ── Indicator hit-test ────────────────────────────────────────────────────
+    // MC-VERSION-SENSITIVE: getIndicatorAt may be removed in newer MC.
+    // Logic lives in ChatRenderer.resolveIndicatorAt — only the hook changes.
+    // If removed: find the replacement (likely DrawnTextConsumer/Interactable callback)
+    // and wire ChatRenderer.resolveIndicatorAt into that instead.
 
     @Inject(method = "getIndicatorAt", at = @At("HEAD"), cancellable = true)
     private void getIndicatorAt(double mouseX, double mouseY,
@@ -163,52 +163,23 @@ public class ChatHudMixin {
         if (MultichatClient.CONFIG.modDisabled) return;
         if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); return; }
 
-        ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
+        ChatTab leftActive  = ChatRenderer.LEFT.getActiveTab();
         boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled() && leftActive.type() == TabType.VANILLA;
-        if (!MultichatClient.CONFIG.showIndicators) { if (!leftIsVanilla) cir.setReturnValue(null); return; }
+
+        if (!MultichatClient.CONFIG.showIndicators) {
+            if (!leftIsVanilla) cir.setReturnValue(null);
+            return;
+        }
 
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
 
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled()) continue;
-            ChatTab active = panel.getActiveTab();
-            if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
-
-            float scale          = panel.resolveScale();
-            int chatWidth        = panel.resolveWidth();
-            int lineHeight       = panel.resolveLineHeight();
-            int visibleLineCount = panel.resolveLines();
-
-            int xOffset      = panel.computeXOffset(windowWidth);
-            int topY         = panel.resolveTopY(windowHeight);
-            double chatLineY = (topY * (double) scale - mouseY) / (scale * lineHeight);
-            double chatLineX = mouseX / scale - 4.0 - xOffset;
-            if (chatLineX < -4.0 || chatLineX > chatWidth) continue;
-
-            List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
-            int maxLines = Math.min(visibleLineCount, panelMsgs.size());
-            if (chatLineY < 0.0 || chatLineY >= maxLines) continue;
-            int lineIdx = LzMath.floor(chatLineY + panel.getScrolledLines(active));
-            if (lineIdx < 0 || lineIdx >= panelMsgs.size()) continue;
-
-            while (lineIdx >= 0 && !panelMsgs.get(lineIdx).endOfEntry()) lineIdx--;
-            if (lineIdx < 0) continue;
-
-            LzChatLine line = panelMsgs.get(lineIdx);
-            LzMessageIndicator indicator = line.indicator();
-            if (indicator == null) { cir.setReturnValue(null); return; }
-
-            // isXInsideIndicatorIcon equivalent
-            if (chatLineX < 0.0) { cir.setReturnValue(indicator.mc()); return; } // over color strip
-            if (!indicator.hasIcon()) { cir.setReturnValue(null); return; }
-            int indicatorX = LzDraw.textWidth(line.content()) + 4; // getIndicatorX equivalent
-            int iconW = indicator.mc().icon() != null ? indicator.mc().icon().width : 0;
-            cir.setReturnValue(chatLineX >= indicatorX && chatLineX <= indicatorX + iconW ? indicator.mc() : null);
-            return;
+        ChatRenderer.IndicatorResult result = ChatRenderer.resolveIndicatorAt(mouseX, mouseY, windowWidth, windowHeight);
+        if (result.found()) {
+            cir.setReturnValue(result.indicator() != null ? result.indicator().mc() : null);
+        } else if (!leftIsVanilla) {
+            cir.setReturnValue(null);
         }
-
-        if (!leftIsVanilla) cir.setReturnValue(null);
     }
 
     @Unique
@@ -216,9 +187,12 @@ public class ChatHudMixin {
         return indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
     }
 
-    // ------------------------------------------------------------------
-    // Click / style hit-test for all panels
-    // ------------------------------------------------------------------
+    // ── Text style hit-test ───────────────────────────────────────────────────
+    // MC-VERSION-SENSITIVE: getTextStyleAt may be removed in newer MC.
+    // Logic lives in ChatRenderer.resolveStyleAt — only the hook changes.
+    // If removed: find the replacement (likely Interactable.text() Consumer<Style> callback)
+    // and wire ChatRenderer.resolveStyleAt into that instead.
+    // For cursor changes: implement ChatRenderer.updateCursor (currently a no-op).
 
     @Inject(method = "getTextStyleAt", at = @At("HEAD"), cancellable = true)
     private void suppressTextStyleWhenMenuOpen(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
@@ -229,6 +203,7 @@ public class ChatHudMixin {
     @Inject(method = "getTextStyleAt", at = @At("RETURN"), cancellable = true)
     private void getTextStyleAtAllPanels(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
+
         ChatTab leftActive = ChatRenderer.LEFT.getActiveTab();
         boolean leftIsVanilla = leftActive != null && ChatRenderer.LEFT.enabled()
             && leftActive.type() == TabType.VANILLA;
@@ -236,41 +211,11 @@ public class ChatHudMixin {
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
 
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled()) continue;
-
-            ChatTab active = panel.getActiveTab();
-            if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
-
-            float scale    = panel.resolveScale();
-            int chatWidth  = panel.resolveWidth();
-            int lineHeight = panel.resolveLineHeight();
-
-            int panelTopY     = panel.resolveTopY(windowHeight);
-            double chatY      = (panelTopY * (double) scale - y) / (scale * lineHeight);
-            double rawChatX   = x / scale - 4.0;
-            int xOffset       = panel.computeXOffset(windowWidth);
-            double localChatX = rawChatX - xOffset;
-
-            if (localChatX < -4.0 || localChatX > chatWidth) continue;
-
-            int scrolledLines = panel.getScrolledLines(active);
-            List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
-            int maxLines = Math.min(panel.resolveLines(), panelMsgs.size());
-            if (chatY < 0.0 || chatY >= maxLines) continue;
-
-            int lineIdx = LzMath.floor(chatY + scrolledLines);
-            if (lineIdx < 0 || lineIdx >= panelMsgs.size()) continue;
-
-            Style style = LzDraw.textHandler()
-                    .getStyleAt(panelMsgs.get(lineIdx).content().mc(), LzMath.floor(localChatX));
-            if (style != null) {
-                cir.setReturnValue(style);
-                return;
-            }
+        Style style = ChatRenderer.resolveStyleAt(x, y, windowWidth, windowHeight);
+        if (style != null) {
+            cir.setReturnValue(style);
+        } else if (!leftIsVanilla) {
+            cir.setReturnValue(null);
         }
-
-        // Suppress vanilla only when left panel is non-vanilla (empty tab or no clickable text found)
-        if (!leftIsVanilla) cir.setReturnValue(null);
     }
 }
