@@ -315,10 +315,15 @@ public abstract class ChatScreenMixin {
 
                 if (mouseX >= screenStart && mouseX < screenEnd) {
                     if (button == 0) {
+                        boolean wasSameTab = (i == panel.activeTabIndex());
                         panel.setActiveTab(i);
                         tab.clearUnread();
+                        if (MultichatClient.CONFIG.switchFocusedPanelOnTabClick)
+                            ChatRenderer.focusedPanel = panel;
+                        if (!wasSameTab && MultichatClient.CONFIG.flashOnMouseTabSwitch)
+                            panel.flash(ChatRenderer.currentTick);
                         TabChangedCallback.EVENT.invoker().onTabChanged(panel, tab);
-                        if (MultichatClient.CONFIG.panelContextEnabled && panel.useActiveTabContext() && panel == ChatRenderer.focusedPanel)
+                        if (MultichatClient.CONFIG.panelContextEnabled && panel.useActiveTabContext())
                             ChatRenderer.contextTab = tab;
                     } else if (button == 1) {
                         MessageContextMenu.close();

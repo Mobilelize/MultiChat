@@ -28,6 +28,8 @@ public class MultiChatConfig extends LzConfig {
     public String  collapseCounterFormat  = "&e(x{count})";
     public boolean arrowKeySwitchTabs      = true;
     public boolean flashOnTabSwitch        = false;
+    public boolean flashOnMouseTabSwitch        = false;
+    public boolean switchFocusedPanelOnTabClick = true;
     public boolean flashOnPanelFocus       = true;
     public boolean showContextDisplay      = true;
     public boolean earlyMessageCapture    = true;

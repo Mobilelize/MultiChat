@@ -38,8 +38,8 @@ public class MessageRouter {
 
         String fullText = rawLzText != null ? rawLzText.mc().getString() : content.mc().getString();
 
-        // Collect the active tab for each enabled panel.
-        List<ChatTab> panelActiveTabs = new ArrayList<>();
+        // Collect the active tab for each enabled panel (deduplicated — same tab on two panels must not double-count).
+        java.util.Set<ChatTab> panelActiveTabs = new java.util.LinkedHashSet<>();
         for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled()) continue;
             ChatTab active = panel.getActiveTab();
@@ -224,27 +224,13 @@ public class MessageRouter {
     }
 
 
-    /** Builds one message group for a secondary panel width, in primary-list format (end-of-entry first). */
-    private static List<LzChatLine> buildGroupForWidth(int width, boolean stamp, int tick,
-                                                        LzText content, LzMessageIndicator indicator,
-                                                        LzChatEntry entry) {
-        int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
-        List<LzOrderedText> wrapped = stamp
-            ? ChatRenderer.stampedLines(tick, content, indicator, width)
-            : net.mobilelize.fabriclib.client.LzChat.breakLines(content, width - indicatorW);
-        List<LzChatLine> group = new ArrayList<>(wrapped.size());
-        for (int j = 0; j < wrapped.size(); j++)
-            group.add(LzChatLine.create(tick, wrapped.get(j), indicator, j == wrapped.size() - 1, entry));
-        java.util.Collections.reverse(group); // end-of-entry at front
-        return group;
-    }
-
     // ------------------------------------------------------------------
     // Refilter (called on tab create or rule change)
     // ------------------------------------------------------------------
 
     public static void refilterSearch(SearchTab tab) {
         tab.clearMessages();
+        for (ChatPanel panel : ChatRenderer.PANELS) panel.setScrolledLines(tab, 0);
 
         List<LzChatLine> source;
         if (tab.sourceTab() != null) {
@@ -327,6 +313,7 @@ public class MessageRouter {
     public static void refilterTab(ChatTab tab) {
         if (tab.type() != TabType.FILTERED) return;
         tab.clearMessages();
+        for (ChatPanel panel : ChatRenderer.PANELS) panel.setScrolledLines(tab, 0);
 
         ChatTab allTab = ChatRenderer.TABS.stream()
             .filter(t -> t.type() == TabType.ALL)

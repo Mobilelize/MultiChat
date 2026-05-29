@@ -18,9 +18,10 @@ public class ConfigMenu {
 
         ConfigEntryBuilder eb = builder.entryBuilder();
 
-        ConfigCategory general = builder.getOrCreateCategory(LzText.literal("General").mc());
+        // ── Appearance ────────────────────────────────────────────────────
+        ConfigCategory appearance = builder.getOrCreateCategory(LzText.literal("Appearance").mc());
 
-        general.addEntry(eb.startBooleanToggle(
+        appearance.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Indicators").mc(),
                 MultichatClient.CONFIG.showIndicators)
                 .setDefaultValue(true)
@@ -28,39 +29,7 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.showIndicators = v)
                 .build());
 
-        general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Enable Text Selection").mc(),
-                MultichatClient.CONFIG.selectionEnabled)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Click and drag in chat to select text. Ctrl+C to copy.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionEnabled = v)
-                .build());
-
-        general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Ctrl Skips Click Events").mc(),
-                MultichatClient.CONFIG.selectionCtrlSkipsClicks)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("When Ctrl is held, clicking on links or commands starts selection instead of activating the click.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionCtrlSkipsClicks = v)
-                .build());
-
-        general.addEntry(eb.startStrField(
-                LzText.literal("Timestamp Format").mc(),
-                MultichatClient.CONFIG.timestampFormat)
-                .setDefaultValue("&d[&6HH&d:&6mm&d:&6ss&d]")
-                .setTooltip(LzText.literal("Java DateTimeFormatter pattern. Supports color codes (e.g. &7[HH:mm:ss]&r).").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.timestampFormat = v)
-                .build());
-
-        general.addEntry(eb.startStrField(
-                LzText.literal("Collapse Counter Format").mc(),
-                MultichatClient.CONFIG.collapseCounterFormat)
-                .setDefaultValue("&e(x{count})")
-                .setTooltip(LzText.literal("Format for the repeat counter on collapsed messages. Use {count} for the number. Supports color codes (e.g. &8 (x{count})).").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.collapseCounterFormat = v)
-                .build());
-
-        general.addEntry(eb.startBooleanToggle(
+        appearance.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Context Display").mc(),
                 MultichatClient.CONFIG.showContextDisplay)
                 .setDefaultValue(true)
@@ -68,7 +37,26 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.showContextDisplay = v)
                 .build());
 
-        general.addEntry(eb.startBooleanToggle(
+        appearance.addEntry(eb.startStrField(
+                LzText.literal("Timestamp Format").mc(),
+                MultichatClient.CONFIG.timestampFormat)
+                .setDefaultValue("&d[&6HH&d:&6mm&d:&6ss&d]")
+                .setTooltip(LzText.literal("Java DateTimeFormatter pattern. Supports color codes (e.g. &7[HH:mm:ss]&r).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.timestampFormat = v)
+                .build());
+
+        appearance.addEntry(eb.startStrField(
+                LzText.literal("Collapse Counter Format").mc(),
+                MultichatClient.CONFIG.collapseCounterFormat)
+                .setDefaultValue("&e(x{count})")
+                .setTooltip(LzText.literal("Format for the repeat counter on collapsed messages. Use {count} for the number. Supports color codes (e.g. &8 (x{count})).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.collapseCounterFormat = v)
+                .build());
+
+        // ── Navigation ────────────────────────────────────────────────────
+        ConfigCategory navigation = builder.getOrCreateCategory(LzText.literal("Navigation").mc());
+
+        navigation.addEntry(eb.startBooleanToggle(
                 LzText.literal("Arrow Keys Switch Tabs").mc(),
                 MultichatClient.CONFIG.arrowKeySwitchTabs)
                 .setDefaultValue(true)
@@ -76,31 +64,7 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.arrowKeySwitchTabs = v)
                 .build());
 
-        general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Flash on Tab Switch").mc(),
-                MultichatClient.CONFIG.flashOnTabSwitch)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Flash message backgrounds when switching tabs with arrow keys.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.flashOnTabSwitch = v)
-                .build());
-
-        general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Flash on Panel Focus").mc(),
-                MultichatClient.CONFIG.flashOnPanelFocus)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Flash message backgrounds when switching focused panel with Ctrl+Arrow.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.flashOnPanelFocus = v)
-                .build());
-
-        general.addEntry(eb.startBooleanToggle(
-                LzText.literal("Server Network Message Capture").mc(),
-                MultichatClient.CONFIG.earlyMessageCapture)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Use Fabric API to capture server network messages before other mods modify them. Fixes filter rules when other mods prepend text to messages (e.g. timestamps).").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.earlyMessageCapture = v)
-                .build());
-
-        general.addEntry(eb.startBooleanToggle(
+        navigation.addEntry(eb.startBooleanToggle(
                 LzText.literal("Panel Context on Switch").mc(),
                 MultichatClient.CONFIG.panelContextEnabled)
                 .setDefaultValue(true)
@@ -108,7 +72,69 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.panelContextEnabled = v)
                 .build());
 
-        general.addEntry(eb.startBooleanToggle(
+        navigation.addEntry(eb.startBooleanToggle(
+                LzText.literal("Flash on Arrow Key Tab Switch").mc(),
+                MultichatClient.CONFIG.flashOnTabSwitch)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Flash message backgrounds when switching tabs with arrow keys.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.flashOnTabSwitch = v)
+                .build());
+
+        navigation.addEntry(eb.startBooleanToggle(
+                LzText.literal("Switch Focused Panel on Tab Click").mc(),
+                MultichatClient.CONFIG.switchFocusedPanelOnTabClick)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Clicking a tab makes that panel the focused one (arrow keys and Ctrl+Arrow then operate on it).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.switchFocusedPanelOnTabClick = v)
+                .build());
+
+        navigation.addEntry(eb.startBooleanToggle(
+                LzText.literal("Flash on Mouse Tab Switch").mc(),
+                MultichatClient.CONFIG.flashOnMouseTabSwitch)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Flash message backgrounds when clicking a different tab with the mouse (same as the arrow key flash, but for mouse).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.flashOnMouseTabSwitch = v)
+                .build());
+
+        navigation.addEntry(eb.startBooleanToggle(
+                LzText.literal("Flash on Panel Focus Switch").mc(),
+                MultichatClient.CONFIG.flashOnPanelFocus)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Flash message backgrounds when switching focused panel with Ctrl+Arrow.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.flashOnPanelFocus = v)
+                .build());
+
+        // ── Selection ─────────────────────────────────────────────────────
+        ConfigCategory selection = builder.getOrCreateCategory(LzText.literal("Selection").mc());
+
+        selection.addEntry(eb.startBooleanToggle(
+                LzText.literal("Enable Text Selection").mc(),
+                MultichatClient.CONFIG.selectionEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Click and drag in chat to select text. Ctrl+C to copy.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionEnabled = v)
+                .build());
+
+        selection.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ctrl Skips Click Events").mc(),
+                MultichatClient.CONFIG.selectionCtrlSkipsClicks)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When Ctrl is held, clicking on links or commands starts selection instead of activating the click.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionCtrlSkipsClicks = v)
+                .build());
+
+        // ── Advanced ──────────────────────────────────────────────────────
+        ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
+
+        advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Server Network Message Capture").mc(),
+                MultichatClient.CONFIG.earlyMessageCapture)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Use Fabric API to capture server network messages before other mods modify them. Fixes filter rules when other mods prepend text to messages (e.g. timestamps).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.earlyMessageCapture = v)
+                .build());
+
+        advanced.addEntry(eb.startBooleanToggle(
                 LzText.literal("Apply Settings on Refilter").mc(),
                 MultichatClient.CONFIG.applySettingsOnRefilter)
                 .setDefaultValue(true)
@@ -116,7 +142,15 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.applySettingsOnRefilter = v)
                 .build());
 
-        general.addEntry(eb.startBooleanToggle(
+        advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Log API Messages").mc(),
+                MultichatClient.CONFIG.logApiMessages)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Log messages sent via the MultiChat API to the game log.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.logApiMessages = v)
+                .build());
+
+        advanced.addEntry(eb.startBooleanToggle(
                 LzText.literal("Disable MultiChat").mc(),
                 MultichatClient.CONFIG.modDisabled)
                 .setDefaultValue(false)
@@ -124,6 +158,7 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.modDisabled = v)
                 .build());
 
+        // ── Search ────────────────────────────────────────────────────────
         ConfigCategory search = builder.getOrCreateCategory(LzText.literal("Search").mc());
 
         search.addEntry(eb.startBooleanToggle(
@@ -179,7 +214,7 @@ public class ConfigMenu {
                 LzText.literal("Default: Show Badge").mc(),
                 MultichatClient.CONFIG.searchDefaultBadge)
                 .setDefaultValue(false)
-                .setTooltip(LzText.literal("Show unread count badge on search tabs by default. Off keeps the tab bar cleaner for temporary searches.").mc())
+                .setTooltip(LzText.literal("Show unread count badge on search tabs by default.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultBadge = v)
                 .build());
 
@@ -195,7 +230,7 @@ public class ConfigMenu {
                 LzText.literal("Default: Collapse Identical").mc(),
                 MultichatClient.CONFIG.searchDefaultCollapseIdentical)
                 .setDefaultValue(false)
-                .setTooltip(LzText.literal("Collapse duplicate messages in search results by default. Only the newest instance is shown with a count.").mc())
+                .setTooltip(LzText.literal("Collapse duplicate messages in search results by default.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultCollapseIdentical = v)
                 .build());
 

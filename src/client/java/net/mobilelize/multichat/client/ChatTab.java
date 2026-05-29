@@ -147,32 +147,6 @@ public class ChatTab {
         return messagesByWidth.computeIfAbsent(width, builder);
     }
 
-    /**
-     * Prepends a new message group to every existing per-width cache incrementally.
-     * The builder receives the panel width and must return lines in primary-list format:
-     * end-of-entry line first, then upper lines (same order as messages()).
-     * Call this instead of clearWidthCaches() when adding a brand-new message — O(new_message) not O(all_messages).
-     */
-    public void prependGroupToWidthCaches(java.util.function.Function<Integer, List<LzChatLine>> groupForWidth) {
-        if (messagesByWidth.isEmpty()) return;
-        for (Map.Entry<Integer, List<LzChatLine>> e : messagesByWidth.entrySet()) {
-            List<LzChatLine> group = groupForWidth.apply(e.getKey());
-            List<LzChatLine> cache = e.getValue();
-            for (int i = group.size() - 1; i >= 0; i--)
-                cache.addFirst(group.get(i));
-        }
-    }
-
-    /**
-     * Removes {@code count} lines from the tail of every per-width cache.
-     * Used when messageCap trims the oldest primary lines — avoids a full rebuild.
-     */
-    public void removeTailFromWidthCaches(int count) {
-        if (messagesByWidth.isEmpty()) return;
-        for (List<LzChatLine> cache : messagesByWidth.values())
-            for (int i = 0; i < count && !cache.isEmpty(); i++) cache.removeLast();
-    }
-
     /** Invalidates all per-width caches so they rebuild from scratch on next render. */
     public void clearWidthCaches() {
         messagesByWidth.clear();
