@@ -18,6 +18,10 @@ public class MultiChatConfig extends LzConfig {
     public String            contextTabName = "";
     public List<PanelConfig> panels         = new ArrayList<>();
 
+    // Tab appearance defaults (per-panel overrides these when >= 0)
+    public double tabBgOpacity = -1;
+    public double tabFgOpacity = -1;
+
     // General
     public boolean applySettingsOnRefilter = true;
     public boolean modDisabled             = false;
@@ -76,6 +80,8 @@ public class MultiChatConfig extends LzConfig {
         public int     bgColor             = 0;
         public double  customBgOpacity     = -1;
         public double  customChatOpacity   = -1;
+        public double  tabBgOpacity        = -1;
+        public double  tabFgOpacity        = -1;
         public String  panelContextTabName  = "";
         public boolean useActiveTabContext  = false;
     }

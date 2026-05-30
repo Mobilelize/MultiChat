@@ -194,8 +194,8 @@ public class ChatRenderer {
             if (x + tabWidth > tabAreaEnd) break;
 
             boolean active = (i == panel.activeTabIndex());
-            LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(tab, active));
-            LzDraw.drawText(context, label, x + 4, topY + 1, tabFgColor(tab, active));
+            LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(tab, active, panel));
+            LzDraw.drawText(context, label, x + 4, topY + 1, tabFgColor(tab, active, panel));
             x += tabWidth + 1;
             lastRendered = i;
         }
@@ -215,8 +215,8 @@ public class ChatRenderer {
                 int sy2 = Math.round((topY + TAB_HEIGHT) * scale);
 
                 LzDraw.enableScissor(context, sx1, sy1, sx2, sy2);
-                LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(nextTab, active));
-                LzDraw.drawText(context, label, x + 4, topY + 1, tabFgColor(nextTab, active));
+                LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(nextTab, active, panel));
+                LzDraw.drawText(context, label, x + 4, topY + 1, tabFgColor(nextTab, active, panel));
                 LzDraw.disableScissor(context);
             }
         }
@@ -230,19 +230,34 @@ public class ChatRenderer {
         LzDraw.popMatrix(context);
     }
 
-    private static int tabBgColor(ChatTab tab, boolean active) {
-        if (tab.tabColor() == 0) return active ? 0xBB888888 : 0x88444444;
-        return active ? (0xCC000000 | (tab.tabColor() & 0xFFFFFF)) : (0x55000000 | (tab.tabColor() & 0xFFFFFF));
+    private static int applyTabOpacity(int color, double panelOp, double globalOp) {
+        double op = panelOp >= 0 ? panelOp : globalOp;
+        if (op < 0) return color;
+        int alpha = (int) Math.round(Math.clamp(op, 0.0, 1.0) * 255);
+        return (alpha << 24) | (color & 0x00FFFFFF);
     }
 
-    private static int tabFgColor(ChatTab tab, boolean active) {
-        if (tab.tabColor() == 0) return active ? 0xFFFFFFFF : 0xFF999999;
-        if (active) return 0xFFFFFFFF;
-        int rgb = tab.tabColor() & 0xFFFFFF;
-        int r = ((rgb >> 16) & 0xFF) * 3 / 5;
-        int g = ((rgb >> 8)  & 0xFF) * 3 / 5;
-        int b = ( rgb        & 0xFF) * 3 / 5;
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    private static int tabBgColor(ChatTab tab, boolean active, ChatPanel panel) {
+        int color = (tab.tabColor() == 0)
+            ? (active ? 0xBB888888 : 0x88444444)
+            : (active ? (0xCC000000 | (tab.tabColor() & 0xFFFFFF)) : (0x55000000 | (tab.tabColor() & 0xFFFFFF)));
+        return applyTabOpacity(color, panel.tabBgOpacity(), MultichatClient.CONFIG.tabBgOpacity);
+    }
+
+    private static int tabFgColor(ChatTab tab, boolean active, ChatPanel panel) {
+        int color;
+        if (tab.tabColor() == 0) {
+            color = active ? 0xFFFFFFFF : 0xFF999999;
+        } else if (active) {
+            color = 0xFFFFFFFF;
+        } else {
+            int rgb = tab.tabColor() & 0xFFFFFF;
+            int r = ((rgb >> 16) & 0xFF) * 3 / 5;
+            int g = ((rgb >> 8)  & 0xFF) * 3 / 5;
+            int b = ( rgb        & 0xFF) * 3 / 5;
+            color = 0xFF000000 | (r << 16) | (g << 8) | b;
+        }
+        return applyTabOpacity(color, panel.tabFgOpacity(), MultichatClient.CONFIG.tabFgOpacity);
     }
 
     private static void renderAt(LzDrawContext context,

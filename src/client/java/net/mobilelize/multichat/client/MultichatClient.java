@@ -71,6 +71,8 @@ public class MultichatClient implements ClientModInitializer {
             pc.bgColor              = panel.bgColor();
             pc.customBgOpacity      = panel.customBgOpacity();
             pc.customChatOpacity    = panel.customChatOpacity();
+            pc.tabBgOpacity         = panel.tabBgOpacity();
+            pc.tabFgOpacity         = panel.tabFgOpacity();
             pc.panelContextTabName  = panel.panelContextTab() != null ? panel.panelContextTab().name() : "";
             pc.useActiveTabContext  = panel.useActiveTabContext();
             panelOut.add(pc);
@@ -175,6 +177,8 @@ public class MultichatClient implements ClientModInitializer {
         panel.setBgColor(pc.bgColor);
         panel.setCustomBgOpacity(pc.customBgOpacity);
         panel.setCustomChatOpacity(pc.customChatOpacity);
+        panel.setTabBgOpacity(pc.tabBgOpacity);
+        panel.setTabFgOpacity(pc.tabFgOpacity);
         panel.setUseActiveTabContext(pc.useActiveTabContext);
     }
 

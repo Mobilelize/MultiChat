@@ -68,6 +68,18 @@ public class PanelEditScreen {
             .setSaveConsumer(panel::setShowBadges)
             .build());
 
+        settings.addEntry(eb.startDoubleField(LzText.literal("Tab BG Opacity").mc(), panel.tabBgOpacity())
+            .setDefaultValue(-1.0)
+            .setTooltip(LzText.literal("Tab background opacity (0.0 = invisible, 1.0 = opaque). -1 = default.").mc())
+            .setSaveConsumer(panel::setTabBgOpacity)
+            .build());
+
+        settings.addEntry(eb.startDoubleField(LzText.literal("Tab Text Opacity").mc(), panel.tabFgOpacity())
+            .setDefaultValue(-1.0)
+            .setTooltip(LzText.literal("Tab text opacity (0.0 = invisible, 1.0 = opaque). -1 = default.").mc())
+            .setSaveConsumer(panel::setTabFgOpacity)
+            .build());
+
         settings.addEntry(eb.startBooleanToggle(LzText.literal("Active Tab as Context").mc(), panel.useActiveTabContext())
             .setDefaultValue(false)
             .setTooltip(LzText.literal("Use this panel's active tab as its context tab.").mc())

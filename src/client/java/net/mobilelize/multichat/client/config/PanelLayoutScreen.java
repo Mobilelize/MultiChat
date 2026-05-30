@@ -71,13 +71,8 @@ public class PanelLayoutScreen extends LzScreen {
         return Math.max(1, heightPx / panel.resolveLineHeight());
     }
 
-    // Focused line count — uses MC focused-height option when no custom height set,
-    // because LzChat.visibleLineCount() returns unfocused count outside the chat screen.
     private int focusedLines(ChatPanel panel) {
-        if (!panel.primary() && panel.customHeightLines() > 0) return panel.customHeightLines();
-        double h = LzClient.mc().options.getChatHeightFocused().getValue();
-        int heightPx = (int)(h * 160.0 + 20.0); // mirrors ChatHud.getHeight(double)
-        return Math.max(1, heightPx / panel.resolveLineHeight());
+        return panel.resolveFocusedLines();
     }
 
     // TopY using focused line count (for CUSTOM panels, topY depends on line count).
@@ -140,6 +135,7 @@ public class PanelLayoutScreen extends LzScreen {
         int   ufLines    = panel.customUnfocusedHeightLines() > 0
             ? panel.customUnfocusedHeightLines()
             : unfocusedMcLines(panel);
+        ufLines = Math.min(ufLines, focusedLines(panel)); // clamp: can't exceed focused height
         return Math.round((topY - ufLines * lineHeight) * scale);
     }
 
@@ -216,7 +212,7 @@ public class PanelLayoutScreen extends LzScreen {
                 LzDraw.fill(ctx, x1 + 12, y2 - 3, x2 - 12, y2 + 3, botCol);
 
                 if (resiz) {
-                    String sizeInfo = "w:" + panel.resolveWidth() + "  h:" + panel.resolveLines() + " lines";
+                    String sizeInfo = "w:" + panel.resolveWidth() + "  h:" + focusedLines(panel) + " lines";
                     LzDraw.drawCenteredText(ctx, LzText.literal(sizeInfo), cx, y1 - 10, 0xFFFFCC44);
                 }
 
@@ -228,8 +224,9 @@ public class PanelLayoutScreen extends LzScreen {
                             && Math.abs(mouseY - lineY) <= EDGE_GRAB);
                     int lineCol = hovLine ? 0xFF44FF88 : 0x8844FF88;
                     LzDraw.fill(ctx, x1 - OUTER_PAD, lineY - 1, x2 + OUTER_PAD, lineY + 1, lineCol);
-                    int ufLines = panel.customUnfocusedHeightLines() > 0
-                        ? panel.customUnfocusedHeightLines() : unfocusedMcLines(panel);
+                    int ufLines = Math.min(
+                        panel.customUnfocusedHeightLines() > 0 ? panel.customUnfocusedHeightLines() : unfocusedMcLines(panel),
+                        focusedLines(panel));
                     LzDraw.drawText(ctx, LzText.literal("unfocused: " + ufLines + " lines"), x1, lineY + 3, hovLine ? 0xFF44FF88 : 0x8844FF88);
                 }
             }

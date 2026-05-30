@@ -1,6 +1,7 @@
 package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.client.LzChat;
+import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzOptions;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.multichat.client.render.ChatRenderer;
@@ -39,6 +40,8 @@ public class ChatPanel {
     private int    bgColor            = 0;
     private double customBgOpacity    = -1;
     private double customChatOpacity  = -1;
+    private double tabBgOpacity       = -1;
+    private double tabFgOpacity       = -1;
 
     private ChatTab panelContextTab    = null;
     private boolean useActiveTabContext = false;
@@ -101,6 +104,10 @@ public class ChatPanel {
     public void   setCustomBgOpacity(double v)    { customBgOpacity = v; }
     public double customChatOpacity()             { return customChatOpacity; }
     public void   setCustomChatOpacity(double v)  { customChatOpacity = v; }
+    public double tabBgOpacity()                  { return tabBgOpacity; }
+    public void   setTabBgOpacity(double v)       { tabBgOpacity = v; }
+    public double tabFgOpacity()                  { return tabFgOpacity; }
+    public void   setTabFgOpacity(double v)       { tabFgOpacity = v; }
 
     // ── Context ────────────────────────────────────────────────────────────────
     public ChatTab panelContextTab()               { return panelContextTab; }
@@ -131,16 +138,24 @@ public class ChatPanel {
         return customWidth;
     }
 
+    // Focused line count from MC options — not isChatFocused()-dependent.
+    public int resolveFocusedLines() {
+        if (primary || customHeightLines <= 0) {
+            double h = LzClient.mc().options.getChatHeightFocused().getValue();
+            int heightPx = (int)(h * 160.0 + 20.0);
+            return Math.max(1, heightPx / resolveLineHeight());
+        }
+        return customHeightLines;
+    }
+
     public int resolveLines() {
         return resolveLines(true);
     }
 
     public int resolveLines(boolean focused) {
-        if (focused || lockUnfocusedToFocused || customUnfocusedHeightLines <= 0) {
-            if (primary || customHeightLines <= 0) return LzChat.visibleLineCount();
-            return customHeightLines;
-        }
-        return customUnfocusedHeightLines;
+        if (focused || lockUnfocusedToFocused) return resolveFocusedLines();
+        if (customUnfocusedHeightLines > 0) return customUnfocusedHeightLines;
+        return LzChat.visibleLineCount(); // unfocused fallback: MC returns unfocused count here
     }
 
     public int resolveLineHeight() {
