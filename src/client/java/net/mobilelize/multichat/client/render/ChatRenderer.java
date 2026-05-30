@@ -17,6 +17,7 @@ import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
@@ -561,9 +562,20 @@ public class ChatRenderer {
 
             LzChatEntry entry = endLine.entry();
             if (entry != null) {
-                List<LzOrderedText> newLines = tab.showTimestamps()
+                List<LzOrderedText> newLines = new ArrayList<>(tab.showTimestamps()
                     ? stampedLines(entry.creationTick, entry.originalContent, entry.indicator, panelWidth)
-                    : breakLinesForPanel(entry.originalContent, entry.indicator, panelWidth);
+                    : breakLinesForPanel(entry.originalContent, entry.indicator, panelWidth));
+
+                if (tab instanceof SearchTab st && st.collapseIdentical()) {
+                    Integer count = st.collapseCounts().get(entry);
+                    if (count != null && count > 1) {
+                        String cStr = " " + MultichatClient.CONFIG.collapseCounterFormat
+                            .replace("{count}", String.valueOf(count));
+                        int last = newLines.size() - 1;
+                        newLines.set(last, LzOrderedText.concat(
+                            newLines.get(last), LzText.format(cStr).ordered()));
+                    }
+                }
 
                 List<LzChatLine> group = new ArrayList<>(newLines.size());
                 for (int j = 0; j < newLines.size(); j++)

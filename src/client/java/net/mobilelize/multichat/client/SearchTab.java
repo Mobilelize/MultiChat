@@ -1,7 +1,11 @@
 package net.mobilelize.multichat.client;
 
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchMode;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class SearchTab extends ChatTab {
 
@@ -14,6 +18,7 @@ public class SearchTab extends ChatTab {
     private final ChatTab    sourceTab;
     private boolean          liveUpdate;
     private boolean          collapseIdentical;
+    private final Map<LzChatEntry, Integer> collapseCounts = new HashMap<>();
 
     public SearchTab(String name, String query, SearchMode searchMode, boolean caseSensitive,
                      int timeFromTicks, int timeToTicks, ChatTab sourceTab, boolean liveUpdate,
@@ -40,6 +45,9 @@ public class SearchTab extends ChatTab {
     public void       setLiveUpdate(boolean v)        { liveUpdate = v; }
     public boolean    collapseIdentical()             { return collapseIdentical; }
     public void       setCollapseIdentical(boolean v) { collapseIdentical = v; }
+
+    public Map<LzChatEntry, Integer> collapseCounts()     { return collapseCounts; }
+    public void                      clearCollapseCounts() { collapseCounts.clear(); }
 
     public boolean matchesText(String text) {
         if (query.isEmpty()) return true;

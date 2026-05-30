@@ -89,7 +89,13 @@ public class MessageRouter {
                     if (st.sourceTab() != null && !st.sourceTab().filterRules().matches(fullText, indicator)) break;
                     if (!st.matchesTime(tick)) break;
                     if (st.collapseIdentical()) {
+                        // Save scroll positions — refilterSearch resets them to 0
+                        java.util.Map<ChatPanel, Integer> savedScrolls = new java.util.HashMap<>();
+                        for (ChatPanel p : ChatRenderer.PANELS) savedScrolls.put(p, p.getScrolledLines(st));
                         refilterSearch(st);
+                        int maxScroll = Math.max(0, st.messageCount() - 1);
+                        for (ChatPanel p : ChatRenderer.PANELS)
+                            p.setScrolledLines(st, Math.min(savedScrolls.getOrDefault(p, 0), maxScroll));
                     } else {
                         ChatTab allTab = ChatRenderer.TABS.stream()
                             .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
@@ -230,6 +236,7 @@ public class MessageRouter {
 
     public static void refilterSearch(SearchTab tab) {
         tab.clearMessages();
+        tab.clearCollapseCounts();
         for (ChatPanel panel : ChatRenderer.PANELS) panel.setScrolledLines(tab, 0);
 
         List<LzChatLine> source;
@@ -292,7 +299,10 @@ public class MessageRouter {
                 for (int j = g.end(); j >= g.start(); j--) lines.add(source.get(j).content());
             }
 
-            if (count > 1) appendCounter(lines, count);
+            if (count > 1) {
+                appendCounter(lines, count);
+                if (srcEntry != null) tab.collapseCounts().put(srcEntry, count);
+            }
             addLinesReversed(tab, lines, g.tick(), lzInd, srcEntry);
         }
     }

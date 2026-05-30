@@ -315,16 +315,27 @@ public abstract class ChatScreenMixin {
 
                 if (mouseX >= screenStart && mouseX < screenEnd) {
                     if (button == 0) {
-                        boolean wasSameTab = (i == panel.activeTabIndex());
+                        boolean wasSameTab  = (i == panel.activeTabIndex());
+                        boolean wasFocused  = (ChatRenderer.focusedPanel == panel);
                         panel.setActiveTab(i);
                         tab.clearUnread();
                         if (MultichatClient.CONFIG.switchFocusedPanelOnTabClick)
                             ChatRenderer.focusedPanel = panel;
-                        if (!wasSameTab && MultichatClient.CONFIG.flashOnMouseTabSwitch)
+                        if (!wasFocused && MultichatClient.CONFIG.switchFocusedPanelOnTabClick
+                                && MultichatClient.CONFIG.flashOnPanelFocus) {
                             panel.flash(ChatRenderer.currentTick);
+                        } else if (!wasSameTab && MultichatClient.CONFIG.flashOnMouseTabSwitch) {
+                            panel.flash(ChatRenderer.currentTick);
+                        }
                         TabChangedCallback.EVENT.invoker().onTabChanged(panel, tab);
-                        if (MultichatClient.CONFIG.panelContextEnabled && panel.useActiveTabContext())
-                            ChatRenderer.contextTab = tab;
+                        if (MultichatClient.CONFIG.panelContextEnabled) {
+                            if (!wasFocused && MultichatClient.CONFIG.switchFocusedPanelOnTabClick) {
+                                ChatRenderer.contextTab = panel.resolveContextTab();
+                                MultichatClient.saveTabsToConfig();
+                            } else if (panel.useActiveTabContext()) {
+                                ChatRenderer.contextTab = tab;
+                            }
+                        }
                     } else if (button == 1) {
                         MessageContextMenu.close();
                         ContextMenu.open(panel, tab, (int) mouseX, (int) mouseY);

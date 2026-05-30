@@ -61,6 +61,7 @@ public class MultiChatConfig extends LzConfig {
         public ChatPanel.Anchor anchor      = ChatPanel.Anchor.LEFT;
         public int     margin              = 0;
         public int     activeTab           = 0;
+        public String  activeTabName       = "";
         public boolean showOnlyWhenFocused = false;
         public boolean showBadges          = true;
         public boolean showTabs            = true;

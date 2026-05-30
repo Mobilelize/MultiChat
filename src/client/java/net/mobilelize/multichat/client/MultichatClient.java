@@ -55,6 +55,8 @@ public class MultichatClient implements ClientModInitializer {
             pc.anchor               = panel.anchor();
             pc.margin               = panel.margin();
             pc.activeTab            = panel.activeTabIndex();
+            ChatTab at              = panel.getActiveTab();
+            pc.activeTabName        = at != null ? at.name() : "";
             pc.showOnlyWhenFocused  = panel.showOnlyWhenFocused();
             pc.showBadges           = panel.showBadges();
             pc.showTabs             = panel.showTabs();
@@ -218,7 +220,24 @@ public class MultichatClient implements ClientModInitializer {
         }
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
-            panel.setActiveTab(panel.activeTabIndex());
+            String savedName = CONFIG.panels.stream()
+                .filter(pc -> pc.id == panel.id())
+                .map(pc -> pc.activeTabName)
+                .findFirst().orElse("");
+            if (!savedName.isEmpty()) {
+                List<ChatTab> visible = panel.getVisibleTabs();
+                boolean found = false;
+                for (int idx = 0; idx < visible.size(); idx++) {
+                    if (visible.get(idx).name().equals(savedName)) {
+                        panel.setActiveTab(idx);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) panel.setActiveTab(panel.activeTabIndex());
+            } else {
+                panel.setActiveTab(panel.activeTabIndex());
+            }
         }
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
