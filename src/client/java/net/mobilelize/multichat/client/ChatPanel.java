@@ -29,11 +29,13 @@ public class ChatPanel {
     private int     tabLastRendered    = -1;
     private int     tabFlashTick       = -1000;
 
-    private float  customX            = 0f;
-    private float  customY            = 0f;
-    private int    customWidth        = -1;
-    private int    customHeightLines  = -1;
-    private float  customScale        = -1f;
+    private float  customX                    = 0f;
+    private float  customY                    = 0f;
+    private int    customWidth                = -1;
+    private int    customHeightLines          = -1;
+    private int    customUnfocusedHeightLines = -1;
+    private boolean lockUnfocusedToFocused   = true;
+    private float  customScale                = -1f;
     private int    bgColor            = 0;
     private double customBgOpacity    = -1;
     private double customChatOpacity  = -1;
@@ -85,8 +87,12 @@ public class ChatPanel {
     public void   setCustomY(float v)         { customY = v; }
     public int    customWidth()               { return customWidth; }
     public void   setCustomWidth(int v)       { customWidth = v; }
-    public int    customHeightLines()         { return customHeightLines; }
-    public void   setCustomHeightLines(int v) { customHeightLines = v; }
+    public int    customHeightLines()                      { return customHeightLines; }
+    public void   setCustomHeightLines(int v)              { customHeightLines = v; }
+    public int    customUnfocusedHeightLines()             { return customUnfocusedHeightLines; }
+    public void   setCustomUnfocusedHeightLines(int v)     { customUnfocusedHeightLines = v; }
+    public boolean lockUnfocusedToFocused()                { return lockUnfocusedToFocused; }
+    public void    setLockUnfocusedToFocused(boolean v)    { lockUnfocusedToFocused = v; }
     public float  customScale()               { return customScale; }
     public void   setCustomScale(float v)     { customScale = v; }
     public int    bgColor()                   { return bgColor; }
@@ -126,8 +132,15 @@ public class ChatPanel {
     }
 
     public int resolveLines() {
-        if (primary || customHeightLines <= 0) return LzChat.visibleLineCount();
-        return customHeightLines;
+        return resolveLines(true);
+    }
+
+    public int resolveLines(boolean focused) {
+        if (focused || lockUnfocusedToFocused || customUnfocusedHeightLines <= 0) {
+            if (primary || customHeightLines <= 0) return LzChat.visibleLineCount();
+            return customHeightLines;
+        }
+        return customUnfocusedHeightLines;
     }
 
     public int resolveLineHeight() {

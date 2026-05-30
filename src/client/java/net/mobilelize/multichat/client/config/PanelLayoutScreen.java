@@ -5,6 +5,7 @@ import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
+import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
@@ -37,7 +38,9 @@ public class PanelLayoutScreen extends LzScreen {
     private int        resizeAnchorX1 = 0;
     private int        resizeAnchorY1 = 0;
 
-    // anchor, customX, customY, customWidth, customHeightLines
+    private ChatPanel unfocusedLineDragging = null;
+
+    // anchor, customX, customY, customWidth, customHeightLines, customUnfocusedHeightLines
     private final Map<ChatPanel, Object[]> originals = new HashMap<>();
 
     public PanelLayoutScreen(Screen parent) {
@@ -49,7 +52,7 @@ public class PanelLayoutScreen extends LzScreen {
     protected void init() {
         if (originals.isEmpty()) {
             for (ChatPanel p : ChatRenderer.PANELS)
-                originals.put(p, new Object[] { p.anchor(), p.customX(), p.customY(), p.customWidth(), p.customHeightLines() });
+                originals.put(p, new Object[] { p.anchor(), p.customX(), p.customY(), p.customWidth(), p.customHeightLines(), p.customUnfocusedHeightLines() });
         }
 
         addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
@@ -61,14 +64,41 @@ public class PanelLayoutScreen extends LzScreen {
         addDrawableChild(LzButton.of("To Wall", 4, height - 26, 58, 18, b -> snapToNearestWall(lastDragged)));
     }
 
+    // Unfocused line count from MC options — used as fallback when customUnfocusedHeightLines is unset.
+    private int unfocusedMcLines(ChatPanel panel) {
+        double h = LzClient.mc().options.getChatHeightUnfocused().getValue();
+        int heightPx = (int)(h * 160.0 + 20.0);
+        return Math.max(1, heightPx / panel.resolveLineHeight());
+    }
+
+    // Focused line count — uses MC focused-height option when no custom height set,
+    // because LzChat.visibleLineCount() returns unfocused count outside the chat screen.
+    private int focusedLines(ChatPanel panel) {
+        if (!panel.primary() && panel.customHeightLines() > 0) return panel.customHeightLines();
+        double h = LzClient.mc().options.getChatHeightFocused().getValue();
+        int heightPx = (int)(h * 160.0 + 20.0); // mirrors ChatHud.getHeight(double)
+        return Math.max(1, heightPx / panel.resolveLineHeight());
+    }
+
+    // TopY using focused line count (for CUSTOM panels, topY depends on line count).
+    private int focusedTopY(ChatPanel panel) {
+        if (panel.primary() || panel.anchor() != ChatPanel.Anchor.CUSTOM)
+            return LzMath.floor((float)(height - 40) / panel.resolveScale());
+        int lines      = focusedLines(panel);
+        int lineHeight = panel.resolveLineHeight();
+        return (int)(panel.customY() * height / panel.resolveScale()
+                   + lines * lineHeight / 2f
+                   - ChatRenderer.TAB_HEIGHT / 2f);
+    }
+
     // Screen-pixel bounding box [x1, y1, x2, y2]
     private int[] bounds(ChatPanel panel) {
         float scale      = panel.resolveScale();
         int   chatWidth  = panel.resolveWidth();
-        int   lines      = panel.resolveLines();
+        int   lines      = focusedLines(panel);
         int   lineHeight = panel.resolveLineHeight();
         int   xOffset    = panel.computeXOffset(width);
-        int   topY       = panel.resolveTopY(height);
+        int   topY       = focusedTopY(panel);
 
         int x1 = Math.round((4 + xOffset) * scale);
         int y1 = Math.round((topY - lines * lineHeight) * scale);
@@ -97,9 +127,20 @@ public class PanelLayoutScreen extends LzScreen {
             if (p.customX()           != (float) o[1])            return true;
             if (p.customY()           != (float) o[2])            return true;
             if (p.customWidth()       != (int) o[3])              return true;
-            if (p.customHeightLines() != (int) o[4])              return true;
+            if (p.customHeightLines()          != (int) o[4]) return true;
+            if (p.customUnfocusedHeightLines() != (int) o[5]) return true;
         }
         return false;
+    }
+
+    private int unfocusedLineScreenY(ChatPanel panel) {
+        float scale      = panel.resolveScale();
+        int   lineHeight = panel.resolveLineHeight();
+        int   topY       = focusedTopY(panel);
+        int   ufLines    = panel.customUnfocusedHeightLines() > 0
+            ? panel.customUnfocusedHeightLines()
+            : unfocusedMcLines(panel);
+        return Math.round((topY - ufLines * lineHeight) * scale);
     }
 
     // Convert panel from wall-anchor to CUSTOM at its current visual position (center stored as screen fractions).
@@ -178,11 +219,24 @@ public class PanelLayoutScreen extends LzScreen {
                     String sizeInfo = "w:" + panel.resolveWidth() + "  h:" + panel.resolveLines() + " lines";
                     LzDraw.drawCenteredText(ctx, LzText.literal(sizeInfo), cx, y1 - 10, 0xFFFFCC44);
                 }
+
+                if (!panel.lockUnfocusedToFocused()) {
+                    int lineY  = unfocusedLineScreenY(panel);
+                    boolean hovLine = unfocusedLineDragging == panel
+                        || (dragging == null && resizing == null && unfocusedLineDragging == null
+                            && mouseX >= x1 - OUTER_PAD && mouseX <= x2 + OUTER_PAD
+                            && Math.abs(mouseY - lineY) <= EDGE_GRAB);
+                    int lineCol = hovLine ? 0xFF44FF88 : 0x8844FF88;
+                    LzDraw.fill(ctx, x1 - OUTER_PAD, lineY - 1, x2 + OUTER_PAD, lineY + 1, lineCol);
+                    int ufLines = panel.customUnfocusedHeightLines() > 0
+                        ? panel.customUnfocusedHeightLines() : unfocusedMcLines(panel);
+                    LzDraw.drawText(ctx, LzText.literal("unfocused: " + ufLines + " lines"), x1, lineY + 3, hovLine ? 0xFF44FF88 : 0x8844FF88);
+                }
             }
         }
 
         LzDraw.drawCenteredText(ctx,
-            LzText.literal("Drag panels  |  Drag edges to resize  |  Esc / Cancel = revert"), width / 2, 6, 0xFFAAAAAA);
+            LzText.literal("Drag panels  |  Drag edges to resize  |  Green line = unfocused height  |  Esc / Cancel = revert"), width / 2, 6, 0xFFAAAAAA);
 
     }
 
@@ -214,6 +268,18 @@ public class PanelLayoutScreen extends LzScreen {
             }
         }
 
+        // Unfocused height line drag
+        for (ChatPanel panel : ChatRenderer.PANELS) {
+            if (panel.primary() || !panel.enabled() || panel.lockUnfocusedToFocused()) continue;
+            int[] b = bounds(panel);
+            int lineY = unfocusedLineScreenY(panel);
+            if (mouseX >= b[0] - OUTER_PAD && mouseX <= b[2] + OUTER_PAD
+                    && Math.abs(mouseY - lineY) <= EDGE_GRAB) {
+                unfocusedLineDragging = panel;
+                return true;
+            }
+        }
+
         // Drag
         ChatPanel hit = null;
         for (ChatPanel panel : ChatRenderer.PANELS) {
@@ -241,6 +307,17 @@ public class PanelLayoutScreen extends LzScreen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+        if (unfocusedLineDragging != null && button == 0) {
+            float scale      = unfocusedLineDragging.resolveScale();
+            int   lineHeight = unfocusedLineDragging.resolveLineHeight();
+            int   topY       = focusedTopY(unfocusedLineDragging);
+            int   maxLines   = focusedLines(unfocusedLineDragging);
+            int   newLines   = (int)((topY - mouseY / scale) / lineHeight);
+            newLines = Math.max(1, Math.min(newLines, maxLines));
+            unfocusedLineDragging.setCustomUnfocusedHeightLines(newLines);
+            return true;
+        }
+
         if (resizing != null && button == 0) {
             float scale = resizing.resolveScale();
 
@@ -287,8 +364,9 @@ public class PanelLayoutScreen extends LzScreen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        dragging = null;
-        resizing = null;
+        dragging              = null;
+        resizing              = null;
+        unfocusedLineDragging = null;
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -319,6 +397,7 @@ public class PanelLayoutScreen extends LzScreen {
             p.setCustomY((float) o[2]);
             p.setCustomWidth((int) o[3]);
             p.setCustomHeightLines((int) o[4]);
+            p.setCustomUnfocusedHeightLines((int) o[5]);
         }
         close();
     }

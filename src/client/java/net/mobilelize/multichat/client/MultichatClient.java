@@ -63,9 +63,11 @@ public class MultichatClient implements ClientModInitializer {
             pc.tabsAtTop            = panel.tabsAtTop();
             pc.customX              = panel.customX();
             pc.customY              = panel.customY();
-            pc.customWidth          = panel.customWidth();
-            pc.customHeightLines    = panel.customHeightLines();
-            pc.customScale          = panel.customScale();
+            pc.customWidth                = panel.customWidth();
+            pc.customHeightLines          = panel.customHeightLines();
+            pc.customUnfocusedHeightLines = panel.customUnfocusedHeightLines();
+            pc.lockUnfocusedToFocused     = panel.lockUnfocusedToFocused();
+            pc.customScale                = panel.customScale();
             pc.bgColor              = panel.bgColor();
             pc.customBgOpacity      = panel.customBgOpacity();
             pc.customChatOpacity    = panel.customChatOpacity();
@@ -167,6 +169,8 @@ public class MultichatClient implements ClientModInitializer {
         panel.setCustomY(pc.customY);
         panel.setCustomWidth(pc.customWidth);
         panel.setCustomHeightLines(pc.customHeightLines);
+        panel.setCustomUnfocusedHeightLines(pc.customUnfocusedHeightLines);
+        panel.setLockUnfocusedToFocused(pc.lockUnfocusedToFocused);
         panel.setCustomScale(pc.customScale);
         panel.setBgColor(pc.bgColor);
         panel.setCustomBgOpacity(pc.customBgOpacity);

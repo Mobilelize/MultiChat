@@ -51,6 +51,7 @@ public class ChatRenderer {
         RIGHT.setEnabled(true);
         RIGHT.setId(1);
         RIGHT.setName("Second Panel");
+        RIGHT.setLockUnfocusedToFocused(false);
         PANELS.add(RIGHT);
     }
 
@@ -129,7 +130,7 @@ public class ChatRenderer {
             double bgOpacity     = panel.resolveBgOpacity();
             int lineHeight       = panel.resolveLineHeight();
             int textOffset       = (int) Math.round(-8.0 * (lineSpacing + 1.0) + 4.0 * lineSpacing);
-            int visibleLineCount = panel.resolveLines();
+            int visibleLineCount = panel.resolveLines(focused);
             int topY             = panel.resolveTopY(windowHeight);
             int xOffset          = panel.computeXOffset(windowWidth);
 

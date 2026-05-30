@@ -68,9 +68,11 @@ public class MultiChatConfig extends LzConfig {
         public boolean tabsAtTop           = false;
         public float   customX             = 0f;
         public float   customY             = 0f;
-        public int     customWidth         = -1;
-        public int     customHeightLines   = -1;
-        public float   customScale         = -1f;
+        public int     customWidth                = -1;
+        public int     customHeightLines          = -1;
+        public int     customUnfocusedHeightLines = -1;
+        public boolean lockUnfocusedToFocused     = true;
+        public float   customScale                = -1f;
         public int     bgColor             = 0;
         public double  customBgOpacity     = -1;
         public double  customChatOpacity   = -1;

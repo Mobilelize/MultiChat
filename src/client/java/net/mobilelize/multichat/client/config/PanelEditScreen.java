@@ -103,8 +103,20 @@ public class PanelEditScreen {
 
             position.addEntry(eb.startIntField(LzText.literal("Custom Height Lines").mc(), panel.customHeightLines())
                 .setDefaultValue(-1)
-                .setTooltip(LzText.literal("Visible line count. -1 = use MC default.").mc())
+                .setTooltip(LzText.literal("Visible line count when focused. -1 = use MC default.").mc())
                 .setSaveConsumer(panel::setCustomHeightLines)
+                .build());
+
+            position.addEntry(eb.startBooleanToggle(LzText.literal("Lock Unfocused to Focused").mc(), panel.lockUnfocusedToFocused())
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When ON, unfocused height matches focused height. Turn OFF to set a separate unfocused line count.").mc())
+                .setSaveConsumer(panel::setLockUnfocusedToFocused)
+                .build());
+
+            position.addEntry(eb.startIntField(LzText.literal("Unfocused Height Lines").mc(), panel.customUnfocusedHeightLines())
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("Line count when chat is closed. Only used when Lock Unfocused to Focused is OFF. -1 = same as focused.").mc())
+                .setSaveConsumer(panel::setCustomUnfocusedHeightLines)
                 .build());
 
             position.addEntry(eb.startDoubleField(LzText.literal("Custom Scale").mc(),
