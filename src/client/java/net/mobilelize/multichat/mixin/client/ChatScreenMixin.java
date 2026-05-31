@@ -19,6 +19,7 @@ import net.mobilelize.multichat.client.ContextMenu;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MessageContextMenu;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
@@ -40,6 +41,14 @@ public abstract class ChatScreenMixin {
 
     @Shadow public abstract String normalize(String chatText);
     @Shadow protected TextFieldWidget chatField;
+
+    @Inject(method = "init()V", at = @At("RETURN"))
+    private void onInit(CallbackInfo ci) {
+        if (MultichatClient.pendingChatText != null) {
+            chatField.setText(MultichatClient.pendingChatText);
+            MultichatClient.pendingChatText = null;
+        }
+    }
 
     @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("RETURN"))
     private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
@@ -118,6 +127,16 @@ public abstract class ChatScreenMixin {
             String selText = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", "").trim() : "";
             LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
+            cir.setReturnValue(true);
+            return;
+        }
+
+        if (MultichatClient.CONFIG.quickActionKeybindEnabled
+                && keyCode == MultichatClient.CONFIG.quickActionKeybindKey
+                && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || (modifiers & 2) != 0)) {
+            String sel = ChatSelection.hasSelection()
+                ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
+            LzClient.mc().setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
             cir.setReturnValue(true);
             return;
         }

@@ -42,6 +42,22 @@ public class MultiChatConfig extends LzConfig {
     public boolean panelContextEnabled    = true;
     public boolean logApiMessages         = true;
 
+    // Quick Actions
+    public boolean quickActionPasteToChat        = false;
+    public boolean quickActionKeybindEnabled     = true;
+    public int     quickActionKeybindKey         = 81; // GLFW_KEY_Q
+    public boolean quickActionKeybindRequireCtrl = true;
+    public java.util.List<QuickActionConfig> quickActions = newDefaultQuickActions();
+
+    private static java.util.List<QuickActionConfig> newDefaultQuickActions() {
+        var list = new java.util.ArrayList<QuickActionConfig>();
+        var def  = new QuickActionConfig();
+        def.name     = "Tell Hello";
+        def.template = "/tell {selected} Hello";
+        list.add(def);
+        return list;
+    }
+
     // Search
     public boolean      searchKeybindEnabled      = true;
     public int          searchKeybindKey          = 70;  // GLFW_KEY_F
@@ -118,6 +134,11 @@ public class MultiChatConfig extends LzConfig {
         public boolean contextCommandMode = true;
         public List<RuleConfig> whitelist = new ArrayList<>();
         public List<RuleConfig> blacklist = new ArrayList<>();
+    }
+
+    public static class QuickActionConfig {
+        public String name     = "";
+        public String template = "";
     }
 
     public static class RuleConfig {

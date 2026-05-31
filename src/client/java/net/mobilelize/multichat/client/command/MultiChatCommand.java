@@ -18,6 +18,8 @@ import net.mobilelize.multichat.client.config.PanelLayoutScreen;
 import net.mobilelize.multichat.client.config.PanelListScreen;
 import net.mobilelize.multichat.client.config.TabEditScreen;
 import net.mobilelize.multichat.client.config.TabListScreen;
+import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
+import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
@@ -54,6 +56,16 @@ public class MultiChatCommand {
                         LzClient.send(() -> LzClient.mc().setScreen(ConfigMenu.create(null)));
                         return 1;
                     }))
+                .then(literal("quickactions")
+                    .executes(ctx -> {
+                        LzClient.send(() -> LzClient.mc().setScreen(new QuickActionsOverlay(null, "")));
+                        return 1;
+                    })
+                    .then(literal("edit")
+                        .executes(ctx -> {
+                            LzClient.send(() -> LzClient.mc().setScreen(new QuickActionsEditScreen(null)));
+                            return 1;
+                        })))
                 .then(literal("context")
                     .executes(ctx -> {
                         ChatRenderer.contextTab = null;

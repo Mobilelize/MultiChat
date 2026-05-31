@@ -266,6 +266,47 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.searchDefaultCollapseIdentical = v)
                 .build());
 
+        // ── Quick Actions ─────────────────────────────────────────────────────
+        ConfigCategory quickActions = builder.getOrCreateCategory(LzText.literal("Quick Actions").mc());
+
+        quickActions.addEntry(eb.startBooleanToggle(
+                LzText.literal("Paste to Chat Instead of Run").mc(),
+                MultichatClient.CONFIG.quickActionPasteToChat)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("When on, Quick Actions paste the command into the chat field instead of sending it immediately.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.quickActionPasteToChat = v)
+                .build());
+
+        quickActions.addEntry(eb.startBooleanToggle(
+                LzText.literal("Enable Keybind").mc(),
+                MultichatClient.CONFIG.quickActionKeybindEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Open the Quick Actions overlay via keybind while in chat.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.quickActionKeybindEnabled = v)
+                .build());
+
+        quickActions.addEntry(eb.startKeyCodeField(
+                LzText.literal("Quick Action Key").mc(),
+                LzInputUtil.fromKeyCode(MultichatClient.CONFIG.quickActionKeybindKey, 0))
+                .setDefaultValue(LzInputUtil.fromKeyCode(81, 0))
+                .setAllowModifiers(false)
+                .setTooltip(LzText.literal("Key to open Quick Actions (default: Q, combine with Require Ctrl for Ctrl+Q).").mc())
+                .setKeySaveConsumer(key -> MultichatClient.CONFIG.quickActionKeybindKey = key.getCode())
+                .build());
+
+        quickActions.addEntry(eb.startBooleanToggle(
+                LzText.literal("Require Ctrl").mc(),
+                MultichatClient.CONFIG.quickActionKeybindRequireCtrl)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When on, Ctrl must be held with the Quick Action key.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.quickActionKeybindRequireCtrl = v)
+                .build());
+
+        quickActions.addEntry(eb.startTextDescription(LzText.format(
+                "&7To add, edit, or remove actions, open &fMultiChat Tabs → Quick Actions&7.\n" +
+                "Templates support &e{selected}&7 — replaced with your selected chat text at run time."
+        ).mc()).build());
+
         // ── Help ──────────────────────────────────────────────────────────
         ConfigCategory help = builder.getOrCreateCategory(LzText.literal("Help").mc());
 

@@ -14,6 +14,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.Collections;
@@ -67,9 +68,10 @@ public class TabListScreen extends LzScreen {
         this.addSelectableChild(nameField);
 
         addDrawableChild(LzButton.of("Add",      width / 2 + 62,  height - 50, 40, 20, b -> addTab()));
-        addDrawableChild(LzButton.of("Panels",   width / 2 - 102, height - 26, 62, 20, b -> LzClient.mc().setScreen(new PanelListScreen(this))));
-        addDrawableChild(LzButton.of("Settings", width / 2 - 36,  height - 26, 72, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
-        addDrawableChild(LzButton.of("Done",     width / 2 + 40,  height - 26, 62, 20, b -> close()));
+        addDrawableChild(LzButton.of("Panels",        width / 2 - 102, height - 26, 62, 20, b -> LzClient.mc().setScreen(new PanelListScreen(this))));
+        addDrawableChild(LzButton.of("Settings",      width / 2 - 36,  height - 26, 72, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
+        addDrawableChild(LzButton.of("Done",          width / 2 + 40,  height - 26, 62, 20, b -> close()));
+        addDrawableChild(LzButton.of("Quick Actions", 4,               height - 26, 90, 20, b -> LzClient.mc().setScreen(new QuickActionsEditScreen(this))));
     }
 
     private void addTab() {

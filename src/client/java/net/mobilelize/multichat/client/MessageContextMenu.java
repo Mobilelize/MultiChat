@@ -8,6 +8,7 @@ import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
 import java.util.ArrayList;
@@ -40,7 +41,9 @@ public class MessageContextMenu {
     private static List<String> buildItems(ChatPanel panel) {
         List<String> list = new ArrayList<>();
         list.add("Copy");
+        if (ChatSelection.hasSelection()) list.add("Copy Selected");
         list.add("Search for this");
+        if (ChatSelection.hasSelection()) list.add("Quick Actions...");
         ChatTab active = panel.getActiveTab();
         if (active != null && active.type() != TabType.ALL) list.add("Jump to All");
         if (active != null && active.type() != TabType.ALL) list.add("Delete message");
@@ -99,11 +102,20 @@ public class MessageContextMenu {
                 LzClient.setClipboard(text);
                 flashGreen(line, sourcePanel);
             }
+            case "Copy Selected" -> {
+                String sel = ChatSelection.getSelectedText().replaceAll("\n", " ").trim();
+                LzClient.setClipboard(sel);
+            }
             case "Search for this" -> {
                 String text = ChatSelection.hasSelection()
                     ? ChatSelection.getSelectedText().replaceAll("\n", "").trim()
                     : extractFullMessage(line, sourcePanel).trim();
                 LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, text));
+            }
+            case "Quick Actions..." -> {
+                String sel = ChatSelection.hasSelection()
+                    ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
+                LzClient.mc().setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
             }
             case "Jump to All" -> jumpToAll();
             case "Delete message" -> deleteMessage(sourcePanel);
