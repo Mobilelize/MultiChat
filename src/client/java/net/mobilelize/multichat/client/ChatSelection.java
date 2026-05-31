@@ -136,6 +136,61 @@ public class ChatSelection {
         return idx;
     }
 
+    // -----------------------------------------------------------------------
+    // Word selection
+    // -----------------------------------------------------------------------
+
+    /**
+     * Sets selection to the word at charIdx on lineIdx.
+     * nameSelect=true: word chars are [a-zA-Z0-9_] (browser default).
+     * nameSelect=false: word chars are any non-whitespace (token mode).
+     */
+    public static void selectWord(ChatPanel panel, int lineIdx, int charIdx, boolean nameSelect) {
+        ChatTab tab = panel.getActiveTab();
+        if (tab == null) return;
+        List<LzChatLine> msgs = ChatRenderer.getMessages(panel, tab);
+        if (lineIdx < 0 || lineIdx >= msgs.size()) return;
+        LzOrderedText content = msgs.get(lineIdx).content();
+        int[] bounds = wordBoundaries(content, charIdx, nameSelect);
+        if (bounds[0] == bounds[1]) return;
+        selPanel   = panel;
+        anchorLine = lineIdx;
+        anchorChar = bounds[0];
+        cursorLine = lineIdx;
+        cursorChar = bounds[1];
+        selecting  = false;
+    }
+
+    /** Returns {wordStart, wordEnd} char indices for the word containing charIdx. */
+    public static int[] wordBoundaries(LzOrderedText text, int charIdx, boolean nameSelect) {
+        int[] codepoints = collectCodepoints(text);
+        if (codepoints.length == 0) return new int[]{0, 0};
+        int idx = Math.min(charIdx, codepoints.length - 1);
+
+        if (!isWordChar(codepoints[idx], nameSelect)) return new int[]{charIdx, charIdx};
+
+        int start = idx;
+        while (start > 0 && isWordChar(codepoints[start - 1], nameSelect)) start--;
+
+        int end = idx;
+        while (end < codepoints.length && isWordChar(codepoints[end], nameSelect)) end++;
+
+        return new int[]{start, end};
+    }
+
+    private static boolean isWordChar(int cp, boolean nameSelect) {
+        if (nameSelect) return Character.isLetterOrDigit(cp) || cp == '_';
+        return !Character.isWhitespace(cp);
+    }
+
+    private static int[] collectCodepoints(LzOrderedText text) {
+        java.util.List<Integer> list = new java.util.ArrayList<>();
+        text.lzAccept((idx, style, cp) -> { list.add(cp); return true; });
+        int[] arr = new int[list.size()];
+        for (int i = 0; i < arr.length; i++) arr[i] = list.get(i);
+        return arr;
+    }
+
     public static int charIndexAtX(LzOrderedText text, float targetX) {
         if (targetX <= 0f) return 0;
         int[]   count = {0};

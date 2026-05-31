@@ -218,7 +218,44 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.selectionEnabled && button == 0) {
-            for (ChatPanel panel : ChatRenderer.PANELS) {
+            long now = System.currentTimeMillis();
+            boolean isDoubleClick = MultichatClient.CONFIG.doubleClickSelectEnabled
+                && now - lastClickTime < 400
+                && Math.abs(mouseX - lastClickX) < 4
+                && Math.abs(mouseY - lastClickY) < 4;
+
+            if (isDoubleClick) {
+                lastClickTime = 0;
+                for (ChatPanel panel : ChatRenderer.PANELS) {
+                    if (!panel.enabled()) continue;
+                    float scale = panel.resolveScale();
+                    int chatWidth = panel.resolveWidth();
+                    int lineH = panel.resolveLineHeight();
+                    int visibleLineCount = panel.resolveLines();
+                    int topY = panel.resolveTopY(windowHeight);
+                    if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLineCount)) continue;
+                    ChatTab active = panel.getActiveTab();
+                    if (active == null || !active.hasMessages()) continue;
+
+                    int xOff = panel.computeXOffset(windowWidth);
+                    int exactIdx = ChatSelection.hitLine(panel, mouseX, mouseY,
+                        visibleLineCount, scale, lineH, windowHeight, chatWidth, xOff);
+                    if (exactIdx < 0) continue;
+
+                    float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
+                    int charIdx  = ChatSelection.charIndexAtX(
+                        ChatRenderer.getMessages(panel, active).get(exactIdx).content(), localX);
+                    ChatSelection.selectWord(panel, exactIdx, charIdx, MultichatClient.CONFIG.doubleClickNameSelect);
+                    cir.setReturnValue(true);
+                    return;
+                }
+            } else {
+                lastClickX    = mouseX;
+                lastClickY    = mouseY;
+                lastClickTime = now;
+            }
+
+            if (!isDoubleClick) for (ChatPanel panel : ChatRenderer.PANELS) {
                 if (!panel.enabled()) continue;
                 float scale = panel.resolveScale();
                 int chatWidth = panel.resolveWidth();
@@ -349,6 +386,10 @@ public abstract class ChatScreenMixin {
             }
         }
     }
+
+    @Unique private static double lastClickX    = -1;
+    @Unique private static double lastClickY    = -1;
+    @Unique private static long   lastClickTime = 0;
 
     @Unique
     private static boolean isMouseInMessageArea(ChatPanel panel, double mouseY,

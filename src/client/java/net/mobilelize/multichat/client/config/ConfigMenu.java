@@ -139,6 +139,22 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.selectionCtrlSkipsClicks = v)
                 .build());
 
+        selection.addEntry(eb.startBooleanToggle(
+                LzText.literal("Double Click Word Select").mc(),
+                MultichatClient.CONFIG.doubleClickSelectEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Double-click a word in chat to select it.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.doubleClickSelectEnabled = v)
+                .build());
+
+        selection.addEntry(eb.startBooleanToggle(
+                LzText.literal("Double Click Name Select").mc(),
+                MultichatClient.CONFIG.doubleClickNameSelect)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("ON: selects letters/digits/underscores only — double-clicking inside <Player> selects Player. OFF: selects the whole non-whitespace token — <Player> is selected as one unit.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.doubleClickNameSelect = v)
+                .build());
+
         // ── Advanced ──────────────────────────────────────────────────────
         ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
 

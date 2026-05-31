@@ -20,7 +20,8 @@ public class PanelLayoutScreen extends LzScreen {
 
     private static final int GRID_SIZE      = 8;
     private static final int EDGE_GRAB      = 7;   // px from edge that counts as resize hit
-    private static final int OUTER_PAD      = 4;   // px the outer outline extends left/right
+    private static final int OUTER_PAD      = 4;   // px the outer outline extends left
+    private static final int OUTER_PAD_R   = 8;   // px the outer outline extends right
     private static final int WALL_SNAP_DIST = 24;  // px from wall-anchor center that triggers wall snap
 
     private enum ResizeDir { WIDTH, HEIGHT }
@@ -173,7 +174,7 @@ public class PanelLayoutScreen extends LzScreen {
 
             // Outer border extends left/right to show true rendered panel extent
             int outerCol = panel.primary() ? 0x55446699 : 0x55FF8800;
-            LzDraw.drawBorder(ctx, x1 - OUTER_PAD, y1, x2 + OUTER_PAD, y2, outerCol);
+            LzDraw.drawBorder(ctx, x1 - OUTER_PAD, y1, x2 + OUTER_PAD_R, y2, outerCol);
 
             if (panel.primary()) {
                 LzDraw.fill(ctx, x1, y1, x2, y2, 0x1A4488FF);
@@ -220,10 +221,10 @@ public class PanelLayoutScreen extends LzScreen {
                     int lineY  = unfocusedLineScreenY(panel);
                     boolean hovLine = unfocusedLineDragging == panel
                         || (dragging == null && resizing == null && unfocusedLineDragging == null
-                            && mouseX >= x1 - OUTER_PAD && mouseX <= x2 + OUTER_PAD
+                            && mouseX >= x1 - OUTER_PAD && mouseX <= x2 + OUTER_PAD_R
                             && Math.abs(mouseY - lineY) <= EDGE_GRAB);
                     int lineCol = hovLine ? 0xFF44FF88 : 0x8844FF88;
-                    LzDraw.fill(ctx, x1 - OUTER_PAD, lineY - 1, x2 + OUTER_PAD, lineY + 1, lineCol);
+                    LzDraw.fill(ctx, x1 - OUTER_PAD, lineY - 1, x2 + OUTER_PAD_R, lineY + 1, lineCol);
                     int ufLines = Math.min(
                         panel.customUnfocusedHeightLines() > 0 ? panel.customUnfocusedHeightLines() : unfocusedMcLines(panel),
                         focusedLines(panel));
@@ -270,7 +271,7 @@ public class PanelLayoutScreen extends LzScreen {
             if (panel.primary() || !panel.enabled() || panel.lockUnfocusedToFocused()) continue;
             int[] b = bounds(panel);
             int lineY = unfocusedLineScreenY(panel);
-            if (mouseX >= b[0] - OUTER_PAD && mouseX <= b[2] + OUTER_PAD
+            if (mouseX >= b[0] - OUTER_PAD && mouseX <= b[2] + OUTER_PAD_R
                     && Math.abs(mouseY - lineY) <= EDGE_GRAB) {
                 unfocusedLineDragging = panel;
                 return true;

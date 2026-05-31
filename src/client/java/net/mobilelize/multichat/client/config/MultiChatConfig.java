@@ -26,8 +26,10 @@ public class MultiChatConfig extends LzConfig {
     public boolean applySettingsOnRefilter = true;
     public boolean modDisabled             = false;
     public boolean showIndicators          = true;
-    public boolean selectionEnabled        = true;
-    public boolean selectionCtrlSkipsClicks = true;
+    public boolean selectionEnabled          = true;
+    public boolean selectionCtrlSkipsClicks  = true;
+    public boolean doubleClickSelectEnabled  = true;
+    public boolean doubleClickNameSelect     = true;
     public String  timestampFormat         = "&d[&6HH&d:&6mm&d:&6ss&d]";
     public String  collapseCounterFormat  = "&e(x{count})";
     public boolean arrowKeySwitchTabs      = true;
