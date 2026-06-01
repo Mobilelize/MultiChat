@@ -321,6 +321,15 @@ public class ConfigMenu {
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
+            "&e&lTab List Indicators&r\n" +
+            "&7Shown after the tab name in the Tabs list screen.\n" +
+            "  &fWL:n&r&7 — whitelist rule count   &fBL:n&r&7 — blacklist rule count\n" +
+            "  &fT&r&7 — timestamps on   &fC&r&7 — collapse repeating on\n" +
+            "  &fD&r&7 — difference mode on (layer 0)   &fD5&r&7 / &fD-2&r&7 — difference mode, non-zero layer\n" +
+            "  &fE&r&7 — difference exception on   &fB&r&7 — badge hidden   &fP&r&7 — context prefix set"
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
             "&e&lPanels&r\n" +
             "&7Panels are independent chat windows. The &fmain panel&r&7 is always on the left.\n" +
             "Additional panels can be positioned anywhere on screen.\n" +
@@ -342,15 +351,17 @@ public class ConfigMenu {
 
         help.addEntry(eb.startTextDescription(LzText.format(
             "&e&lDifference Mode&r\n" +
-            "&7A filtered tab with &fDifference Mode&r&7 on acts as a catch-all for unmatched messages.\n" +
-            "When active, it receives any message that &fnone&r&7 of the other currently active panel tabs received.\n" +
-            "Rules:\n" +
-            "  &f•&r&7 Exactly &fone&r&7 active tab (the tab shown on a panel) may have Difference Mode enabled.\n" +
-            "    If zero or two or more active tabs have it on, the feature does nothing.\n" +
-            "  &f•&r&7 The check is against the &factive tab per panel&r&7 only — not all tabs in the list.\n" +
-            "  &f•&r&7 Other tabs still receive their matched messages as normal.\n" +
-            "Typical use: put your filters on other tabs, put a Difference tab on a second panel\n" +
-            "to catch everything that slipped through."
+            "&7Routes messages through a priority pipeline based on the active tab on each enabled panel.\n" +
+            "  &fLayer index&r&7 — higher number = higher priority. Tabs at the same index share a layer.\n" +
+            "  &fPipeline order&r&7 — highest layer checked first. If any tab at that layer matches,\n" +
+            "    all matching tabs at that layer receive the message and the pipeline stops.\n" +
+            "    Lower layers never see that message.\n" +
+            "  &fNon-diff tab wins&r&7 — if the active tab on any panel is a normal (non-diff) filtered tab\n" +
+            "    and it matches, the entire diff pipeline is suppressed.\n" +
+            "  &fDifference Exception&r&7 — tab receives messages normally but never blocks the pipeline.\n" +
+            "    Other diff tabs are unaffected by what an exception tab matches.\n" +
+            "Layers use the &factive tab per panel&r&7 — switching panels changes which tabs participate.\n" +
+            "Negative layer indices are allowed (useful for low-priority catch-all tabs)."
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(

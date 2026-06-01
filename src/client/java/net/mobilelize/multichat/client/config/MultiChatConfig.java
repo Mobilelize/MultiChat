@@ -106,7 +106,9 @@ public class MultiChatConfig extends LzConfig {
 
     public static class TabConfig {
         public String name = "";
-        public boolean differenceMode    = false;
+        public boolean differenceMode       = false;
+        public int     differenceLayerIndex = 0;
+        public boolean differenceException  = false;
         public boolean showBadge         = true;
         public boolean showTimestamps    = false;
         public int     tabColor          = 0;

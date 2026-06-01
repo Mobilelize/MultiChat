@@ -224,12 +224,16 @@ public class TabListScreen extends LzScreen {
                 LzDraw.drawText(ctx, blStr, infoX, textY, blCount > 0 ? 0xFFFF8888 : 0xFF666666);
                 infoX += LzDraw.textWidth(blStr);
 
-                // Settings flags: T=timestamps C=collapse D=diff B=badge-off P=prefix
+                // Settings flags: T=timestamps C=collapse D=diff E=exception B=badge-off P=prefix
                 StringBuilder flags = new StringBuilder();
-                if (tab.showTimestamps())          flags.append("T");
-                if (tab.collapseRepeating())       flags.append("C");
-                if (tab.differenceMode())          flags.append("D");
-                if (!tab.showBadge())              flags.append("B");
+                if (tab.showTimestamps())           flags.append("T");
+                if (tab.collapseRepeating())        flags.append("C");
+                if (tab.differenceMode()) {
+                    flags.append("D");
+                    if (tab.differenceLayerIndex() != 0) flags.append(tab.differenceLayerIndex());
+                }
+                if (tab.differenceException())      flags.append("E");
+                if (!tab.showBadge())               flags.append("B");
                 if (!tab.contextPrefix().isEmpty()) flags.append("P");
                 if (!flags.isEmpty())
                     LzDraw.drawText(ctx, "  " + flags, infoX, textY, 0xFF9999CC);

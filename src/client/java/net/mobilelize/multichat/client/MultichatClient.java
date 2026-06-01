@@ -86,6 +86,8 @@ public class MultichatClient implements ClientModInitializer {
             TabConfig tc               = new TabConfig();
             tc.name                    = tab.name();
             tc.differenceMode          = tab.differenceMode();
+            tc.differenceLayerIndex    = tab.differenceLayerIndex();
+            tc.differenceException     = tab.differenceException();
             tc.showBadge               = tab.showBadge();
             tc.showTimestamps          = tab.showTimestamps();
             tc.tabColor                = tab.tabColor();
@@ -198,6 +200,8 @@ public class MultichatClient implements ClientModInitializer {
         for (TabConfig tc : CONFIG.tabs) {
             ChatTab tab = new ChatTab(tc.name, TabType.FILTERED, new java.util.LinkedHashSet<>(tc.visibleOnPanels));
             tab.setDifferenceMode(tc.differenceMode);
+            tab.setDifferenceLayerIndex(tc.differenceLayerIndex);
+            tab.setDifferenceException(tc.differenceException);
             tab.setShowBadge(tc.showBadge);
             tab.setShowTimestamps(tc.showTimestamps);
             tab.setTabColor(tc.tabColor);

@@ -56,6 +56,8 @@ public class ChatTab {
     private final Set<Integer> visibleOnPanels         = new LinkedHashSet<>();
     private final FilterRuleSet filterRules            = new FilterRuleSet();
     private boolean            differenceMode          = false;
+    private int                differenceLayerIndex    = 0;
+    private boolean            differenceException     = false;
     private boolean            showBadge               = true;
     private boolean            showTimestamps          = false;
     private int                tabColor                = 0;
@@ -99,6 +101,10 @@ public class ChatTab {
     // ── Display settings ───────────────────────────────────────────────────────
     public boolean differenceMode()                      { return differenceMode; }
     public void    setDifferenceMode(boolean v)          { differenceMode = v; }
+    public int     differenceLayerIndex()                { return differenceLayerIndex; }
+    public void    setDifferenceLayerIndex(int v)        { differenceLayerIndex = v; }
+    public boolean differenceException()                 { return differenceException; }
+    public void    setDifferenceException(boolean v)     { differenceException = v; }
     public boolean showBadge()                           { return showBadge; }
     public void    setShowBadge(boolean v)               { showBadge = v; }
     public boolean showTimestamps()                      { return showTimestamps; }

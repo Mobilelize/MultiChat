@@ -46,16 +46,13 @@ public class MessageRouter {
             if (active != null) panelActiveTabs.add(active);
         }
 
-        // Difference mode: exactly one active tab has differenceMode=true.
-        // That tab only receives messages that no other active tab received.
-        ChatTab diffTab = null;
-        int diffCount = 0;
+        // Difference pipeline: one active tab per enabled panel. If that tab has diffMode + no exception,
+        // it enters the pipeline. Highest layer = highest priority. First layer with any match claims it.
+        java.util.TreeMap<Integer, List<ChatTab>> diffByLayer = new java.util.TreeMap<>(java.util.Comparator.reverseOrder());
         for (ChatTab tab : panelActiveTabs) {
-            if (tab.type() == TabType.FILTERED && tab.differenceMode()) { diffTab = tab; diffCount++; }
+            if (tab.type() == TabType.FILTERED && tab.differenceMode() && !tab.differenceException())
+                diffByLayer.computeIfAbsent(tab.differenceLayerIndex(), k -> new ArrayList<>()).add(tab);
         }
-        if (diffCount != 1) diffTab = null;
-
-        boolean anyOtherActiveReceived = false;
 
         LzText effectiveLzText = rawLzText != null ? rawLzText : content;
 
@@ -69,18 +66,14 @@ public class MessageRouter {
                 case ALL -> addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case FILTERED -> {
-                    if (tab == diffTab) break; // handled after first pass
-                    if (tab.filterRules().matches(fullText, indicator)) {
+                    if (tab.differenceMode() && !tab.differenceException()) break; // handled by diff pipeline below
+                    if (tab.filterRules().matches(fullText, indicator))
                         addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
-                        if (diffTab != null && panelActiveTabs.contains(tab)) anyOtherActiveReceived = true;
-                    }
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
-                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(fullText, indicator)) {
+                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(fullText, indicator))
                         addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
-                        if (diffTab != null && panelActiveTabs.contains(tab)) anyOtherActiveReceived = true;
-                    }
                 }
                 case SEARCH -> {
                     SearchTab st = (SearchTab) tab;
@@ -129,8 +122,29 @@ public class MessageRouter {
             }
         }
 
-        if (diffTab != null && !anyOtherActiveReceived && diffTab.filterRules().matches(fullText, indicator)) {
-            addLines(diffTab, tick, content, indicator, lines, rawLzText, sharedEntry);
+        // Step 1: if any active non-diff non-exception tab matched, diff pipeline is suppressed entirely.
+        boolean activeNonDiffMatched = false;
+        for (ChatTab tab : panelActiveTabs) {
+            if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
+                    && tab.filterRules().matches(fullText, indicator)) {
+                activeNonDiffMatched = true;
+                break;
+            }
+        }
+
+        // Step 2: walk diff layers highest-to-lowest. First layer with any match claims the message;
+        // all matching tabs at that layer receive it, then pipeline stops.
+        if (!activeNonDiffMatched) {
+            for (List<ChatTab> layerTabs : diffByLayer.values()) {
+                boolean anyMatched = false;
+                for (ChatTab tab : layerTabs) {
+                    if (tab.filterRules().matches(fullText, indicator)) {
+                        addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
+                        anyMatched = true;
+                    }
+                }
+                if (anyMatched) break;
+            }
         }
     }
 
@@ -331,13 +345,13 @@ public class MessageRouter {
         if (allTab == null || !allTab.hasMessages()) return;
         List<LzChatLine> all = allTab.messages();
 
-        long diffCount2 = tab.differenceMode()
-            ? ChatRenderer.TABS.stream().filter(t -> t.type() == TabType.FILTERED && t.differenceMode()).count()
-            : 0;
-        boolean effectiveDiff = tab.differenceMode() && diffCount2 == 1;
-        List<ChatTab> otherFiltered = effectiveDiff
+        boolean effectiveDiff = tab.differenceMode() && !tab.differenceException();
+        // Higher-layer diff tabs (exception tabs excluded) that claim messages before this tab.
+        List<ChatTab> higherLayerDiffTabs = effectiveDiff
             ? ChatRenderer.TABS.stream()
-                .filter(t -> t.type() == TabType.FILTERED && !t.differenceMode())
+                .filter(t -> t != tab && t.type() == TabType.FILTERED && t.differenceMode()
+                          && !t.differenceException()
+                          && t.differenceLayerIndex() > tab.differenceLayerIndex())
                 .toList()
             : List.of();
 
@@ -365,9 +379,9 @@ public class MessageRouter {
 
             boolean include;
             if (effectiveDiff) {
-                boolean matchedOther = otherFiltered.stream()
+                boolean claimedByHigherLayer = higherLayerDiffTabs.stream()
                     .anyMatch(ft -> ft.filterRules().matches(fullText, indicator));
-                include = !matchedOther && tab.filterRules().matches(fullText, indicator);
+                include = !claimedByHigherLayer && tab.filterRules().matches(fullText, indicator);
             } else {
                 include = tab.filterRules().matches(fullText, indicator);
             }

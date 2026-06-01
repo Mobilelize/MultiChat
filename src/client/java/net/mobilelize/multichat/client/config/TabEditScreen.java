@@ -92,13 +92,6 @@ public class TabEditScreen {
                 .build());
         }
 
-        if (tab.type() == TabType.FILTERED) {
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode())
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Catch-all: receives messages no other active panel tab received. Only works when exactly one active tab has this enabled.").mc())
-                .setSaveConsumer(tab::setDifferenceMode)
-                .build());
-        }
 
         if (tab.type() == TabType.FILTERED || tab.type() == TabType.API) {
             settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Badge").mc(), tab.showBadge())
@@ -135,6 +128,36 @@ public class TabEditScreen {
         }
 
         if (tab.type() != TabType.FILTERED && tab.type() != TabType.API) return builder.build();
+
+        // ── Difference Mode ────────────────────────────────────────────────
+        if (tab.type() == TabType.FILTERED) {
+            ConfigCategory diffCat = builder.getOrCreateCategory(LzText.literal("Difference Mode").mc());
+
+            diffCat.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Routes messages through a layered pipeline. Lower-index layers claim messages first.").mc())
+                .setSaveConsumer(tab::setDifferenceMode)
+                .build());
+
+            diffCat.addEntry(eb.startIntField(LzText.literal("Difference Layer").mc(), tab.differenceLayerIndex())
+                .setDefaultValue(0)
+                .setTooltip(LzText.literal("Layer index. Higher = higher priority. All matching tabs at the same index receive the message together. Negative numbers allowed.").mc())
+                .setSaveConsumer(tab::setDifferenceLayerIndex)
+                .build());
+
+            diffCat.addEntry(eb.startBooleanToggle(LzText.literal("Difference Exception").mc(), tab.differenceException())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("This tab receives messages normally but never blocks the pipeline. Other diff tabs are unaffected by what this tab matches.").mc())
+                .setSaveConsumer(tab::setDifferenceException)
+                .build());
+
+            diffCat.addEntry(eb.startTextDescription(LzText.format(
+                "&eExample&r: &aGuild&r layer &e2&r, &aTrade&r layer &e2&r, &6Other&r layer &e0\n" +
+                "&7Guild message matches &aGuild&7 (layer 2, highest) — both &aGuild&7 and &aTrade&7\n" +
+                "&7share layer 2, so &aGuild&7 gets it. &6Other&7 at layer 0 never sees it.\n" +
+                "&7A message matching neither layer-2 tab falls down to &6Other&7 at layer 0.").mc())
+                .build());
+        }
 
         // ── Whitelist ──────────────────────────────────────────────────────
         ConfigCategory wlCat = builder.getOrCreateCategory(LzText.literal("Whitelist").mc());
