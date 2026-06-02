@@ -44,6 +44,7 @@ public class ChatRenderer {
         LEFT.setEnabled(true);
         LEFT.setId(0);
         LEFT.setName("Main");
+        LEFT.setLockUnfocusedToFocused(false);
         PANELS.add(LEFT);
 
         RIGHT = new ChatPanel();

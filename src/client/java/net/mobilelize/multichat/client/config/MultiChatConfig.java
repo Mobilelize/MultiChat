@@ -93,7 +93,7 @@ public class MultiChatConfig extends LzConfig {
         public int     customWidth                = -1;
         public int     customHeightLines          = -1;
         public int     customUnfocusedHeightLines = -1;
-        public boolean lockUnfocusedToFocused     = true;
+        public boolean lockUnfocusedToFocused     = false;
         public float   customScale                = -1f;
         public int     bgColor             = 0;
         public double  customBgOpacity     = -1;
@@ -148,4 +148,8 @@ public class MultiChatConfig extends LzConfig {
         public String          value     = "";
         public IndicatorFilter indicator = IndicatorFilter.ANY;
     }
+
+    public static int pct(double v)    { return v < 0 ? -1 : Math.min(100, Math.max(0, (int) Math.round(v * 100))); }
+    public static int pct(float v)     { return v < 0 ? -1 : Math.min(100, Math.max(0, Math.round(v * 100))); }
+    public static double fromPct(int v) { return v < 0 ? -1.0 : v / 100.0; }
 }

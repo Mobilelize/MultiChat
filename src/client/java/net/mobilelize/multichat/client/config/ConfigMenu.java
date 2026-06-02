@@ -37,20 +37,20 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.showContextDisplay = v)
                 .build());
 
-        appearance.addEntry(eb.startDoubleField(
+        appearance.addEntry(eb.startIntSlider(
                 LzText.literal("Tab BG Opacity").mc(),
-                MultichatClient.CONFIG.tabBgOpacity)
-                .setDefaultValue(-1.0)
-                .setTooltip(LzText.literal("Default tab background opacity for all panels (0.0 = invisible, 1.0 = opaque). -1 = built-in default. Overridden per-panel in Panel Settings.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.tabBgOpacity = v)
+                MultiChatConfig.pct(MultichatClient.CONFIG.tabBgOpacity), -1, 100)
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("Default tab background opacity for all panels (0-100%). -1 = built-in default. Overridden per-panel in Panel Settings.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.tabBgOpacity = MultiChatConfig.fromPct(v))
                 .build());
 
-        appearance.addEntry(eb.startDoubleField(
+        appearance.addEntry(eb.startIntSlider(
                 LzText.literal("Tab Text Opacity").mc(),
-                MultichatClient.CONFIG.tabFgOpacity)
-                .setDefaultValue(-1.0)
-                .setTooltip(LzText.literal("Default tab text opacity for all panels (0.0 = invisible, 1.0 = opaque). -1 = built-in default. Overridden per-panel in Panel Settings.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.tabFgOpacity = v)
+                MultiChatConfig.pct(MultichatClient.CONFIG.tabFgOpacity), -1, 100)
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("Default tab text opacity for all panels (0-100%). -1 = built-in default. Overridden per-panel in Panel Settings.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.tabFgOpacity = MultiChatConfig.fromPct(v))
                 .build());
 
         appearance.addEntry(eb.startStrField(

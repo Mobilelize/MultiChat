@@ -68,16 +68,16 @@ public class PanelEditScreen {
             .setSaveConsumer(panel::setShowBadges)
             .build());
 
-        settings.addEntry(eb.startDoubleField(LzText.literal("Tab BG Opacity").mc(), panel.tabBgOpacity())
-            .setDefaultValue(-1.0)
-            .setTooltip(LzText.literal("Tab background opacity (0.0 = invisible, 1.0 = opaque). -1 = default.").mc())
-            .setSaveConsumer(panel::setTabBgOpacity)
+        settings.addEntry(eb.startIntSlider(LzText.literal("Tab BG Opacity").mc(), MultiChatConfig.pct(panel.tabBgOpacity()), -1, 100)
+            .setDefaultValue(-1)
+            .setTooltip(LzText.literal("Tab background opacity (0-100%). -1 = use default.").mc())
+            .setSaveConsumer(v -> panel.setTabBgOpacity(MultiChatConfig.fromPct(v)))
             .build());
 
-        settings.addEntry(eb.startDoubleField(LzText.literal("Tab Text Opacity").mc(), panel.tabFgOpacity())
-            .setDefaultValue(-1.0)
-            .setTooltip(LzText.literal("Tab text opacity (0.0 = invisible, 1.0 = opaque). -1 = default.").mc())
-            .setSaveConsumer(panel::setTabFgOpacity)
+        settings.addEntry(eb.startIntSlider(LzText.literal("Tab Text Opacity").mc(), MultiChatConfig.pct(panel.tabFgOpacity()), -1, 100)
+            .setDefaultValue(-1)
+            .setTooltip(LzText.literal("Tab text opacity (0-100%). -1 = use default.").mc())
+            .setSaveConsumer(v -> panel.setTabFgOpacity(MultiChatConfig.fromPct(v)))
             .build());
 
         settings.addEntry(eb.startBooleanToggle(LzText.literal("Active Tab as Context").mc(), panel.useActiveTabContext())
@@ -127,30 +127,30 @@ public class PanelEditScreen {
 
             position.addEntry(eb.startIntField(LzText.literal("Unfocused Height Lines").mc(), panel.customUnfocusedHeightLines())
                 .setDefaultValue(-1)
-                .setTooltip(LzText.literal("Line count when chat is closed. Only used when Lock Unfocused to Focused is OFF. -1 = same as focused.").mc())
+                .setTooltip(LzText.literal("Line count when chat is closed. Only used when Lock Unfocused to Focused is OFF. -1 = use MC default.").mc())
                 .setSaveConsumer(panel::setCustomUnfocusedHeightLines)
                 .build());
 
-            position.addEntry(eb.startDoubleField(LzText.literal("Custom Scale").mc(),
-                    panel.customScale() < 0 ? -1.0 : panel.customScale())
-                .setDefaultValue(-1.0)
-                .setTooltip(LzText.literal("Render scale. -1 = use MC default.").mc())
-                .setSaveConsumer(v -> panel.setCustomScale(v.floatValue()))
+            position.addEntry(eb.startIntSlider(LzText.literal("Custom Scale").mc(), MultiChatConfig.pct(panel.customScale()), -1, 100)
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("Render scale (0-100% where 100 = 1.0x). -1 = use MC default.").mc())
+                .setSaveConsumer(v -> panel.setCustomScale(v < 0 ? -1f : v / 100.0f))
                 .build());
 
-            position.addEntry(eb.startDoubleField(LzText.literal("BG Opacity").mc(), panel.customBgOpacity())
-                .setDefaultValue(-1.0)
-                .setTooltip(LzText.literal("Background opacity. -1 = use MC default.").mc())
-                .setSaveConsumer(panel::setCustomBgOpacity)
+            position.addEntry(eb.startIntSlider(LzText.literal("BG Opacity").mc(), MultiChatConfig.pct(panel.customBgOpacity()), -1, 100)
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("Background opacity (0-100%). -1 = use MC default.").mc())
+                .setSaveConsumer(v -> panel.setCustomBgOpacity(MultiChatConfig.fromPct(v)))
                 .build());
 
-            position.addEntry(eb.startDoubleField(LzText.literal("Chat Opacity").mc(), panel.customChatOpacity())
-                .setDefaultValue(-1.0)
-                .setTooltip(LzText.literal("Text opacity. -1 = use MC default.").mc())
-                .setSaveConsumer(panel::setCustomChatOpacity)
+            position.addEntry(eb.startIntSlider(LzText.literal("Text Opacity").mc(), MultiChatConfig.pct(panel.customChatOpacity()), -1, 100)
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("Text opacity (0-100%). -1 = use MC default.").mc())
+                .setSaveConsumer(v -> panel.setCustomChatOpacity(MultiChatConfig.fromPct(v)))
                 .build());
         }
 
         return builder.build();
     }
+
 }

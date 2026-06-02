@@ -146,6 +146,7 @@ public class MultichatClient implements ClientModInitializer {
         ChatRenderer.LEFT.setPrimary(true);
         ChatRenderer.LEFT.setEnabled(true);
         ChatRenderer.LEFT.setId(0);
+        ChatRenderer.LEFT.setLockUnfocusedToFocused(false);
 
         if (CONFIG.panels.size() >= 2) {
             applyPanelConfig(ChatRenderer.RIGHT, CONFIG.panels.get(1));

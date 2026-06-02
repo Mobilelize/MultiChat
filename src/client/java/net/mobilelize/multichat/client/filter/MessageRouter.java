@@ -122,13 +122,16 @@ public class MessageRouter {
             }
         }
 
-        // Step 1: if any active non-diff non-exception tab matched, diff pipeline is suppressed entirely.
+        // Step 1: if any active non-diff tab matched, diff pipeline is suppressed entirely.
         boolean activeNonDiffMatched = false;
         for (ChatTab tab : panelActiveTabs) {
             if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
                     && tab.filterRules().matches(fullText, indicator)) {
-                activeNonDiffMatched = true;
-                break;
+                activeNonDiffMatched = true; break;
+            }
+            if (tab.type() == TabType.API && !tab.filterRules().isEmpty()
+                    && tab.filterRules().matches(fullText, indicator)) {
+                activeNonDiffMatched = true; break;
             }
         }
 
