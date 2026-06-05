@@ -3,10 +3,14 @@ package net.mobilelize.multichat.client.config;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
+import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
 import net.minecraft.client.gui.screen.Screen;
+import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.input.LzInputUtil;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.config.MultiChatConfig;
+import net.mobilelize.multichat.client.ping.PingPlayer;
 
 public class ConfigMenu {
 
@@ -307,6 +311,125 @@ public class ConfigMenu {
                 "Templates support &e{selected}&7 — replaced with your selected chat text at run time."
         ).mc()).build());
 
+        // ── Sound Pings ───────────────────────────────────────────────────────
+        ConfigCategory pings = builder.getOrCreateCategory(LzText.literal("Sound Pings").mc());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Enable Sound Pings").mc(),
+                MultichatClient.CONFIG.pingEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Master switch for audio pings on chat messages. Each tab also needs its own toggle in Tab Edit → Sound Pings.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingEnabled = v)
+                .build());
+
+        pings.addEntry(eb.startDropdownMenu(
+                LzText.literal("Default Ping Sound").mc(),
+                DropdownMenuBuilder.TopCellElementBuilder.<String>of(MultichatClient.CONFIG.pingSound, s -> s),
+                DropdownMenuBuilder.CellCreatorBuilder.of())
+                .setDefaultValue("minecraft:entity.experience_orb.pickup")
+                .setSelections(PingPlayer.allSoundIds())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingSound = v)
+                .build());
+
+        pings.addEntry(SoundBrowser.build(eb, PingPlayer.allSoundIds(), soundId -> {
+            MultichatClient.CONFIG.pingSound = soundId;
+            LzSound.playMaster(soundId, MultichatClient.CONFIG.pingPitch, MultichatClient.CONFIG.pingVolume);
+        }));
+
+        pings.addEntry(eb.startIntSlider(
+                LzText.literal("Ping Volume").mc(),
+                MultiChatConfig.pingVolPct(MultichatClient.CONFIG.pingVolume), 0, 200)
+                .setDefaultValue(100)
+                .setTooltip(LzText.literal("0–200%. 100 = normal volume.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingVolume = MultiChatConfig.fromPingVolPct(v))
+                .build());
+
+        pings.addEntry(eb.startIntSlider(
+                LzText.literal("Ping Pitch").mc(),
+                MultiChatConfig.pingPitchPct(MultichatClient.CONFIG.pingPitch), 50, 200)
+                .setDefaultValue(100)
+                .setTooltip(LzText.literal("50–200. 100 = normal pitch.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingPitch = MultiChatConfig.fromPingPitchPct(v))
+                .build());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Test Ping Sound").mc(), false)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Toggle ON then Save to play the current sound settings.").mc())
+                .setSaveConsumer(v -> { if (v) LzSound.playMaster(MultichatClient.CONFIG.pingSound, MultichatClient.CONFIG.pingPitch, MultichatClient.CONFIG.pingVolume); })
+                .build());
+
+        pings.addEntry(eb.startTextDescription(LzText.literal(
+                "Conditions — OR logic: ping fires if any enabled condition is true.\n" +
+                "Require Silence is an AND gate on top of the selected conditions.").mc()).build());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping Always").mc(),
+                MultichatClient.CONFIG.pingCondAlways)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping on every message regardless of focus or AFK state.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingCondAlways = v)
+                .build());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when Tab Unfocused").mc(),
+                MultichatClient.CONFIG.pingCondUnfocusedTab)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Ping when the tab is not active on any panel.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingCondUnfocusedTab = v)
+                .build());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when Game Unfocused").mc(),
+                MultichatClient.CONFIG.pingCondGameUnfocused)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping when the Minecraft window does not have OS focus.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingCondGameUnfocused = v)
+                .build());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when AFK").mc(),
+                MultichatClient.CONFIG.pingCondAfk)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping when mouse has not moved for AFK Threshold seconds.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingCondAfk = v)
+                .build());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Require Silence").mc(),
+                MultichatClient.CONFIG.pingCondRequireSilence)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("AND gate: the gap between the previous message and this one must be >= Silence Threshold. Any message resets the clock — pure inter-message silence.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingCondRequireSilence = v)
+                .build());
+
+        pings.addEntry(eb.startIntField(
+                LzText.literal("Silence Threshold (s)").mc(),
+                MultichatClient.CONFIG.pingSilenceThresholdSec)
+                .setDefaultValue(30)
+                .setMin(1)
+                .setTooltip(LzText.literal("Seconds of no messages required before Require Silence triggers a ping.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingSilenceThresholdSec = v)
+                .build());
+
+        pings.addEntry(eb.startIntField(
+                LzText.literal("AFK Threshold (s)").mc(),
+                MultichatClient.CONFIG.pingAfkThresholdSec)
+                .setDefaultValue(120)
+                .setMin(10)
+                .setTooltip(LzText.literal("Seconds without mouse movement before player is considered AFK. Used by AFK ping mode.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingAfkThresholdSec = v)
+                .build());
+
+        pings.addEntry(eb.startIntField(
+                LzText.literal("Ping Cooldown (s)").mc(),
+                MultichatClient.CONFIG.pingCooldownSec)
+                .setDefaultValue(2)
+                .setMin(0)
+                .setTooltip(LzText.literal("Minimum seconds between pings per tab. 0 = no cooldown.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingCooldownSec = v)
+                .build());
+
         // ── Help ──────────────────────────────────────────────────────────
         ConfigCategory help = builder.getOrCreateCategory(LzText.literal("Help").mc());
 
@@ -326,7 +449,7 @@ public class ConfigMenu {
             "  &fWL:n&r&7 — whitelist rule count   &fBL:n&r&7 — blacklist rule count\n" +
             "  &fT&r&7 — timestamps on   &fC&r&7 — collapse repeating on\n" +
             "  &fD&r&7 — difference mode on (layer 0)   &fD5&r&7 / &fD-2&r&7 — difference mode, non-zero layer\n" +
-            "  &fE&r&7 — difference exception on   &fB&r&7 — badge hidden   &fP&r&7 — context prefix set"
+            "  &fE&r&7 — difference exception on   &fB&r&7 — badge hidden   &fP&r&7 — context prefix set   &fS&r&7 — sound ping on"
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(

@@ -224,7 +224,7 @@ public class TabListScreen extends LzScreen {
                 LzDraw.drawText(ctx, blStr, infoX, textY, blCount > 0 ? 0xFFFF8888 : 0xFF666666);
                 infoX += LzDraw.textWidth(blStr);
 
-                // Settings flags: T=timestamps C=collapse D=diff E=exception B=badge-off P=prefix
+                // Settings flags: T=timestamps C=collapse D=diff E=exception B=badge-off P=prefix S=sound-ping
                 StringBuilder flags = new StringBuilder();
                 if (tab.showTimestamps())           flags.append("T");
                 if (tab.collapseRepeating())        flags.append("C");
@@ -235,6 +235,7 @@ public class TabListScreen extends LzScreen {
                 if (tab.differenceException())      flags.append("E");
                 if (!tab.showBadge())               flags.append("B");
                 if (!tab.contextPrefix().isEmpty()) flags.append("P");
+                if (tab.pingEnabled())              flags.append("S");
                 if (!flags.isEmpty())
                     LzDraw.drawText(ctx, "  " + flags, infoX, textY, 0xFF9999CC);
             } else {

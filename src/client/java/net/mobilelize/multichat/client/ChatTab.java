@@ -71,6 +71,19 @@ public class ChatTab {
     private final List<LzChatLine>               messages        = new ArrayList<>();
     private final Map<Integer, List<LzChatLine>> messagesByWidth = new HashMap<>();
     private int                unreadCount             = 0;
+    private boolean            pingEnabled              = false;
+    private String             pingSound                = "";
+    private float              pingVolume               = -1f;
+    private float              pingPitch                = -1f;
+    private boolean            pingUseGlobalConditions  = true;
+    private boolean            pingCondAlways           = false;
+    private boolean            pingCondUnfocusedTab     = false;
+    private boolean            pingCondGameUnfocused    = false;
+    private boolean            pingCondAfk              = false;
+    private boolean            pingCondRequireSilence   = false;
+    private int                pingCooldownSec          = -1;
+    private int                pingSilenceThresholdSec  = -1;
+    private int                pingAfkThresholdSec      = -1;
 
     public ChatTab(String name, TabType type, Collection<Integer> visibleOnPanels) {
         this.name = name;
@@ -163,4 +176,32 @@ public class ChatTab {
     public boolean hasUnread()       { return unreadCount > 0; }
     public void    incrementUnread() { unreadCount++; }
     public void    clearUnread()     { unreadCount = 0; }
+
+    // ── Pings ──────────────────────────────────────────────────────────────────
+    public boolean pingEnabled()                           { return pingEnabled; }
+    public void    setPingEnabled(boolean v)               { pingEnabled = v; }
+    public String  pingSound()                             { return pingSound; }
+    public void    setPingSound(String v)                  { pingSound = v != null ? v : ""; }
+    public float   pingVolume()                            { return pingVolume; }
+    public void    setPingVolume(float v)                  { pingVolume = v; }
+    public float   pingPitch()                             { return pingPitch; }
+    public void    setPingPitch(float v)                   { pingPitch = v; }
+    public boolean pingUseGlobalConditions()               { return pingUseGlobalConditions; }
+    public void    setPingUseGlobalConditions(boolean v)   { pingUseGlobalConditions = v; }
+    public boolean pingCondAlways()                        { return pingCondAlways; }
+    public void    setPingCondAlways(boolean v)            { pingCondAlways = v; }
+    public boolean pingCondUnfocusedTab()                  { return pingCondUnfocusedTab; }
+    public void    setPingCondUnfocusedTab(boolean v)      { pingCondUnfocusedTab = v; }
+    public boolean pingCondGameUnfocused()                 { return pingCondGameUnfocused; }
+    public void    setPingCondGameUnfocused(boolean v)     { pingCondGameUnfocused = v; }
+    public boolean pingCondAfk()                           { return pingCondAfk; }
+    public void    setPingCondAfk(boolean v)               { pingCondAfk = v; }
+    public boolean pingCondRequireSilence()                { return pingCondRequireSilence; }
+    public void    setPingCondRequireSilence(boolean v)    { pingCondRequireSilence = v; }
+    public int     pingCooldownSec()                       { return pingCooldownSec; }
+    public void    setPingCooldownSec(int v)               { pingCooldownSec = v; }
+    public int     pingSilenceThresholdSec()               { return pingSilenceThresholdSec; }
+    public void    setPingSilenceThresholdSec(int v)       { pingSilenceThresholdSec = v; }
+    public int     pingAfkThresholdSec()                   { return pingAfkThresholdSec; }
+    public void    setPingAfkThresholdSec(int v)           { pingAfkThresholdSec = v; }
 }

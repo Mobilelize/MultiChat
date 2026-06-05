@@ -5,7 +5,9 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.gui.entries.MultiElementListEntry;
 import me.shedaniel.clothconfig2.gui.entries.NestedListListEntry;
+import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
 import net.minecraft.client.gui.screen.Screen;
+import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
@@ -15,6 +17,7 @@ import net.mobilelize.multichat.client.filter.FilterType;
 import net.mobilelize.multichat.client.filter.IndicatorFilter;
 import net.mobilelize.multichat.client.filter.WhitelistMode;
 import net.mobilelize.multichat.client.filter.MessageRouter;
+import net.mobilelize.multichat.client.ping.PingPlayer;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.ArrayList;
@@ -128,6 +131,151 @@ public class TabEditScreen {
         }
 
         if (tab.type() != TabType.FILTERED && tab.type() != TabType.API) return builder.build();
+
+        // ── Sound Pings ────────────────────────────────────────────────────
+        ConfigCategory pingsCat = builder.getOrCreateCategory(LzText.literal("Sound Pings").mc());
+
+        pingsCat.addEntry(eb.startBooleanToggle(LzText.literal("Enable Sound Ping").mc(), tab.pingEnabled())
+            .setDefaultValue(false)
+            .setTooltip(LzText.literal("Play a sound when a message arrives in this tab. Requires global switch on in Settings → Sound Pings.").mc())
+            .setSaveConsumer(tab::setPingEnabled)
+            .build());
+
+        // Holders keep effective values in sync as save consumers fire — order-independent
+        final String   tabSoundAtOpen = tab.pingSound(); // "" = inheriting global
+        final String[] snd = { tabSoundAtOpen.isEmpty() ? MultichatClient.CONFIG.pingSound : tabSoundAtOpen };
+        final float[]  vol = { tab.pingVolume() < 0 ? MultichatClient.CONFIG.pingVolume : tab.pingVolume() };
+        final float[]  pit = { tab.pingPitch()  < 0 ? MultichatClient.CONFIG.pingPitch  : tab.pingPitch() };
+
+        pingsCat.addEntry(eb.startDropdownMenu(
+                LzText.literal("Ping Sound").mc(),
+                DropdownMenuBuilder.TopCellElementBuilder.of(snd[0], s -> s),
+                DropdownMenuBuilder.CellCreatorBuilder.of())
+                .setDefaultValue(MultichatClient.CONFIG.pingSound)
+                .setSelections(PingPlayer.allSoundIds())
+                .setTooltip(LzText.literal("Sound ID. Clear to inherit from global default.").mc())
+                .setSaveConsumer(v -> {
+                    String s = v.trim();
+                    // Preserve inheritance: if tab was inheriting and user left the global sound, keep empty
+                    String toSave = (tabSoundAtOpen.isEmpty() && s.equals(MultichatClient.CONFIG.pingSound)) ? "" : s;
+                    tab.setPingSound(toSave);
+                    snd[0] = toSave.isEmpty() ? MultichatClient.CONFIG.pingSound : toSave;
+                })
+                .build());
+
+        pingsCat.addEntry(SoundBrowser.build(eb, PingPlayer.allSoundIds(), soundId -> {
+            tab.setPingSound(soundId);
+            snd[0] = soundId;
+            LzSound.playMaster(soundId, pit[0], vol[0]);
+        }));
+
+        pingsCat.addEntry(eb.startIntSlider(
+                LzText.literal("Ping Volume").mc(),
+                MultiChatConfig.pingVolPct(tab.pingVolume()), -1, 200)
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("0–200%. -1 = inherit global default.").mc())
+                .setSaveConsumer(v -> {
+                    tab.setPingVolume(MultiChatConfig.fromPingVolPct(v));
+                    vol[0] = v < 0 ? MultichatClient.CONFIG.pingVolume : MultiChatConfig.fromPingVolPct(v);
+                })
+                .build());
+
+        pingsCat.addEntry(eb.startIntSlider(
+                LzText.literal("Ping Pitch").mc(),
+                MultiChatConfig.pingPitchPct(tab.pingPitch()), -1, 200)
+                .setDefaultValue(-1)
+                .setTooltip(LzText.literal("50–200. -1 = inherit global default.").mc())
+                .setSaveConsumer(v -> {
+                    tab.setPingPitch(MultiChatConfig.fromPingPitchPct(v));
+                    pit[0] = v < 0 ? MultichatClient.CONFIG.pingPitch : MultiChatConfig.fromPingPitchPct(v);
+                })
+                .build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Test Ping Sound").mc(), false)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Toggle ON then Save to play the current sound settings.").mc())
+                .setSaveConsumer(v -> { if (v) LzSound.playMaster(snd[0].isEmpty() ? MultichatClient.CONFIG.pingSound : snd[0], pit[0], vol[0]); })
+                .build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Use Global Ping Conditions").mc(),
+                tab.pingUseGlobalConditions())
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When ON, this tab uses the global ping conditions from Settings → Sound Pings. Turn OFF to override with tab-specific conditions below.").mc())
+                .setSaveConsumer(tab::setPingUseGlobalConditions)
+                .build());
+
+        pingsCat.addEntry(eb.startTextDescription(LzText.literal(
+                "Tab-specific conditions below are ignored when Use Global is ON.\n" +
+                "OR logic: ping fires if any enabled condition is true.").mc()).build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping Always").mc(),
+                tab.pingCondAlways())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping on every message regardless of focus or AFK state.").mc())
+                .setSaveConsumer(tab::setPingCondAlways)
+                .build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when Tab Unfocused").mc(),
+                tab.pingCondUnfocusedTab())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping when this tab is not active on any panel.").mc())
+                .setSaveConsumer(tab::setPingCondUnfocusedTab)
+                .build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when Game Unfocused").mc(),
+                tab.pingCondGameUnfocused())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping when the Minecraft window does not have OS focus.").mc())
+                .setSaveConsumer(tab::setPingCondGameUnfocused)
+                .build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when AFK").mc(),
+                tab.pingCondAfk())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping when mouse has not moved for AFK Threshold seconds.").mc())
+                .setSaveConsumer(tab::setPingCondAfk)
+                .build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Require Silence").mc(),
+                tab.pingCondRequireSilence())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("AND gate: the gap between the previous message and this one must be >= Silence Threshold. Any message resets the clock — pure inter-message silence.").mc())
+                .setSaveConsumer(tab::setPingCondRequireSilence)
+                .build());
+
+        pingsCat.addEntry(eb.startIntField(
+                LzText.literal("Silence Threshold (s)").mc(),
+                tab.pingSilenceThresholdSec())
+                .setDefaultValue(-1)
+                .setMin(-1)
+                .setTooltip(LzText.literal("Seconds of no messages before Require Silence triggers. -1 = inherit global.").mc())
+                .setSaveConsumer(tab::setPingSilenceThresholdSec)
+                .build());
+
+        pingsCat.addEntry(eb.startIntField(
+                LzText.literal("AFK Threshold (s)").mc(),
+                tab.pingAfkThresholdSec())
+                .setDefaultValue(-1)
+                .setMin(-1)
+                .setTooltip(LzText.literal("Seconds without mouse movement before considered AFK. -1 = inherit global.").mc())
+                .setSaveConsumer(tab::setPingAfkThresholdSec)
+                .build());
+
+        pingsCat.addEntry(eb.startIntField(
+                LzText.literal("Ping Cooldown (s)").mc(),
+                tab.pingCooldownSec())
+                .setDefaultValue(-1)
+                .setMin(-1)
+                .setTooltip(LzText.literal("Min seconds between pings. -1 = inherit global. 0 = no cooldown.").mc())
+                .setSaveConsumer(tab::setPingCooldownSec)
+                .build());
 
         // ── Difference Mode ────────────────────────────────────────────────
         if (tab.type() == TabType.FILTERED) {

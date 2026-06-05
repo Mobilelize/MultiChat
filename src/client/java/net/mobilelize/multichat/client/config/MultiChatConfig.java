@@ -69,6 +69,20 @@ public class MultiChatConfig extends LzConfig {
     public boolean      searchDefaultTimestamps        = true;
     public boolean      searchDefaultCollapseIdentical = false;
 
+    // Pings
+    public boolean  pingEnabled             = true;
+    public String   pingSound               = "minecraft:entity.experience_orb.pickup";
+    public float    pingVolume              = 1.0f;
+    public float    pingPitch               = 1.0f;
+    public boolean  pingCondAlways          = false;
+    public boolean  pingCondUnfocusedTab    = true;
+    public boolean  pingCondGameUnfocused   = false;
+    public boolean  pingCondAfk             = false;
+    public boolean  pingCondRequireSilence  = false;
+    public int      pingCooldownSec             = 2;
+    public int      pingSilenceThresholdSec     = 30;
+    public int      pingAfkThresholdSec         = 120;
+
     public List<TabConfig>    tabs    = new ArrayList<>();
     public List<ApiTabConfig> apiTabs = new ArrayList<>();
 
@@ -123,6 +137,20 @@ public class MultiChatConfig extends LzConfig {
         public boolean contextCommandMode = true;
         public List<RuleConfig> whitelist = new ArrayList<>();
         public List<RuleConfig> blacklist = new ArrayList<>();
+        // Pings — empty/negative means inherit from global
+        public boolean  pingEnabled              = false;
+        public String   pingSound                = "";
+        public float    pingVolume               = -1f;
+        public float    pingPitch                = -1f;
+        public boolean  pingUseGlobalConditions  = true;
+        public boolean  pingCondAlways           = false;
+        public boolean  pingCondUnfocusedTab     = false;
+        public boolean  pingCondGameUnfocused    = false;
+        public boolean  pingCondAfk              = false;
+        public boolean  pingCondRequireSilence   = false;
+        public int      pingCooldownSec              = -1;
+        public int      pingSilenceThresholdSec      = -1;
+        public int      pingAfkThresholdSec          = -1;
     }
 
     public static class ApiTabConfig {
@@ -136,6 +164,20 @@ public class MultiChatConfig extends LzConfig {
         public boolean contextCommandMode = true;
         public List<RuleConfig> whitelist = new ArrayList<>();
         public List<RuleConfig> blacklist = new ArrayList<>();
+        // Pings — same inherit semantics as TabConfig
+        public boolean  pingEnabled              = false;
+        public String   pingSound                = "";
+        public float    pingVolume               = -1f;
+        public float    pingPitch                = -1f;
+        public boolean  pingUseGlobalConditions  = true;
+        public boolean  pingCondAlways           = false;
+        public boolean  pingCondUnfocusedTab     = false;
+        public boolean  pingCondGameUnfocused    = false;
+        public boolean  pingCondAfk              = false;
+        public boolean  pingCondRequireSilence   = false;
+        public int      pingCooldownSec          = -1;
+        public int      pingSilenceThresholdSec  = -1;
+        public int      pingAfkThresholdSec      = -1;
     }
 
     public static class QuickActionConfig {
@@ -152,4 +194,9 @@ public class MultiChatConfig extends LzConfig {
     public static int pct(double v)    { return v < 0 ? -1 : Math.min(100, Math.max(0, (int) Math.round(v * 100))); }
     public static int pct(float v)     { return v < 0 ? -1 : Math.min(100, Math.max(0, Math.round(v * 100))); }
     public static double fromPct(int v) { return v < 0 ? -1.0 : v / 100.0; }
+
+    public static int pingVolPct(float v)        { return v < 0 ? -1 : Math.min(200, Math.max(0, Math.round(v * 100))); }
+    public static float fromPingVolPct(int v)    { return v < 0 ? -1.0f : v / 100.0f; }
+    public static int pingPitchPct(float v)      { return v < 0 ? -1 : Math.min(200, Math.max(50, Math.round(v * 100))); }
+    public static float fromPingPitchPct(int v)  { return v < 0 ? -1.0f : v / 100.0f; }
 }

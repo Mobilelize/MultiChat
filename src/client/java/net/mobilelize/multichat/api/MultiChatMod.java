@@ -71,6 +71,19 @@ public class MultiChatMod {
             for (RuleConfig rc : saved.blacklist)
                 if (rc.type != null) tab.filterRules().blacklist().add(
                     new FilterRule(rc.type, rc.value, rc.indicator != null ? rc.indicator : IndicatorFilter.ANY));
+            tab.setPingEnabled(saved.pingEnabled);
+            tab.setPingSound(saved.pingSound != null ? saved.pingSound : "");
+            tab.setPingVolume(saved.pingVolume);
+            tab.setPingPitch(saved.pingPitch);
+            tab.setPingUseGlobalConditions(saved.pingUseGlobalConditions);
+            tab.setPingCondAlways(saved.pingCondAlways);
+            tab.setPingCondUnfocusedTab(saved.pingCondUnfocusedTab);
+            tab.setPingCondGameUnfocused(saved.pingCondGameUnfocused);
+            tab.setPingCondAfk(saved.pingCondAfk);
+            tab.setPingCondRequireSilence(saved.pingCondRequireSilence);
+            tab.setPingCooldownSec(saved.pingCooldownSec);
+            tab.setPingSilenceThresholdSec(saved.pingSilenceThresholdSec);
+            tab.setPingAfkThresholdSec(saved.pingAfkThresholdSec);
         }
 
         ChatRenderer.TABS.add(tab);

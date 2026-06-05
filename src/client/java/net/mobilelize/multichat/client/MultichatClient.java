@@ -3,8 +3,10 @@ package net.mobilelize.multichat.client;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.mobilelize.fabriclib.client.LzAfk;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.api.MessageAddedToTabCallback;
 import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.ApiTabConfig;
@@ -13,6 +15,7 @@ import net.mobilelize.multichat.client.config.MultiChatConfig.TabConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.RuleConfig;
 import net.mobilelize.multichat.client.filter.FilterRule;
 import net.mobilelize.multichat.client.filter.MessageRouter;
+import net.mobilelize.multichat.client.ping.PingPlayer;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.ArrayList;
@@ -27,10 +30,13 @@ public class MultichatClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         CONFIG = LzConfig.load(MultiChatConfig.class);
+        LzAfk.init();
         restorePanelsFromConfig();
         restoreTabsFromConfig();
         MultiChatCommand.register();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveTabsToConfig());
+
+        MessageAddedToTabCallback.EVENT.register((tab, message) -> PingPlayer.playForTab(tab));
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (overlay || CONFIG.modDisabled || !CONFIG.earlyMessageCapture) return;
@@ -102,6 +108,19 @@ public class MultichatClient implements ClientModInitializer {
             tc.contextCommandMode      = tab.contextCommandMode();
             tc.whitelist               = serializeRules(tab.filterRules().whitelist());
             tc.blacklist               = serializeRules(tab.filterRules().blacklist());
+            tc.pingEnabled              = tab.pingEnabled();
+            tc.pingSound                = tab.pingSound();
+            tc.pingVolume               = tab.pingVolume();
+            tc.pingPitch                = tab.pingPitch();
+            tc.pingUseGlobalConditions  = tab.pingUseGlobalConditions();
+            tc.pingCondAlways           = tab.pingCondAlways();
+            tc.pingCondUnfocusedTab     = tab.pingCondUnfocusedTab();
+            tc.pingCondGameUnfocused    = tab.pingCondGameUnfocused();
+            tc.pingCondAfk              = tab.pingCondAfk();
+            tc.pingCondRequireSilence   = tab.pingCondRequireSilence();
+            tc.pingCooldownSec              = tab.pingCooldownSec();
+            tc.pingSilenceThresholdSec      = tab.pingSilenceThresholdSec();
+            tc.pingAfkThresholdSec          = tab.pingAfkThresholdSec();
             out.add(tc);
         }
         CONFIG.tabs = out;
@@ -110,16 +129,29 @@ public class MultichatClient implements ClientModInitializer {
         for (ChatTab tab : ChatRenderer.TABS) {
             if (tab.type() != TabType.API || tab.apiId() == null) continue;
             ApiTabConfig atc         = new ApiTabConfig();
-            atc.id                   = tab.apiId();
-            atc.displayName          = tab.name();
-            atc.visibleOnPanels      = new java.util.ArrayList<>(tab.visibleOnPanels());
-            atc.color                = tab.tabColor();
-            atc.whitelistMode        = tab.filterRules().whitelistMode();
-            atc.blacklistMode        = tab.filterRules().blacklistMode();
-            atc.contextPrefix        = tab.contextPrefix();
-            atc.contextCommandMode   = tab.contextCommandMode();
-            atc.whitelist            = serializeRules(tab.filterRules().whitelist());
-            atc.blacklist            = serializeRules(tab.filterRules().blacklist());
+            atc.id                       = tab.apiId();
+            atc.displayName              = tab.name();
+            atc.visibleOnPanels          = new java.util.ArrayList<>(tab.visibleOnPanels());
+            atc.color                    = tab.tabColor();
+            atc.whitelistMode            = tab.filterRules().whitelistMode();
+            atc.blacklistMode            = tab.filterRules().blacklistMode();
+            atc.contextPrefix            = tab.contextPrefix();
+            atc.contextCommandMode       = tab.contextCommandMode();
+            atc.whitelist                = serializeRules(tab.filterRules().whitelist());
+            atc.blacklist                = serializeRules(tab.filterRules().blacklist());
+            atc.pingEnabled              = tab.pingEnabled();
+            atc.pingSound                = tab.pingSound();
+            atc.pingVolume               = tab.pingVolume();
+            atc.pingPitch                = tab.pingPitch();
+            atc.pingUseGlobalConditions  = tab.pingUseGlobalConditions();
+            atc.pingCondAlways           = tab.pingCondAlways();
+            atc.pingCondUnfocusedTab     = tab.pingCondUnfocusedTab();
+            atc.pingCondGameUnfocused    = tab.pingCondGameUnfocused();
+            atc.pingCondAfk              = tab.pingCondAfk();
+            atc.pingCondRequireSilence   = tab.pingCondRequireSilence();
+            atc.pingCooldownSec          = tab.pingCooldownSec();
+            atc.pingSilenceThresholdSec  = tab.pingSilenceThresholdSec();
+            atc.pingAfkThresholdSec      = tab.pingAfkThresholdSec();
             apiOut.add(atc);
         }
         CONFIG.apiTabs = apiOut;
@@ -216,6 +248,19 @@ public class MultichatClient implements ClientModInitializer {
                 : net.mobilelize.multichat.client.filter.WhitelistMode.ANY);
             tab.setContextPrefix(tc.contextPrefix != null ? tc.contextPrefix : "");
             tab.setContextCommandMode(tc.contextCommandMode);
+            tab.setPingEnabled(tc.pingEnabled);
+            tab.setPingSound(tc.pingSound != null ? tc.pingSound : "");
+            tab.setPingVolume(tc.pingVolume);
+            tab.setPingPitch(tc.pingPitch);
+            tab.setPingUseGlobalConditions(tc.pingUseGlobalConditions);
+            tab.setPingCondAlways(tc.pingCondAlways);
+            tab.setPingCondUnfocusedTab(tc.pingCondUnfocusedTab);
+            tab.setPingCondGameUnfocused(tc.pingCondGameUnfocused);
+            tab.setPingCondAfk(tc.pingCondAfk);
+            tab.setPingCondRequireSilence(tc.pingCondRequireSilence);
+            tab.setPingCooldownSec(tc.pingCooldownSec);
+            tab.setPingSilenceThresholdSec(tc.pingSilenceThresholdSec);
+            tab.setPingAfkThresholdSec(tc.pingAfkThresholdSec);
             for (RuleConfig rc : tc.whitelist) {
                 if (rc.type != null) tab.filterRules().whitelist().add(new FilterRule(rc.type, rc.value,
                     rc.indicator != null ? rc.indicator : net.mobilelize.multichat.client.filter.IndicatorFilter.ANY));
