@@ -20,6 +20,7 @@ import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.multichat.client.filter.MessageRouter;
+import net.mobilelize.multichat.client.ping.PingPlayer;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -129,6 +130,11 @@ public class ChatHudMixin {
     @Inject(method = "refresh", at = @At("HEAD"))
     private void onRefresh(CallbackInfo ci) {
         ChatRenderer.resetForRefresh();
+    }
+
+    @Inject(method = "refresh", at = @At("RETURN"))
+    private void onRefreshDone(CallbackInfo ci) {
+        PingPlayer.suppressPingsUntil = 0L;
     }
 
     // ── Route incoming messages ───────────────────────────────────────────────

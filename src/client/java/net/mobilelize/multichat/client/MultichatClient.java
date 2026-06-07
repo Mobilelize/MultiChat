@@ -114,6 +114,7 @@ public class MultichatClient implements ClientModInitializer {
             tc.pingPitch                = tab.pingPitch();
             tc.pingUseGlobalConditions  = tab.pingUseGlobalConditions();
             tc.pingCondAlways           = tab.pingCondAlways();
+            tc.pingCondActiveTab        = tab.pingCondActiveTab();
             tc.pingCondUnfocusedTab     = tab.pingCondUnfocusedTab();
             tc.pingCondGameUnfocused    = tab.pingCondGameUnfocused();
             tc.pingCondAfk              = tab.pingCondAfk();
@@ -145,6 +146,7 @@ public class MultichatClient implements ClientModInitializer {
             atc.pingPitch                = tab.pingPitch();
             atc.pingUseGlobalConditions  = tab.pingUseGlobalConditions();
             atc.pingCondAlways           = tab.pingCondAlways();
+            atc.pingCondActiveTab        = tab.pingCondActiveTab();
             atc.pingCondUnfocusedTab     = tab.pingCondUnfocusedTab();
             atc.pingCondGameUnfocused    = tab.pingCondGameUnfocused();
             atc.pingCondAfk              = tab.pingCondAfk();
@@ -157,10 +159,14 @@ public class MultichatClient implements ClientModInitializer {
         CONFIG.apiTabs = apiOut;
 
         for (ChatTab tab : ChatRenderer.TABS) {
-            if (tab.type() == TabType.ALL)
-                CONFIG.allTabPanels = new ArrayList<>(tab.visibleOnPanels());
-            else if (tab.type() == TabType.VANILLA)
+            if (tab.type() == TabType.ALL) {
+                CONFIG.allTabPanels      = new ArrayList<>(tab.visibleOnPanels());
+                CONFIG.allTabRawList     = tab.allRawList();
+                CONFIG.allTabRefilterRaw = tab.allRefilterRaw();
+                CONFIG.allTabSearchRaw   = tab.allSearchRaw();
+            } else if (tab.type() == TabType.VANILLA) {
                 CONFIG.vanillaTabPanels = new ArrayList<>(tab.visibleOnPanels());
+            }
         }
 
         CONFIG.contextTabName = ChatRenderer.contextTab != null ? ChatRenderer.contextTab.name() : "";
@@ -223,6 +229,9 @@ public class MultichatClient implements ClientModInitializer {
             if (tab.type() == TabType.ALL) {
                 tab.visibleOnPanels().clear();
                 tab.visibleOnPanels().addAll(CONFIG.allTabPanels);
+                tab.setAllRawList(CONFIG.allTabRawList);
+                tab.setAllRefilterRaw(CONFIG.allTabRefilterRaw);
+                tab.setAllSearchRaw(CONFIG.allTabSearchRaw);
             } else if (tab.type() == TabType.VANILLA) {
                 tab.visibleOnPanels().clear();
                 tab.visibleOnPanels().addAll(CONFIG.vanillaTabPanels);
@@ -254,6 +263,7 @@ public class MultichatClient implements ClientModInitializer {
             tab.setPingPitch(tc.pingPitch);
             tab.setPingUseGlobalConditions(tc.pingUseGlobalConditions);
             tab.setPingCondAlways(tc.pingCondAlways);
+            tab.setPingCondActiveTab(tc.pingCondActiveTab);
             tab.setPingCondUnfocusedTab(tc.pingCondUnfocusedTab);
             tab.setPingCondGameUnfocused(tc.pingCondGameUnfocused);
             tab.setPingCondAfk(tc.pingCondAfk);

@@ -12,7 +12,9 @@ import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.config.DeleteConfirmScreen;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
+import net.minecraft.client.gui.screen.Screen;
 
 import java.util.Collections;
 import java.util.List;
@@ -30,10 +32,11 @@ public class QuickActionsEditScreen extends LzScreen {
     private final Screen parent;
     private LzTextField nameField;
     private LzTextField templateField;
-    private int     scrollOffset = 0;
-    private int     editingIdx   = -1;
-    private int     selectedIdx  = -1;
-    private boolean swapPending  = false;
+    private int     scrollOffset    = 0;
+    private int     editingIdx      = -1;
+    private int     selectedIdx     = -1;
+    private boolean swapPending     = false;
+    private boolean quickDeleteMode = false;
 
     public QuickActionsEditScreen(Screen parent) {
         super("MultiChat — Quick Actions");
@@ -94,6 +97,11 @@ public class QuickActionsEditScreen extends LzScreen {
         }
 
         addDrawableChild(LzButton.of("Done", lx2 - 50, height - 26, 50, 20, b -> close()));
+        addDrawableChild(LzButton.of(quickDeleteMode ? "Del: ON" : "Del: OFF",
+            lx2 - 106, height - 26, 52, 20, b -> {
+                quickDeleteMode = !quickDeleteMode;
+                b.setMessage(LzText.literal(quickDeleteMode ? "Del: ON" : "Del: OFF"));
+            }));
     }
 
     private void move(int idx, boolean up) {
@@ -215,9 +223,13 @@ public class QuickActionsEditScreen extends LzScreen {
 
                 int dx = lx2 - DEL_W - 2;
                 boolean dHov = mouseX >= dx && mouseX < dx + DEL_W && mouseY >= ry + 3 && mouseY < ry + 3 + BTN_H;
-                LzDraw.fill(ctx, dx, ry + 3, dx + DEL_W, ry + 3 + BTN_H, dHov ? 0xAAFF3333 : 0x44FF3333);
-                LzDraw.drawBorder(ctx, dx, ry + 3, dx + DEL_W, ry + 3 + BTN_H, 0x88FF5555);
-                LzDraw.drawCenteredText(ctx, LzText.literal("Del"), dx + DEL_W / 2, ry + 5, 0xFFFF8888);
+                boolean dInst = quickDeleteMode || Screen.hasControlDown();
+                int dBg  = dInst ? (dHov ? 0xAAFF3333 : 0x44FF3333) : (dHov ? 0xAAFF8800 : 0x44884400);
+                int dBdr = dInst ? 0x88FF5555 : 0x88FFAA00;
+                int dTxt = dInst ? 0xFFFF8888 : 0xFFFFAA44;
+                LzDraw.fill(ctx, dx, ry + 3, dx + DEL_W, ry + 3 + BTN_H, dBg);
+                LzDraw.drawBorder(ctx, dx, ry + 3, dx + DEL_W, ry + 3 + BTN_H, dBdr);
+                LzDraw.drawCenteredText(ctx, LzText.literal("Del"), dx + DEL_W / 2, ry + 5, dTxt);
 
                 int ex = dx - EDIT_W - 2;
                 boolean eHov = mouseX >= ex && mouseX < ex + EDIT_W && mouseY >= ry + 3 && mouseY < ry + 3 + BTN_H;
@@ -264,13 +276,14 @@ public class QuickActionsEditScreen extends LzScreen {
             // Del button
             int dx = lx2 - DEL_W - 2;
             if (mouseX >= dx && mouseX < dx + DEL_W && mouseY >= ry + 3 && mouseY < ry + 3 + BTN_H) {
-                list.remove(i);
-                if (editingIdx > i)  editingIdx--;
-                if (selectedIdx > i) selectedIdx--;
-                else if (selectedIdx == i) selectedIdx = -1;
-                swapPending = false;
-                MultichatClient.saveTabsToConfig();
-                clearChildren(); init();
+                if (quickDeleteMode || Screen.hasControlDown()) {
+                    doRemoveAction(list, i);
+                } else {
+                    int capturedI = i;
+                    LzClient.mc().setScreen(new DeleteConfirmScreen(this,
+                        "Delete \"" + list.get(capturedI).name + "\"?",
+                        () -> doRemoveAction(list, capturedI)));
+                }
                 return true;
             }
 
@@ -323,6 +336,16 @@ public class QuickActionsEditScreen extends LzScreen {
             if (keyCode == Keys.DOWN) { move(selectedIdx, false); return true; }
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void doRemoveAction(List<MultiChatConfig.QuickActionConfig> list, int i) {
+        list.remove(i);
+        if (editingIdx > i)  editingIdx--;
+        if (selectedIdx > i) selectedIdx--;
+        else if (selectedIdx == i) selectedIdx = -1;
+        swapPending = false;
+        MultichatClient.saveTabsToConfig();
+        clearChildren(); init();
     }
 
     @Override

@@ -27,6 +27,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean modDisabled             = false;
     public boolean showIndicators          = true;
     public boolean selectionEnabled          = true;
+    public boolean selectionFreezeChat       = true;
     public boolean selectionCtrlSkipsClicks  = true;
     public boolean doubleClickSelectEnabled  = true;
     public boolean doubleClickNameSelect     = true;
@@ -75,6 +76,7 @@ public class MultiChatConfig extends LzConfig {
     public float    pingVolume              = 1.0f;
     public float    pingPitch               = 1.0f;
     public boolean  pingCondAlways          = false;
+    public boolean  pingCondActiveTab       = false;
     public boolean  pingCondUnfocusedTab    = true;
     public boolean  pingCondGameUnfocused   = false;
     public boolean  pingCondAfk             = false;
@@ -89,6 +91,11 @@ public class MultiChatConfig extends LzConfig {
     // visibleOnPanels for the two fixed system tabs
     public List<Integer> allTabPanels     = new java.util.ArrayList<>(java.util.List.of(0, 1));
     public List<Integer> vanillaTabPanels = new java.util.ArrayList<>(java.util.List.of(0));
+
+    // All-tab raw list settings
+    public boolean allTabRawList      = true;
+    public boolean allTabRefilterRaw  = true;
+    public boolean allTabSearchRaw    = true;
 
     public static class PanelConfig {
         public int     id                  = 0;
@@ -144,6 +151,7 @@ public class MultiChatConfig extends LzConfig {
         public float    pingPitch                = -1f;
         public boolean  pingUseGlobalConditions  = true;
         public boolean  pingCondAlways           = false;
+        public boolean  pingCondActiveTab        = false;
         public boolean  pingCondUnfocusedTab     = false;
         public boolean  pingCondGameUnfocused    = false;
         public boolean  pingCondAfk              = false;
@@ -171,6 +179,7 @@ public class MultiChatConfig extends LzConfig {
         public float    pingPitch                = -1f;
         public boolean  pingUseGlobalConditions  = true;
         public boolean  pingCondAlways           = false;
+        public boolean  pingCondActiveTab        = false;
         public boolean  pingCondUnfocusedTab     = false;
         public boolean  pingCondGameUnfocused    = false;
         public boolean  pingCondAfk              = false;

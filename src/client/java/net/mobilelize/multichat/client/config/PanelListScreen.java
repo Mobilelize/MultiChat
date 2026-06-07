@@ -2,8 +2,8 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
-import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzText;
@@ -28,6 +28,7 @@ public class PanelListScreen extends LzScreen {
     private boolean scrollDragging     = false;
     private int     scrollDragStartY   = 0;
     private int     scrollDragStartOff = 0;
+    private boolean quickDeleteMode    = false;
 
     public PanelListScreen(Screen parent) {
         super("MultiChat — Panels");
@@ -44,7 +45,12 @@ public class PanelListScreen extends LzScreen {
 
         addDrawableChild(LzButton.of("Add Panel", width / 2 - 154, height - 28, 98,  20, b -> addPanel()));
         addDrawableChild(LzButton.of("Layout",    width / 2 - 50,  height - 28, 100, 20, b -> LzClient.mc().setScreen(new PanelLayoutScreen(this))));
-        addDrawableChild(LzButton.of("Done",      width / 2 + 56,  height - 28, 98,  20, b -> close()));
+        addDrawableChild(LzButton.of("Done",      width / 2 + 56,  height - 28, 74,  20, b -> close()));
+        addDrawableChild(LzButton.of(quickDeleteMode ? "Del: ON" : "Del: OFF",
+            width / 2 + 134, height - 28, 52, 20, b -> {
+                quickDeleteMode = !quickDeleteMode;
+                b.setMessage(LzText.literal(quickDeleteMode ? "Del: ON" : "Del: OFF"));
+            }));
     }
 
     private void addPanel() {
@@ -126,9 +132,13 @@ public class PanelListScreen extends LzScreen {
 
             // Remove button — only for extra panels (index >= 2)
             if (i >= 2) {
-                boolean hoverRemove = mouseX >= lx + 228 && mouseX < lx + 258 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-                LzDraw.fill(ctx, lx + 228, btnY1, lx + 258, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
-                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 243, textY, 0xFFFFFF);
+                boolean hoverRemove  = mouseX >= lx + 228 && mouseX < lx + 258 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+                boolean instantDelete = quickDeleteMode || Screen.hasControlDown();
+                int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
+                                         : (hoverRemove ? 0xAAFF8800 : 0x66552200);
+                int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
+                LzDraw.fill(ctx, lx + 228, btnY1, lx + 258, btnY2, xBg);
+                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 243, textY, xCol);
             }
         }
 
@@ -198,9 +208,14 @@ public class PanelListScreen extends LzScreen {
 
         // Remove button (index >= 2 only)
         if (idx >= 2 && mx >= lx + 228 && mx < lx + 258) {
-            ChatRenderer.PANELS.remove(panel);
-            MultichatClient.saveTabsToConfig();
-            clearAndInit();
+            if (quickDeleteMode || Screen.hasControlDown()) {
+                doRemovePanel(panel);
+            } else {
+                ChatPanel capturedPanel = panel;
+                LzClient.mc().setScreen(new DeleteConfirmScreen(this,
+                    "Delete panel \"" + panel.name() + "\"?",
+                    () -> doRemovePanel(capturedPanel)));
+            }
             return true;
         }
 
@@ -242,6 +257,12 @@ public class PanelListScreen extends LzScreen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == Keys.ESCAPE) { close(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void doRemovePanel(ChatPanel panel) {
+        ChatRenderer.PANELS.remove(panel);
+        MultichatClient.saveTabsToConfig();
+        clearAndInit();
     }
 
     @Override

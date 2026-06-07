@@ -136,6 +136,14 @@ public class ConfigMenu {
                 .build());
 
         selection.addEntry(eb.startBooleanToggle(
+                LzText.literal("Freeze Chat While Selecting").mc(),
+                MultichatClient.CONFIG.selectionFreezeChat)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("While dragging to select text (and at least one character is selected), new messages don't scroll the view — the selected content stays in place.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionFreezeChat = v)
+                .build());
+
+        selection.addEntry(eb.startBooleanToggle(
                 LzText.literal("Ctrl Skips Click Events").mc(),
                 MultichatClient.CONFIG.selectionCtrlSkipsClicks)
                 .setDefaultValue(true)
@@ -369,6 +377,14 @@ public class ConfigMenu {
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Ping on every message regardless of focus or AFK state.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.pingCondAlways = v)
+                .build());
+
+        pings.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when Tab Active").mc(),
+                MultichatClient.CONFIG.pingCondActiveTab)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping even when the tab is currently visible on a panel.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.pingCondActiveTab = v)
                 .build());
 
         pings.addEntry(eb.startBooleanToggle(

@@ -137,6 +137,91 @@ public class TabHandle {
     public Set<Integer> getVisiblePanels() { return tab.visibleOnPanels(); }
 
     // ------------------------------------------------------------------
+    // Sound pings
+    // ------------------------------------------------------------------
+
+    public TabHandle setPingEnabled(boolean enabled) {
+        tab.setPingEnabled(enabled);
+        return this;
+    }
+
+    public TabHandle setPingSound(String soundId) {
+        tab.setPingSound(soundId != null ? soundId : "");
+        return this;
+    }
+
+    /** Volume multiplier. 1.0 = normal, 0.0–2.0 range. -1 = inherit global. */
+    public TabHandle setPingVolume(float volume) {
+        tab.setPingVolume(volume);
+        return this;
+    }
+
+    /** Pitch multiplier. 1.0 = normal, 0.5–2.0 range. -1 = inherit global. */
+    public TabHandle setPingPitch(float pitch) {
+        tab.setPingPitch(pitch);
+        return this;
+    }
+
+    /** Minimum seconds between pings. 0 = no cooldown, -1 = inherit global. */
+    public TabHandle setPingCooldownSec(int seconds) {
+        tab.setPingCooldownSec(seconds);
+        return this;
+    }
+
+    /** Seconds of message silence required before Require Silence condition fires. -1 = inherit global. */
+    public TabHandle setPingSilenceThresholdSec(int seconds) {
+        tab.setPingSilenceThresholdSec(seconds);
+        return this;
+    }
+
+    /** Seconds without mouse movement to be considered AFK. -1 = inherit global. */
+    public TabHandle setPingAfkThresholdSec(int seconds) {
+        tab.setPingAfkThresholdSec(seconds);
+        return this;
+    }
+
+    /** When true this tab uses the global ping conditions; when false the per-tab condition flags below apply. */
+    public TabHandle setPingUseGlobalConditions(boolean useGlobal) {
+        tab.setPingUseGlobalConditions(useGlobal);
+        return this;
+    }
+
+    public TabHandle setPingCondAlways(boolean enabled) {
+        tab.setPingCondAlways(enabled);
+        return this;
+    }
+
+    public TabHandle setPingCondUnfocusedTab(boolean enabled) {
+        tab.setPingCondUnfocusedTab(enabled);
+        return this;
+    }
+
+    public TabHandle setPingCondGameUnfocused(boolean enabled) {
+        tab.setPingCondGameUnfocused(enabled);
+        return this;
+    }
+
+    public TabHandle setPingCondAfk(boolean enabled) {
+        tab.setPingCondAfk(enabled);
+        return this;
+    }
+
+    public TabHandle setPingCondRequireSilence(boolean enabled) {
+        tab.setPingCondRequireSilence(enabled);
+        return this;
+    }
+
+    // Ping getters
+    public boolean getPingEnabled()              { return tab.pingEnabled(); }
+    public String  getPingSound()                { return tab.pingSound(); }
+    public float   getPingVolume()               { return tab.pingVolume(); }
+    public float   getPingPitch()                { return tab.pingPitch(); }
+    public int     getPingCooldownSec()          { return tab.pingCooldownSec(); }
+    public int     getPingSilenceThresholdSec()  { return tab.pingSilenceThresholdSec(); }
+    public int     getPingAfkThresholdSec()      { return tab.pingAfkThresholdSec(); }
+    public boolean getPingUseGlobalConditions()  { return tab.pingUseGlobalConditions(); }
+
+    // ------------------------------------------------------------------
     // Context
     // ------------------------------------------------------------------
 

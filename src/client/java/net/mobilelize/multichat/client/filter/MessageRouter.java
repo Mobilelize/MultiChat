@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.filter;
 
+import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
@@ -122,14 +123,11 @@ public class MessageRouter {
             }
         }
 
-        // Step 1: if any active non-diff tab matched, diff pipeline is suppressed entirely.
+        // Step 1: if any active non-diff FILTERED tab matched, diff pipeline is suppressed entirely.
+        // API tabs are excluded — they receive messages independently and must not affect the pipeline.
         boolean activeNonDiffMatched = false;
         for (ChatTab tab : panelActiveTabs) {
             if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
-                    && tab.filterRules().matches(fullText, indicator)) {
-                activeNonDiffMatched = true; break;
-            }
-            if (tab.type() == TabType.API && !tab.filterRules().isEmpty()
                     && tab.filterRules().matches(fullText, indicator)) {
                 activeNonDiffMatched = true; break;
             }
@@ -149,6 +147,7 @@ public class MessageRouter {
                 if (anyMatched) break;
             }
         }
+
     }
 
     private static void addLines(ChatTab tab, int tick, LzText content, LzMessageIndicator indicator,
@@ -199,8 +198,10 @@ public class MessageRouter {
             cs.setLastTick(tick);
             cs.setLastLines(new ArrayList<>(lines));
 
+            // ALL tab display always uses content (mixin path); other tabs use rawLzText when available
+            LzText displayText = (tab.type() == TabType.ALL) ? content : effectiveText;
             List<LzOrderedText> active = stamp
-                ? ChatRenderer.stampedLines(tick, effectiveText, indicator, lines)
+                ? ChatRenderer.stampedLines(tick, displayText, indicator, lines)
                 : lines;
             cs.setLineCount(active.size());
             for (int j = 0; j < active.size(); j++) {
@@ -210,17 +211,35 @@ public class MessageRouter {
             netLinesAdded = active.size();
         }
 
+        // Populate raw list for ALL tab only when a rawLzText (pre-Minecraft) version exists.
+        // Break from rawLzText specifically so content differs from the display list.
+        if (tab.type() == TabType.ALL && tab.allRawList() && rawLzText != null) {
+            int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
+            int rawWidth = (int) Math.floor((double) LzChat.chatWidth() / LzChat.chatScale()) - indicatorW;
+            List<LzOrderedText> rawLines = LzChat.breakLines(rawLzText, rawWidth);
+            for (int j = 0; j < rawLines.size(); j++) {
+                boolean isEnd = j == rawLines.size() - 1;
+                tab.rawMessages().addFirst(LzChatLine.create(tick, rawLines.get(j), indicator, isEnd, entry));
+            }
+        }
+
         tab.clearWidthCaches();
 
         if (netLinesAdded != 0) {
+            boolean freezing = MultichatClient.CONFIG.selectionFreezeChat
+                && ChatSelection.isSelecting() && ChatSelection.hasSelection();
+            ChatPanel freezePanel = freezing ? ChatSelection.getPanel() : null;
+
+            LzText scrollText = (tab.type() == TabType.ALL) ? content : effectiveText;
             for (ChatPanel panel : ChatRenderer.PANELS) {
                 int scrolled = panel.getScrolledLines(tab);
-                if (scrolled <= 0) continue;
+                boolean shouldFreeze = freezePanel == panel && panel.getActiveTab() == tab;
+                if (scrolled <= 0 && !shouldFreeze) continue;
                 int delta;
                 if (panel.primary() || wasCollapse) {
                     delta = netLinesAdded;
                 } else {
-                    delta = ChatRenderer.lineCountAtWidth(effectiveText, indicator, stamp, tick, panel.resolveWidth());
+                    delta = ChatRenderer.lineCountAtWidth(scrollText, indicator, stamp, tick, panel.resolveWidth());
                 }
                 panel.setScrolledLines(tab, Math.max(0, scrolled + delta));
             }
@@ -239,6 +258,13 @@ public class MessageRouter {
                     panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
                 }
                 ChatSelection.clampOrClear(tab);
+                // Sync raw list: remove entries no longer present in the display list
+                if (tab.type() == TabType.ALL && tab.allRawList()) {
+                    java.util.IdentityHashMap<net.mobilelize.fabriclib.client.LzChatEntry, Boolean> alive =
+                        new java.util.IdentityHashMap<>();
+                    for (LzChatLine l : tab.messages()) if (l.entry() != null) alive.put(l.entry(), Boolean.TRUE);
+                    tab.rawMessages().removeIf(l -> l.entry() != null && !alive.containsKey(l.entry()));
+                }
             }
         }
         if (!ChatRenderer.isActiveInAnyPanel(tab)) tab.incrementUnread();
@@ -263,7 +289,8 @@ public class MessageRouter {
             ChatTab allTab = ChatRenderer.TABS.stream()
                 .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
             if (allTab == null) return;
-            source = allTab.messages();
+            source = (allTab.allRawList() && allTab.allSearchRaw() && !allTab.rawMessages().isEmpty())
+                ? allTab.rawMessages() : allTab.messages();
         }
         if (source.isEmpty()) return;
 
@@ -346,7 +373,8 @@ public class MessageRouter {
             .filter(t -> t.type() == TabType.ALL)
             .findFirst().orElse(null);
         if (allTab == null || !allTab.hasMessages()) return;
-        List<LzChatLine> all = allTab.messages();
+        List<LzChatLine> all = (allTab.allRawList() && allTab.allRefilterRaw() && !allTab.rawMessages().isEmpty())
+            ? allTab.rawMessages() : allTab.messages();
 
         boolean effectiveDiff = tab.differenceMode() && !tab.differenceException();
         // Higher-layer diff tabs (exception tabs excluded) that claim messages before this tab.

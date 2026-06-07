@@ -2,8 +2,8 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
-import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzTextField;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -37,6 +37,7 @@ public class TabListScreen extends LzScreen {
     private int     scrollDragStartOff = 0;
     private int     selectedIdx        = -1;
     private boolean swapPending        = false;
+    private boolean quickDeleteMode    = false;
 
     public TabListScreen(Screen parent) {
         super("MultiChat — Tabs");
@@ -72,6 +73,11 @@ public class TabListScreen extends LzScreen {
         addDrawableChild(LzButton.of("Settings",      width / 2 - 36,  height - 26, 72, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
         addDrawableChild(LzButton.of("Done",          width / 2 + 40,  height - 26, 62, 20, b -> close()));
         addDrawableChild(LzButton.of("Quick Actions", 4,               height - 26, 90, 20, b -> LzClient.mc().setScreen(new QuickActionsEditScreen(this))));
+        addDrawableChild(LzButton.of(quickDeleteMode ? "Del: ON" : "Del: OFF",
+            width / 2 + 106, height - 26, 52, 20, b -> {
+                quickDeleteMode = !quickDeleteMode;
+                b.setMessage(LzText.literal(quickDeleteMode ? "Del: ON" : "Del: OFF"));
+            }));
     }
 
     private void addTab() {
@@ -249,7 +255,7 @@ public class TabListScreen extends LzScreen {
                     LzDraw.drawText(ctx, typeTag, infoX, textY, 0xFF666666);
             }
 
-            boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API;
+            boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL;
             boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH;
             boolean hoverEdit   = canEdit   && mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverRemove = canRemove && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
@@ -258,8 +264,12 @@ public class TabListScreen extends LzScreen {
             LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 207, textY, canEdit ? 0xFFFFFF : 0x555555);
 
             if (canRemove) {
-                LzDraw.fill(ctx, lx + 231, btnY1, lx + 259, btnY2, hoverRemove ? 0xAAFF4444 : 0x66882222);
-                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 245, textY, 0xFFFFFF);
+                boolean instantDelete = quickDeleteMode || Screen.hasControlDown();
+                int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
+                                         : (hoverRemove ? 0xAAFF8800 : 0x66552200);
+                int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
+                LzDraw.fill(ctx, lx + 231, btnY1, lx + 259, btnY2, xBg);
+                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 245, textY, xCol);
             }
         }
 
@@ -351,19 +361,22 @@ public class TabListScreen extends LzScreen {
 
         // Edit button
         if (mx >= lx + 186 && mx < lx + 228) {
-            if (tab.type() == TabType.FILTERED || tab.type() == TabType.API)
+            if (tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL)
                 LzClient.mc().setScreen(TabEditScreen.create(this, tab));
             return true;
         }
 
         // Remove button
         if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
-            if (idx == selectedIdx) selectedIdx = -1;
-            else if (idx < selectedIdx) selectedIdx--;
-            swapPending = false;
-            ChatRenderer.TABS.remove(tab);
-            if (tab.type() == TabType.FILTERED) MultichatClient.saveTabsToConfig();
-            clearAndInit();
+            if (quickDeleteMode || Screen.hasControlDown()) {
+                doRemoveTab(idx, tab);
+            } else {
+                int capturedIdx = idx;
+                ChatTab capturedTab = tab;
+                LzClient.mc().setScreen(new DeleteConfirmScreen(this,
+                    "Delete tab \"" + tab.name() + "\"?",
+                    () -> doRemoveTab(capturedIdx, capturedTab)));
+            }
             return true;
         }
 
@@ -414,6 +427,15 @@ public class TabListScreen extends LzScreen {
             return true;
         }
         return super.mouseScrolled(mx, my, horizontalAmount, verticalAmount);
+    }
+
+    private void doRemoveTab(int idx, ChatTab tab) {
+        if (idx == selectedIdx) selectedIdx = -1;
+        else if (idx < selectedIdx) selectedIdx--;
+        swapPending = false;
+        ChatRenderer.TABS.remove(tab);
+        if (tab.type() == TabType.FILTERED) MultichatClient.saveTabsToConfig();
+        clearAndInit();
     }
 
     @Override

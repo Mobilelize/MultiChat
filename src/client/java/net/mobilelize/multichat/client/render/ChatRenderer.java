@@ -19,6 +19,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.multichat.client.ping.PingPlayer;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
 import net.minecraft.text.Style;
@@ -92,6 +93,7 @@ public class ChatRenderer {
     }
 
     public static void resetForRefresh() {
+        PingPlayer.suppressPingsUntil = System.currentTimeMillis() + 10_000L;
         PANELS.forEach(ChatPanel::resetScrollPositions);
         TABS.forEach(t -> {
             t.clearMessages();

@@ -77,6 +77,7 @@ public class ChatTab {
     private float              pingPitch                = -1f;
     private boolean            pingUseGlobalConditions  = true;
     private boolean            pingCondAlways           = false;
+    private boolean            pingCondActiveTab        = false;
     private boolean            pingCondUnfocusedTab     = false;
     private boolean            pingCondGameUnfocused    = false;
     private boolean            pingCondAfk              = false;
@@ -84,6 +85,16 @@ public class ChatTab {
     private int                pingCooldownSec          = -1;
     private int                pingSilenceThresholdSec  = -1;
     private int                pingAfkThresholdSec      = -1;
+
+    // ── All-tab raw list (only meaningful when type == ALL) ────────────────────
+    // Parallel list storing messages as captured from the Fabric packet event
+    // (rawLzText — before any mod or Minecraft rendering touches them). No timestamps,
+    // no collapse. Used as the preferred source for refilter and search so that
+    // display-side changes never affect filter text matching.
+    private boolean            allRawList      = true;  // maintain the raw list
+    private boolean            allRefilterRaw  = true;  // refilterTab reads rawMessages instead of display list
+    private boolean            allSearchRaw    = true;  // search reads rawMessages instead of display list
+    private final List<LzChatLine> rawMessages = new ArrayList<>();
 
     public ChatTab(String name, TabType type, Collection<Integer> visibleOnPanels) {
         this.name = name;
@@ -155,6 +166,7 @@ public class ChatTab {
 
     public void clearMessages() {
         messages.clear();
+        rawMessages.clear();
         collapse.reset();
         messagesByWidth.clear();
     }
@@ -177,6 +189,15 @@ public class ChatTab {
     public void    incrementUnread() { unreadCount++; }
     public void    clearUnread()     { unreadCount = 0; }
 
+    // ── All-tab raw list ───────────────────────────────────────────────────────
+    public List<LzChatLine> rawMessages()                 { return rawMessages; }
+    public boolean allRawList()                            { return allRawList; }
+    public void    setAllRawList(boolean v)                { allRawList = v; }
+    public boolean allRefilterRaw()                        { return allRefilterRaw; }
+    public void    setAllRefilterRaw(boolean v)            { allRefilterRaw = v; }
+    public boolean allSearchRaw()                          { return allSearchRaw; }
+    public void    setAllSearchRaw(boolean v)              { allSearchRaw = v; }
+
     // ── Pings ──────────────────────────────────────────────────────────────────
     public boolean pingEnabled()                           { return pingEnabled; }
     public void    setPingEnabled(boolean v)               { pingEnabled = v; }
@@ -190,6 +211,8 @@ public class ChatTab {
     public void    setPingUseGlobalConditions(boolean v)   { pingUseGlobalConditions = v; }
     public boolean pingCondAlways()                        { return pingCondAlways; }
     public void    setPingCondAlways(boolean v)            { pingCondAlways = v; }
+    public boolean pingCondActiveTab()                     { return pingCondActiveTab; }
+    public void    setPingCondActiveTab(boolean v)         { pingCondActiveTab = v; }
     public boolean pingCondUnfocusedTab()                  { return pingCondUnfocusedTab; }
     public void    setPingCondUnfocusedTab(boolean v)      { pingCondUnfocusedTab = v; }
     public boolean pingCondGameUnfocused()                 { return pingCondGameUnfocused; }

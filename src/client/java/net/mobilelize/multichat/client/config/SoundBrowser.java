@@ -58,7 +58,7 @@ public class SoundBrowser {
                     .build());
             } else {
                 SubCategoryBuilder sub = eb.startSubCategory(LzText.format(color + label).mc());
-                renderNode(eb, e -> sub.add(e), child, onSelect, depth + 1);
+                renderNode(eb, sub::add, child, onSelect, depth + 1);
                 addTo.accept(sub.build());
             }
         }

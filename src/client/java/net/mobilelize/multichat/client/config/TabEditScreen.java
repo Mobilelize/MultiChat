@@ -50,6 +50,39 @@ public class TabEditScreen {
 
         ConfigEntryBuilder eb = builder.entryBuilder();
 
+        // ── All Tab settings (only for ALL type) ──────────────────────────
+        if (tab.type() == TabType.ALL) {
+            ConfigCategory allCat = builder.getOrCreateCategory(LzText.literal("All Tab").mc());
+
+            allCat.addEntry(eb.startBooleanToggle(LzText.literal("Raw List").mc(), tab.allRawList())
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal(
+                    "Maintain a parallel list of messages captured directly from the Fabric API " +
+                    "(before Minecraft or any mod processes them). " +
+                    "Used as source for refilter and search when those options are ON.").mc())
+                .setSaveConsumer(tab::setAllRawList)
+                .build());
+
+            allCat.addEntry(eb.startBooleanToggle(LzText.literal("Refilter Reads Raw List").mc(), tab.allRefilterRaw())
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal(
+                    "ON (default): refiltering a tab reads from the raw list so timestamps and " +
+                    "collapse counters in the All display list do not affect filter text matching. " +
+                    "OFF: reads from the All display list (legacy behaviour).").mc())
+                .setSaveConsumer(tab::setAllRefilterRaw)
+                .build());
+
+            allCat.addEntry(eb.startBooleanToggle(LzText.literal("Search Reads Raw List").mc(), tab.allSearchRaw())
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal(
+                    "ON (default): search results are built from the raw list. " +
+                    "OFF: search reads from the All display list.").mc())
+                .setSaveConsumer(tab::setAllSearchRaw)
+                .build());
+
+            return builder.build();
+        }
+
         // ── Settings ──────────────────────────────────────────────────────
         ConfigCategory settings = builder.getOrCreateCategory(LzText.literal("Settings").mc());
 
@@ -216,6 +249,14 @@ public class TabEditScreen {
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Ping on every message regardless of focus or AFK state.").mc())
                 .setSaveConsumer(tab::setPingCondAlways)
+                .build());
+
+        pingsCat.addEntry(eb.startBooleanToggle(
+                LzText.literal("Ping when Tab Active").mc(),
+                tab.pingCondActiveTab())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Ping even when this tab is currently visible on a panel. Useful when you need an audio alert regardless of whether you're watching the tab.").mc())
+                .setSaveConsumer(tab::setPingCondActiveTab)
                 .build());
 
         pingsCat.addEntry(eb.startBooleanToggle(

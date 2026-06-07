@@ -16,11 +16,16 @@ public class PingPlayer {
     private static final Map<ChatTab, Long> lastPlayed      = new WeakHashMap<>();
     private static final Map<ChatTab, Long> lastMessageTime = new WeakHashMap<>();
 
+    /** Epoch-ms deadline until which pings are suppressed during chat refresh. 0 = not suppressed.
+     *  Using a deadline instead of a boolean so a thrown exception can't leave it stuck forever. */
+    public static long suppressPingsUntil = 0L;
+
     public static void playForTab(ChatTab tab) {
         // Track message time regardless of enabled state — silence clock must run always
         long now     = System.currentTimeMillis();
         Long lastMsg = lastMessageTime.get(tab);
         lastMessageTime.put(tab, now);
+        if (now < suppressPingsUntil) return;
 
         if (!MultichatClient.CONFIG.pingEnabled) return;
         if (!tab.pingEnabled()) return;
@@ -47,6 +52,7 @@ public class PingPlayer {
         // Resolve effective conditions — tab overrides global when not using global
         boolean useGlobal     = tab.pingUseGlobalConditions();
         boolean condAlways    = useGlobal ? MultichatClient.CONFIG.pingCondAlways         : tab.pingCondAlways();
+        boolean condActiveTab = useGlobal ? MultichatClient.CONFIG.pingCondActiveTab      : tab.pingCondActiveTab();
         boolean condUnfocused = useGlobal ? MultichatClient.CONFIG.pingCondUnfocusedTab   : tab.pingCondUnfocusedTab();
         boolean condGame      = useGlobal ? MultichatClient.CONFIG.pingCondGameUnfocused  : tab.pingCondGameUnfocused();
         boolean condAfk       = useGlobal ? MultichatClient.CONFIG.pingCondAfk            : tab.pingCondAfk();
@@ -58,6 +64,7 @@ public class PingPlayer {
         // OR between all enabled conditions
         boolean anyCondition =
             condAlways ||
+            (condActiveTab && tabVisible) ||
             (condUnfocused && !tabVisible) ||
             (condGame      && !winFocused) ||
             (condAfk       && LzAfk.isAfk(afkThresholdSec));
