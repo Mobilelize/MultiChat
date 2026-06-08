@@ -116,6 +116,7 @@ public class MessageRouter {
                                 if (scrolled > 0)
                                     panel.setScrolledLines(tab, scrolled + linesAdded);
                             }
+                            ChatSelection.shiftLines(tab, linesAdded);
                         }
                     }
                     if (!ChatRenderer.isActiveInAnyPanel(tab)) tab.incrementUnread();
@@ -227,10 +228,10 @@ public class MessageRouter {
 
         if (netLinesAdded != 0) {
             boolean freezing = MultichatClient.CONFIG.selectionFreezeChat
-                && ChatSelection.isSelecting() && ChatSelection.hasSelection();
-            ChatPanel freezePanel = freezing ? ChatSelection.getPanel() : null;
+                && ChatSelection.isSelecting();
+            ChatPanel selP = ChatSelection.getPanel();
+            ChatPanel freezePanel = freezing ? selP : null;
 
-            LzText scrollText = (tab.type() == TabType.ALL) ? content : effectiveText;
             for (ChatPanel panel : ChatRenderer.PANELS) {
                 int scrolled = panel.getScrolledLines(tab);
                 boolean shouldFreeze = freezePanel == panel && panel.getActiveTab() == tab;
@@ -239,11 +240,16 @@ public class MessageRouter {
                 if (panel.primary() || wasCollapse) {
                     delta = netLinesAdded;
                 } else {
-                    delta = ChatRenderer.lineCountAtWidth(scrollText, indicator, stamp, tick, panel.resolveWidth());
+                    delta = ChatRenderer.lineCountAtWidth(effectiveText, indicator, stamp, tick, panel.resolveWidth());
                 }
                 panel.setScrolledLines(tab, Math.max(0, scrolled + delta));
             }
-            ChatSelection.shiftLines(tab, netLinesAdded);
+            // Secondary panels wrap at different widths → line indices grow at a different rate than
+            // netLinesAdded (primary count). Use the selection panel's own delta to avoid drift.
+            int shiftDelta = (selP != null && !selP.primary() && !wasCollapse && selP.getActiveTab() == tab)
+                ? ChatRenderer.lineCountAtWidth(effectiveText, indicator, stamp, tick, selP.resolveWidth())
+                : netLinesAdded;
+            ChatSelection.shiftLines(tab, shiftDelta);
         }
 
         if (tab.messageCap() > 0) {

@@ -2,6 +2,7 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -264,7 +265,7 @@ public class TabListScreen extends LzScreen {
             LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 207, textY, canEdit ? 0xFFFFFF : 0x555555);
 
             if (canRemove) {
-                boolean instantDelete = quickDeleteMode || Screen.hasControlDown();
+                boolean instantDelete = quickDeleteMode || LzKeys.isCtrlDown();
                 int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
                                          : (hoverRemove ? 0xAAFF8800 : 0x66552200);
                 int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
@@ -368,7 +369,7 @@ public class TabListScreen extends LzScreen {
 
         // Remove button
         if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
-            if (quickDeleteMode || Screen.hasControlDown()) {
+            if (quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemoveTab(idx, tab);
             } else {
                 int capturedIdx = idx;

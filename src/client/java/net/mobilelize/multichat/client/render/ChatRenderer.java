@@ -562,7 +562,7 @@ public class ChatRenderer {
 
     public static boolean isActiveInAnyPanel(ChatTab tab) {
         for (ChatPanel panel : PANELS) {
-            if (panel.getActiveTab() == tab) return true;
+            if (panel.enabled() && panel.getActiveTab() == tab) return true;
         }
         return false;
     }

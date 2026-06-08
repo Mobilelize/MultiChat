@@ -259,6 +259,10 @@ public class TabHandle {
     private static void adjustAfterAdd(ChatTab tab, int linesAdded) {
         tab.clearWidthCaches();
 
+        // API messages are created without a LzChatEntry, so buildForWidth copies the primary-width
+        // lines directly instead of re-wrapping at the secondary panel's width. All panels therefore
+        // show exactly linesAdded lines for this message.
+        ChatPanel selP = ChatSelection.getPanel();
         for (ChatPanel panel : ChatRenderer.PANELS) {
             int scrolled = panel.getScrolledLines(tab);
             if (scrolled <= 0) continue;

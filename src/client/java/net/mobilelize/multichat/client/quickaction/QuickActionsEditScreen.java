@@ -5,6 +5,7 @@ import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.client.LzTextField;
+import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzFormatting;
@@ -14,7 +15,6 @@ import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.config.DeleteConfirmScreen;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
-import net.minecraft.client.gui.screen.Screen;
 
 import java.util.Collections;
 import java.util.List;
@@ -223,7 +223,7 @@ public class QuickActionsEditScreen extends LzScreen {
 
                 int dx = lx2 - DEL_W - 2;
                 boolean dHov = mouseX >= dx && mouseX < dx + DEL_W && mouseY >= ry + 3 && mouseY < ry + 3 + BTN_H;
-                boolean dInst = quickDeleteMode || Screen.hasControlDown();
+                boolean dInst = quickDeleteMode || LzKeys.isCtrlDown();
                 int dBg  = dInst ? (dHov ? 0xAAFF3333 : 0x44FF3333) : (dHov ? 0xAAFF8800 : 0x44884400);
                 int dBdr = dInst ? 0x88FF5555 : 0x88FFAA00;
                 int dTxt = dInst ? 0xFFFF8888 : 0xFFFFAA44;
@@ -276,7 +276,7 @@ public class QuickActionsEditScreen extends LzScreen {
             // Del button
             int dx = lx2 - DEL_W - 2;
             if (mouseX >= dx && mouseX < dx + DEL_W && mouseY >= ry + 3 && mouseY < ry + 3 + BTN_H) {
-                if (quickDeleteMode || Screen.hasControlDown()) {
+                if (quickDeleteMode || LzKeys.isCtrlDown()) {
                     doRemoveAction(list, i);
                 } else {
                     int capturedI = i;
@@ -340,7 +340,8 @@ public class QuickActionsEditScreen extends LzScreen {
 
     private void doRemoveAction(List<MultiChatConfig.QuickActionConfig> list, int i) {
         list.remove(i);
-        if (editingIdx > i)  editingIdx--;
+        if (editingIdx == i)     editingIdx = -1;
+        else if (editingIdx > i) editingIdx--;
         if (selectedIdx > i) selectedIdx--;
         else if (selectedIdx == i) selectedIdx = -1;
         swapPending = false;

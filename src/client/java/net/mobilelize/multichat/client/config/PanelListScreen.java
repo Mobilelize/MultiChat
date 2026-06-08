@@ -2,6 +2,7 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -133,7 +134,7 @@ public class PanelListScreen extends LzScreen {
             // Remove button — only for extra panels (index >= 2)
             if (i >= 2) {
                 boolean hoverRemove  = mouseX >= lx + 228 && mouseX < lx + 258 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-                boolean instantDelete = quickDeleteMode || Screen.hasControlDown();
+                boolean instantDelete = quickDeleteMode || LzKeys.isCtrlDown();
                 int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
                                          : (hoverRemove ? 0xAAFF8800 : 0x66552200);
                 int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
@@ -208,13 +209,12 @@ public class PanelListScreen extends LzScreen {
 
         // Remove button (index >= 2 only)
         if (idx >= 2 && mx >= lx + 228 && mx < lx + 258) {
-            if (quickDeleteMode || Screen.hasControlDown()) {
+            if (quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemovePanel(panel);
             } else {
-                ChatPanel capturedPanel = panel;
                 LzClient.mc().setScreen(new DeleteConfirmScreen(this,
                     "Delete panel \"" + panel.name() + "\"?",
-                    () -> doRemovePanel(capturedPanel)));
+                    () -> doRemovePanel(panel)));
             }
             return true;
         }
@@ -260,6 +260,8 @@ public class PanelListScreen extends LzScreen {
     }
 
     private void doRemovePanel(ChatPanel panel) {
+        int id = panel.id();
+        ChatRenderer.TABS.forEach(t -> t.visibleOnPanels().remove(id));
         ChatRenderer.PANELS.remove(panel);
         MultichatClient.saveTabsToConfig();
         clearAndInit();

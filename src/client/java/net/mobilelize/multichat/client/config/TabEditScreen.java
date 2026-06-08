@@ -341,10 +341,11 @@ public class TabEditScreen {
                 .build());
 
             diffCat.addEntry(eb.startTextDescription(LzText.format(
-                "&eExample&r: &aGuild&r layer &e2&r, &aTrade&r layer &e2&r, &6Other&r layer &e0\n" +
-                "&7Guild message matches &aGuild&7 (layer 2, highest) — both &aGuild&7 and &aTrade&7\n" +
-                "&7share layer 2, so &aGuild&7 gets it. &6Other&7 at layer 0 never sees it.\n" +
-                "&7A message matching neither layer-2 tab falls down to &6Other&7 at layer 0.").mc())
+                            """
+                                    &eExample&r: &aGuild&r layer &e2&r, &aTrade&r layer &e2&r, &6Other&r layer &e0
+                                    &7Guild message matches &aGuild&7 (layer 2, highest) — both &aGuild&7 and &aTrade&7
+                                    &7share layer 2, so &aGuild&7 gets it. &6Other&7 at layer 0 never sees it.
+                                    &7A message matching neither layer-2 tab falls down to &6Other&7 at layer 0.""").mc())
                 .build());
         }
 

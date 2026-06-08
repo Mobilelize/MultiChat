@@ -1,7 +1,6 @@
 package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.render.LzDrawContext;
-import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzChatLine;
@@ -176,7 +175,7 @@ public class MessageContextMenu {
 
         sourcePanel.setActiveTab(allPanelIdx);
         allTab.clearUnread();
-        int maxScroll = Math.max(0, allTab.messageCount() - LzChat.visibleLineCount());
+        int maxScroll = Math.max(0, allTab.messageCount() - sourcePanel.resolveLines());
         sourcePanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));
 
         // Highlight via entry so all panels (any width) light up the same message
