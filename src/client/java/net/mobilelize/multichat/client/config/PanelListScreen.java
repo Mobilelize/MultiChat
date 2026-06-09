@@ -4,9 +4,11 @@ import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzTextField;
 import net.mobilelize.fabriclib.render.LzDrawContext;
-import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.text.LzFormatting;
+import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
@@ -18,40 +20,37 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class PanelListScreen extends LzScreen {
+public class PanelListScreen extends ConfigScreen {
 
     private static final int LIST_TOP   = 32;
     private static final int ROW_HEIGHT = 22;
-    private static final int SB_W       = 6;
 
-    private final Screen parent;
+    private LzTextField panelNameField;
     private int     scrollOffset       = 0;
     private boolean scrollDragging     = false;
     private int     scrollDragStartY   = 0;
     private int     scrollDragStartOff = 0;
-    private boolean quickDeleteMode    = false;
 
     public PanelListScreen(Screen parent) {
-        super("MultiChat — Panels");
-        this.parent = parent;
+        super("Panels", parent);
     }
 
     private List<ChatPanel> panels() { return ChatRenderer.PANELS; }
-    private int listBottom()         { return height - 36; }
+    private int listBottom()         { return height - 80; }
     private int maxScroll()          { return Math.max(0, panels().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
     @Override
     protected void init() {
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
-        addDrawableChild(LzButton.of("Add Panel", width / 2 - 154, height - 28, 98,  20, b -> addPanel()));
-        addDrawableChild(LzButton.of("Layout",    width / 2 - 50,  height - 28, 100, 20, b -> LzClient.mc().setScreen(new PanelLayoutScreen(this))));
-        addDrawableChild(LzButton.of("Done",      width / 2 + 56,  height - 28, 74,  20, b -> close()));
-        addDrawableChild(LzButton.of(quickDeleteMode ? "Del: ON" : "Del: OFF",
-            width / 2 + 134, height - 28, 52, 20, b -> {
-                quickDeleteMode = !quickDeleteMode;
-                b.setMessage(LzText.literal(quickDeleteMode ? "Del: ON" : "Del: OFF"));
-            }));
+        // Name field + Add + Layout on one row — left-anchored at list edge
+        panelNameField = new LzTextField(width / 2 - 198, height - 74, 284, 20);
+        panelNameField.setPlaceholder(LzText.literal("New panel name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+        addSelectableChild(panelNameField);
+        addDrawableChild(LzButton.of("Layout", width / 2 + 90, height - 74, 60, 20, b -> LzClient.mc().setScreen(new PanelLayoutScreen(this))));
+        addDrawableChild(LzButton.of("Add",    width / 2 + 154, height - 74, 40, 20, b -> addPanel()));
+
+        addConfigNav(width, height, NavPage.PANELS);
     }
 
     private void addPanel() {
@@ -61,8 +60,9 @@ public class PanelListScreen extends LzScreen {
 
         ChatPanel panel = new ChatPanel();
         panel.setId(id);
-        String baseName = "Panel " + (ChatRenderer.PANELS.size() + 1);
-        java.util.Set<String> usedNames = ChatRenderer.PANELS.stream().map(ChatPanel::name).collect(java.util.stream.Collectors.toSet());
+        String fieldText = panelNameField != null ? panelNameField.getText().trim() : "";
+        String baseName = fieldText.isEmpty() ? "Panel " + (ChatRenderer.PANELS.size() + 1) : fieldText;
+        Set<String> usedNames = ChatRenderer.PANELS.stream().map(ChatPanel::name).collect(Collectors.toSet());
         String uniqueName = baseName;
         int suffix = 2;
         while (usedNames.contains(uniqueName)) uniqueName = baseName + " (" + suffix++ + ")";
@@ -86,10 +86,13 @@ public class PanelListScreen extends LzScreen {
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, 0xFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, 0xAAFFCC);
+        LzDraw.drawCenteredText(ctx, LzText.format("&7layout panels  ·  click Tabs to assign"), width / 2, 21, 0xFFFFFF);
+        if (panelNameField != null) panelNameField.render(ctx.mc(), mouseX, mouseY, delta);
 
-        int lx = width / 2 - 130;
+        int lx = width / 2 - 200;
         List<ChatPanel> panels = panels();
+
 
         LzDraw.enableScissor(ctx, 0, LIST_TOP, width, listBottom());
 
@@ -105,8 +108,15 @@ public class PanelListScreen extends LzScreen {
             int rowBg  = i == 0 ? 0x44AAAAFF : i == 1 ? 0x44BB88FF : 0x4488FFAA;
             int rowBdr = i == 0 ? 0x886688CC : i == 1 ? 0x88886699 : 0x8855AA77;
 
-            LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, rowBg);
-            LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2, rowBdr);
+            LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, rowBg);
+            LzDraw.drawBorder(ctx, lx, rowY1, lx + 400, rowY2, rowBdr);
+
+            // Hover highlight
+            boolean hoverRow = mouseX >= lx && mouseX < lx + 400 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            if (hoverRow) {
+                int hoverTint = i == 0 ? 0x44AAAAFF : i == 1 ? 0x44BB88FF : 0x4488FFAA;
+                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, hoverTint);
+            }
 
             // Name + tab count + anchor (anchor color = enabled status)
             String anchorTag = "[" + panel.anchor().name().toLowerCase() + "]";
@@ -122,24 +132,28 @@ public class PanelListScreen extends LzScreen {
             LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.enabled() ? 0xFF55FF55 : 0xFFFF5555);
 
             // Tabs button — always
-            boolean hoverTabs = mouseX >= lx + 148 && mouseX < lx + 183 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            LzDraw.fill(ctx, lx + 148, btnY1, lx + 183, btnY2, hoverTabs ? 0xAA336688 : 0x66224466);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Tabs"), lx + 165, textY, 0xAADDFF);
+            boolean hoverTabs = mouseX >= lx + 282 && mouseX < lx + 318 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            LzDraw.fill(ctx, lx + 282, btnY1, lx + 318, btnY2, hoverTabs ? 0xAA336688 : 0x66224466);
+            LzDraw.drawBorder(ctx, lx + 282, btnY1, lx + 318, btnY2, 0x88446688);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Tabs"), lx + 300, textY, 0xAADDFF);
 
             // Edit button — always
-            boolean hoverEdit = mouseX >= lx + 186 && mouseX < lx + 225 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            LzDraw.fill(ctx, lx + 186, btnY1, lx + 225, btnY2, hoverEdit ? 0xAA888888 : 0x66555555);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 205, textY, 0xFFFFFF);
+            boolean hoverEdit = mouseX >= lx + 322 && mouseX < lx + 358 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, hoverEdit ? 0xAAFFCC44 : 0x44FFCC44);
+            LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, 0x88FFCC44);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, 0xFFFFCC44);
 
-            // Remove button — only for extra panels (index >= 2)
+            // Del button — only for extra panels (index >= 2)
             if (i >= 2) {
-                boolean hoverRemove  = mouseX >= lx + 228 && mouseX < lx + 258 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-                boolean instantDelete = quickDeleteMode || LzKeys.isCtrlDown();
+                boolean hoverRemove   = mouseX >= lx + 362 && mouseX < lx + 398 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+                boolean instantDelete = TabListScreen.quickDeleteMode || LzKeys.isCtrlDown();
                 int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
                                          : (hoverRemove ? 0xAAFF8800 : 0x66552200);
+                int xBdr = instantDelete ? 0x88FF5555 : 0x88FFAA00;
                 int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
-                LzDraw.fill(ctx, lx + 228, btnY1, lx + 258, btnY2, xBg);
-                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 243, textY, xCol);
+                LzDraw.fill(ctx, lx + 362, btnY1, lx + 398, btnY2, xBg);
+                LzDraw.drawBorder(ctx, lx + 362, btnY1, lx + 398, btnY2, xBdr);
+                LzDraw.drawCenteredText(ctx, LzText.literal("Del"), lx + 380, textY, xCol);
             }
         }
 
@@ -148,12 +162,13 @@ public class PanelListScreen extends LzScreen {
         // Scrollbar
         int max = maxScroll();
         if (max > 0) {
-            int sbX    = lx + 265;
+            int sbX    = lx + 405;
             int trackH = listBottom() - LIST_TOP;
             int totalH = panels.size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
             LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
+            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x88666666);
             LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
                 scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
         }
@@ -163,8 +178,8 @@ public class PanelListScreen extends LzScreen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
 
-        int lx  = width / 2 - 130;
-        int lxSb = lx + 265;
+        int lx  = width / 2 - 200;
+        int lxSb = lx + 405;
         int max  = maxScroll();
 
         // Scrollbar
@@ -196,20 +211,20 @@ public class PanelListScreen extends LzScreen {
         ChatPanel panel = panels.get(idx);
 
         // Tabs button
-        if (mx >= lx + 148 && mx < lx + 183) {
+        if (mx >= lx + 282 && mx < lx + 318) {
             LzClient.mc().setScreen(new PanelTabsScreen(this, panel));
             return true;
         }
 
         // Edit button
-        if (mx >= lx + 186 && mx < lx + 225) {
+        if (mx >= lx + 322 && mx < lx + 358) {
             LzClient.mc().setScreen(PanelEditScreen.create(this, panel));
             return true;
         }
 
-        // Remove button (index >= 2 only)
-        if (idx >= 2 && mx >= lx + 228 && mx < lx + 258) {
-            if (quickDeleteMode || LzKeys.isCtrlDown()) {
+        // Del button (index >= 2 only)
+        if (idx >= 2 && mx >= lx + 362 && mx < lx + 398) {
+            if (TabListScreen.quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemovePanel(panel);
             } else {
                 LzClient.mc().setScreen(new DeleteConfirmScreen(this,
@@ -267,6 +282,4 @@ public class PanelListScreen extends LzScreen {
         clearAndInit();
     }
 
-    @Override
-    public void close() { LzClient.mc().setScreen(parent); }
 }

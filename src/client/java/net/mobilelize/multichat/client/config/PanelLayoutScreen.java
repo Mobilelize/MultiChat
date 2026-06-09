@@ -149,8 +149,8 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+        super.lzRender(ctx, mouseX, mouseY, delta);
 
         if (snapEnabled) {
             for (int gx = 0; gx < width;  gx += GRID_SIZE)
@@ -158,11 +158,6 @@ public class PanelLayoutScreen extends LzScreen {
             for (int gy = 0; gy < height; gy += GRID_SIZE)
                 LzDraw.fill(ctx, 0, gy, width, gy + 1, 0x0DFFFFFF);
         }
-    }
-
-    @Override
-    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        super.lzRender(ctx, mouseX, mouseY, delta);
 
         for (ChatPanel panel : ChatRenderer.PANELS) {
             if (!panel.enabled()) continue;
@@ -402,7 +397,4 @@ public class PanelLayoutScreen extends LzScreen {
 
     @Override
     public void close() { LzClient.mc().setScreen(parent); }
-
-    @Override
-    public boolean shouldPause() { return false; }
 }

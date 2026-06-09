@@ -1,0 +1,56 @@
+package net.mobilelize.multichat.client.config;
+
+import net.minecraft.client.gui.screen.Screen;
+import net.mobilelize.fabriclib.client.LzButton;
+import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.client.LzScreen;
+import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
+
+public abstract class ConfigScreen extends LzScreen {
+
+    public enum NavPage { TABS, PANELS, QUICK_ACTIONS }
+
+    public static final int LIST_W = 400;
+    public static final int SB_W   = 6;
+
+    protected final Screen parent;
+
+    protected ConfigScreen(String title, Screen parent) {
+        super(title);
+        this.parent = parent;
+    }
+
+    /** Called before any nav-button navigation. Override to save state, etc. */
+    protected void beforeNavigate() {}
+
+    /** Called before close(). Override to save state. */
+    protected void beforeClose() {}
+
+    protected void addConfigNav(int width, int height, NavPage current) {
+        int sx = width / 2 - 136;
+        var tabs = addDrawableChild(LzButton.of("Tabs",
+            sx, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new TabListScreen(parent)); }));
+        var panels = addDrawableChild(LzButton.of("Panels",
+            sx + 92, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new PanelListScreen(parent)); }));
+        var qa = addDrawableChild(LzButton.of("Quick Actions",
+            sx + 184, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new QuickActionsEditScreen(parent)); }));
+        if (current == NavPage.TABS)          tabs.active   = false;
+        if (current == NavPage.PANELS)        panels.active = false;
+        if (current == NavPage.QUICK_ACTIONS) qa.active     = false;
+        addDrawableChild(LzButton.of(TabListScreen.quickDeleteMode ? "Del: ON" : "Del: OFF",
+            sx, height - 24, 88, 20, b -> {
+                TabListScreen.quickDeleteMode = !TabListScreen.quickDeleteMode;
+                b.setMessage(LzText.literal(TabListScreen.quickDeleteMode ? "Del: ON" : "Del: OFF"));
+            }));
+        addDrawableChild(LzButton.of("Settings",
+            sx + 92, height - 24, 88, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
+        addDrawableChild(LzButton.of("Done", sx + 184, height - 24, 88, 20, b -> close()));
+    }
+
+    @Override
+    public void close() {
+        beforeClose();
+        LzClient.mc().setScreen(parent);
+    }
+}

@@ -31,12 +31,6 @@ public class DeleteConfirmScreen extends LzScreen {
     }
 
     @Override
-    public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        applyBlur(delta);
-        LzDraw.fill(ctx, 0, 0, width, height, 0x88000000);
-    }
-
-    @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
 
@@ -62,7 +56,4 @@ public class DeleteConfirmScreen extends LzScreen {
 
     @Override
     public void close() { LzClient.mc().setScreen(returnTo); }
-
-    @Override
-    public boolean shouldPause() { return false; }
 }

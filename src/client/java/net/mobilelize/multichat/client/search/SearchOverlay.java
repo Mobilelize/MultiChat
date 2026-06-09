@@ -170,8 +170,8 @@ public class SearchOverlay extends LzScreen {
         }
 
         LzDraw.drawText(ctx, "Query", fx, top - 9, 0xAAAAAA);
-        LzDraw.drawText(ctx, "From (older)", fx, top + 21, 0xAAAAAA);
-        LzDraw.drawText(ctx, "To (newer)", fx + half + 6, top + 21, 0xAAAAAA);
+        LzDraw.drawText(ctx, "msgs older than", fx, top + 21, 0xAAAAAA);
+        LzDraw.drawText(ctx, "msgs newer than", fx + half + 6, top + 21, 0xAAAAAA);
     }
 
     @Override

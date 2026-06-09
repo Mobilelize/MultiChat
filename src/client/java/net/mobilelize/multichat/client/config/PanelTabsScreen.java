@@ -274,7 +274,4 @@ public class PanelTabsScreen extends LzScreen {
 
     @Override
     public void close() { LzClient.mc().setScreen(parent); }
-
-    @Override
-    public boolean shouldPause() { return false; }
 }

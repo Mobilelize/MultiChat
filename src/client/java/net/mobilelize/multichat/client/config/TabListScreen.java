@@ -6,7 +6,6 @@ import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzTextField;
-import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
@@ -15,22 +14,19 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.Collections;
 import java.util.List;
 
-public class TabListScreen extends LzScreen {
+public class TabListScreen extends ConfigScreen {
 
     private static final int LIST_TOP   = 32;
     private static final int ROW_HEIGHT = 22;
-    private static final int SB_W       = 6;
     private static final int BTN_W      = 40;
     private static final int BTN_H      = 18;
     private static final int BTN_GAP    = 3;
 
-    private final Screen parent;
     private LzTextField nameField;
     private int     scrollOffset       = 0;
     private boolean scrollDragging     = false;
@@ -38,15 +34,14 @@ public class TabListScreen extends LzScreen {
     private int     scrollDragStartOff = 0;
     private int     selectedIdx        = -1;
     private boolean swapPending        = false;
-    private boolean quickDeleteMode    = false;
+    public static boolean quickDeleteMode = false;
 
     public TabListScreen(Screen parent) {
-        super("MultiChat — Tabs");
-        this.parent = parent;
+        super("Tabs", parent);
     }
 
     private List<ChatTab> allTabs() { return ChatRenderer.TABS; }
-    private int listBottom()        { return height - 62; }
+    private int listBottom()        { return height - 80; }
     private int maxScroll()         { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
     private boolean isMoveable(ChatTab tab) {
@@ -65,26 +60,27 @@ public class TabListScreen extends LzScreen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
         if (selectedIdx >= allTabs().size()) selectedIdx = -1;
 
-        nameField = new LzTextField(width / 2 - 100, height - 50, 158, 20);
+        nameField = new LzTextField(width / 2 - 198, height - 74, 350, 20);
         nameField.setPlaceholder(LzText.literal("New tab name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         this.addSelectableChild(nameField);
+        addDrawableChild(LzButton.of("Add", width / 2 + 156, height - 74, 40, 20, b -> addTab()));
 
-        addDrawableChild(LzButton.of("Add",      width / 2 + 62,  height - 50, 40, 20, b -> addTab()));
-        addDrawableChild(LzButton.of("Panels",        width / 2 - 102, height - 26, 62, 20, b -> LzClient.mc().setScreen(new PanelListScreen(this))));
-        addDrawableChild(LzButton.of("Settings",      width / 2 - 36,  height - 26, 72, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
-        addDrawableChild(LzButton.of("Done",          width / 2 + 40,  height - 26, 62, 20, b -> close()));
-        addDrawableChild(LzButton.of("Quick Actions", 4,               height - 26, 90, 20, b -> LzClient.mc().setScreen(new QuickActionsEditScreen(this))));
-        addDrawableChild(LzButton.of(quickDeleteMode ? "Del: ON" : "Del: OFF",
-            width / 2 + 106, height - 26, 52, 20, b -> {
-                quickDeleteMode = !quickDeleteMode;
-                b.setMessage(LzText.literal(quickDeleteMode ? "Del: ON" : "Del: OFF"));
-            }));
+        addConfigNav(width, height, NavPage.TABS);
     }
 
     private void addTab() {
-        String name = nameField.getText().trim();
-        if (name.isEmpty()) return;
-        if (ChatRenderer.TABS.stream().anyMatch(t -> t.type() == TabType.FILTERED && t.name().equalsIgnoreCase(name))) return;
+        String raw = nameField.getText().trim();
+        String name;
+        if (raw.isEmpty()) {
+            java.util.Set<String> existing = new java.util.HashSet<>();
+            for (ChatTab t : ChatRenderer.TABS) existing.add(t.name().toLowerCase());
+            int n = 1;
+            while (existing.contains("tab " + n)) n++;
+            name = "Tab " + n;
+        } else {
+            if (ChatRenderer.TABS.stream().anyMatch(t -> t.type() == TabType.FILTERED && t.name().equalsIgnoreCase(raw))) return;
+            name = raw;
+        }
         ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, java.util.List.of(0, 1)));
         MultichatClient.saveTabsToConfig();
         clearAndInit();
@@ -113,8 +109,8 @@ public class TabListScreen extends LzScreen {
     }
 
     // Control button bounds — to the LEFT of the row list, vertically centered
-    private int ctrlBtnX1() { return width / 2 - 130 - BTN_W - 4; }
-    private int ctrlBtnX2() { return width / 2 - 130 - 4; }
+    private int ctrlBtnX1() { return width / 2 - 200 - BTN_W - 4; }
+    private int ctrlBtnX2() { return width / 2 - 200 - 4; }
     private int ctrlBtnCx() { return (ctrlBtnX1() + ctrlBtnX2()) / 2; }
 
     private int ctrlUpY1()   { int cy = (LIST_TOP + listBottom()) / 2; return cy - BTN_H - BTN_GAP - BTN_H / 2; }
@@ -127,10 +123,12 @@ public class TabListScreen extends LzScreen {
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, 0xFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, 0xAADDFF);
+        LzDraw.drawCenteredText(ctx, LzText.format("&7add, edit & reorder tabs  ·  WL/BL filter rules"), width / 2, 21, 0xFFFFFF);
         nameField.render(ctx.mc(), mouseX, mouseY, delta);
 
-        int lx = width / 2 - 130;
+        int lx = width / 2 - 200;
+
 
         // --- Control buttons (left of list) ---
         int cx1 = ctrlBtnX1(), cx2 = ctrlBtnX2(), cxMid = ctrlBtnCx();
@@ -190,15 +188,23 @@ public class TabListScreen extends LzScreen {
                 case API      -> 0x88CC6600;
                 default       -> 0x886688CC;
             };
-            LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, rowBg);
-            LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2, rowBdr);
+            LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, rowBg);
+            LzDraw.drawBorder(ctx, lx, rowY1, lx + 400, rowY2, rowBdr);
 
-            // Selection highlight
+            // Selection / hover highlight
+            boolean hoverRow = mouseX >= lx && mouseX < lx + 400 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             if (i == selectedIdx) {
-                LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, swapPending ? 0x553366FF : 0x55FFFF44);
-            } else if (swapPending && isMoveable(tab)
-                    && mouseX >= lx && mouseX < lx + 260 && mouseY >= y && mouseY < y + ROW_HEIGHT) {
-                LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2, 0x3300FFAA);
+                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, swapPending ? 0x553366FF : 0x55FFFF44);
+            } else if (swapPending && isMoveable(tab) && hoverRow) {
+                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, 0x3300FFAA);
+            } else if (hoverRow) {
+                int hoverTint = switch (tab.type()) {
+                    case FILTERED -> 0x44FFFFFF;
+                    case SEARCH   -> 0x4400FFAA;
+                    case API      -> 0x44FF9900;
+                    default       -> 0x4466AAFF;
+                };
+                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, hoverTint);
             }
 
             int nameColor = switch (tab.type()) {
@@ -231,19 +237,20 @@ public class TabListScreen extends LzScreen {
                 LzDraw.drawText(ctx, blStr, infoX, textY, blCount > 0 ? 0xFFFF8888 : 0xFF666666);
                 infoX += LzDraw.textWidth(blStr);
 
-                // Settings flags: T=timestamps C=collapse D=diff E=exception B=badge-off P=prefix S=sound-ping
+                // Settings flags
                 StringBuilder flags = new StringBuilder();
-                if (tab.showTimestamps())           flags.append("T");
-                if (tab.collapseRepeating())        flags.append("C");
+                if (tab.showTimestamps())           { if (flags.length() > 0) flags.append(' '); flags.append('T'); }
+                if (tab.collapseRepeating())        { if (flags.length() > 0) flags.append(' '); flags.append('C'); }
                 if (tab.differenceMode()) {
-                    flags.append("D");
+                    if (flags.length() > 0) flags.append(' ');
+                    flags.append('D');
                     if (tab.differenceLayerIndex() != 0) flags.append(tab.differenceLayerIndex());
                 }
-                if (tab.differenceException())      flags.append("E");
-                if (!tab.showBadge())               flags.append("B");
-                if (!tab.contextPrefix().isEmpty()) flags.append("P");
-                if (tab.pingEnabled())              flags.append("S");
-                if (!flags.isEmpty())
+                if (tab.differenceException())      { if (flags.length() > 0) flags.append(' '); flags.append('E'); }
+                if (!tab.showBadge())               { if (flags.length() > 0) flags.append(' '); flags.append('B'); }
+                if (!tab.contextPrefix().isEmpty()) { if (flags.length() > 0) flags.append(' '); flags.append('P'); }
+                if (tab.pingEnabled())              { if (flags.length() > 0) flags.append(' '); flags.append('S'); }
+                if (flags.length() > 0)
                     LzDraw.drawText(ctx, "  " + flags, infoX, textY, 0xFF9999CC);
             } else {
                 String typeTag = switch (tab.type()) {
@@ -258,19 +265,22 @@ public class TabListScreen extends LzScreen {
 
             boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL;
             boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH;
-            boolean hoverEdit   = canEdit   && mouseX >= lx + 186 && mouseX < lx + 228 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            boolean hoverRemove = canRemove && mouseX >= lx + 231 && mouseX < lx + 259 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            boolean hoverEdit   = canEdit   && mouseX >= lx + 322 && mouseX < lx + 358 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            boolean hoverRemove = canRemove && mouseX >= lx + 362 && mouseX < lx + 398 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
-            LzDraw.fill(ctx, lx + 186, btnY1, lx + 228, btnY2, canEdit ? (hoverEdit ? 0xAA888888 : 0x66555555) : 0x33333333);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 207, textY, canEdit ? 0xFFFFFF : 0x555555);
+            LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? (hoverEdit ? 0xAAFFCC44 : 0x44FFCC44) : 0x33333333);
+            LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? 0x88FFCC44 : 0x44444444);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, canEdit ? 0xFFFFCC44 : 0x555555);
 
             if (canRemove) {
                 boolean instantDelete = quickDeleteMode || LzKeys.isCtrlDown();
                 int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
                                          : (hoverRemove ? 0xAAFF8800 : 0x66552200);
+                int xBdr = instantDelete ? 0x88FF5555 : 0x88FFAA00;
                 int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
-                LzDraw.fill(ctx, lx + 231, btnY1, lx + 259, btnY2, xBg);
-                LzDraw.drawCenteredText(ctx, LzText.literal("X"), lx + 245, textY, xCol);
+                LzDraw.fill(ctx, lx + 362, btnY1, lx + 398, btnY2, xBg);
+                LzDraw.drawBorder(ctx, lx + 362, btnY1, lx + 398, btnY2, xBdr);
+                LzDraw.drawCenteredText(ctx, LzText.literal("Del"), lx + 380, textY, xCol);
             }
         }
 
@@ -279,13 +289,14 @@ public class TabListScreen extends LzScreen {
         // Scrollbar
         int max = maxScroll();
         if (max > 0) {
-            int sbX    = lx + 265;
+            int sbX    = lx + 405;
             int trackH = listBottom() - LIST_TOP;
             int totalH = tabs.size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
 
             LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
+            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x88666666);
             LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
                 scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
         }
@@ -309,7 +320,7 @@ public class TabListScreen extends LzScreen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
 
-        int lx = width / 2 - 130;
+        int lx = width / 2 - 200;
 
         // Control buttons
         if (button == 0 && mx >= ctrlBtnX1() && mx < ctrlBtnX2()) {
@@ -331,7 +342,7 @@ public class TabListScreen extends LzScreen {
         }
 
         // Scrollbar
-        int lxSb = lx + 265;
+        int lxSb = lx + 405;
         int max  = maxScroll();
         if (button == 0 && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
             int trackH = listBottom() - LIST_TOP;
@@ -352,6 +363,7 @@ public class TabListScreen extends LzScreen {
         }
 
         if (my < LIST_TOP || my >= listBottom()) return false;
+        if (mx < lx || mx >= lx + 400) return false;
 
         int relY = (int)(my - LIST_TOP) + scrollOffset;
         int idx  = relY / ROW_HEIGHT;
@@ -361,14 +373,14 @@ public class TabListScreen extends LzScreen {
         ChatTab tab = tabs.get(idx);
 
         // Edit button
-        if (mx >= lx + 186 && mx < lx + 228) {
+        if (mx >= lx + 322 && mx < lx + 358) {
             if (tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL)
                 LzClient.mc().setScreen(TabEditScreen.create(this, tab));
             return true;
         }
 
         // Remove button
-        if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH) && mx >= lx + 231 && mx < lx + 259) {
+        if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH) && mx >= lx + 362 && mx < lx + 398) {
             if (quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemoveTab(idx, tab);
             } else {
@@ -439,6 +451,4 @@ public class TabListScreen extends LzScreen {
         clearAndInit();
     }
 
-    @Override
-    public void close() { LzClient.mc().setScreen(parent); }
 }
