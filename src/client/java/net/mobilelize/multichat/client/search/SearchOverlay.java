@@ -157,7 +157,7 @@ public class SearchOverlay extends LzScreen {
         int fx   = cx - fw / 2;
         int half = (fw - 6) / 2;
 
-        LzDraw.fill(ctx, bx, by, bx + W, by + H, 0xEE111111);
+        LzDraw.fill(ctx, bx, by, bx + W, by + H, 0x55000000);
         LzDraw.drawBorder(ctx, bx, by, bx + W, by + H, 0xFF666666);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), cx, by + 7, 0xFFFFFF);
 

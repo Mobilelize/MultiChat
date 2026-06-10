@@ -7,6 +7,7 @@ import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
@@ -65,7 +66,7 @@ public class PanelTabsScreen extends LzScreen {
             }
         }));
         addDrawableChild(LzButton.of("Remove All", btnGroupX + 76, LIST_TOP - 22, 72, 18, b -> {
-            for (ChatTab t : ChatRenderer.TABS) t.visibleOnPanels().remove(Integer.valueOf(panel.id()));
+            for (ChatTab t : ChatRenderer.TABS) t.visibleOnPanels().remove(panel.id());
         }));
         addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
         addDrawableChild(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> attemptClose()));
@@ -73,6 +74,7 @@ public class PanelTabsScreen extends LzScreen {
 
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
         super.lzRender(ctx, mouseX, mouseY, delta);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, 0xFFFFFF);
 
@@ -201,7 +203,7 @@ public class PanelTabsScreen extends LzScreen {
 
         // Visibility toggle (name area + toggle button, but not CTX region)
         if (mx >= lx && mx < lx + 194) {
-            if (tab.visibleOnPanels().contains(panel.id())) tab.visibleOnPanels().remove(Integer.valueOf(panel.id()));
+            if (tab.visibleOnPanels().contains(panel.id())) tab.visibleOnPanels().remove(panel.id());
             else                                         tab.visibleOnPanels().add(panel.id());
             return true;
         }

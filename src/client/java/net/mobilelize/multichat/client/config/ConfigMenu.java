@@ -450,87 +450,95 @@ public class ConfigMenu {
         ConfigCategory help = builder.getOrCreateCategory(LzText.literal("Help").mc());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lTabs&r\n" +
-            "&7Tabs organize chat into views. Each panel shows a list of tabs at the bottom (or top).\n" +
-            "  &f[All]&r&7  Receives every message.\n" +
-            "  &f[Vanilla]&r&7  The default Minecraft chat. Only visible on the main panel.\n" +
-            "  &f[Filtered]&r&7  User-defined tab. Shows messages matching its whitelist/blacklist rules.\n" +
-            "  &f[Search]&r&7  Temporary tab created by a search query.\n" +
-            "  &f[API]&r&7  Controlled by another mod via the MultiChat API."
+                """
+                        &e&lTabs&r
+                        &7Tabs organize chat into views. Each panel shows a list of tabs at the bottom (or top).
+                          &f[All]&r&7  Receives every message.
+                          &f[Vanilla]&r&7  The default Minecraft chat. Only visible on the main panel.
+                          &f[Filtered]&r&7  User-defined tab. Shows messages matching its whitelist/blacklist rules.
+                          &f[Search]&r&7  Temporary tab created by a search query.
+                          &f[API]&r&7  Controlled by another mod via the MultiChat API."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lTab List Indicators&r\n" +
-            "&7Shown after the tab name in the Tabs list screen.\n" +
-            "  &fWL:n&r&7 — whitelist rule count   &fBL:n&r&7 — blacklist rule count\n" +
-            "  &fT&r&7 — timestamps on   &fC&r&7 — collapse repeating on\n" +
-            "  &fD&r&7 — difference mode on (layer 0)   &fD5&r&7 / &fD-2&r&7 — difference mode, non-zero layer\n" +
-            "  &fE&r&7 — difference exception on   &fB&r&7 — badge hidden   &fP&r&7 — context prefix set   &fS&r&7 — sound ping on"
+                """
+                        &e&lTab List Indicators&r
+                        &7Shown after the tab name in the Tabs list screen.
+                          &fWL:n&r&7 — whitelist rule count   &fBL:n&r&7 — blacklist rule count
+                          &fT&r&7 — timestamps on   &fC&r&7 — collapse repeating on
+                          &fD&r&7 — difference mode on (layer 0)   &fD5&r&7 / &fD-2&r&7 — difference mode, non-zero layer
+                          &fE&r&7 — difference exception on   &fB&r&7 — badge hidden   &fP&r&7 — context prefix set   &fS&r&7 — sound ping on"""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lPanels&r\n" +
-            "&7Panels are independent chat windows. The &fmain panel&r&7 is always on the left.\n" +
-            "Additional panels can be positioned anywhere on screen.\n" +
-            "Open &fMod Menu → MultiChat → Panels&r&7 or run &f/multichat panels&r&7 to manage panels.\n" +
-            "Use &fPanel Layout&r&7 to drag and resize panels visually with snap-to-grid.\n" +
-            "&fArrow keys&r&7 switch tabs on the focused panel. &fCtrl+Arrow&r&7 cycles the focused panel.\n" +
-            "Each panel can have a &fPanel Context Tab&r&7 — set in Panel → Tabs → &fSet CTX&r&7.\n" +
-            "When &fPanel Context on Switch&r&7 is enabled, focusing a panel via Ctrl+Arrow auto-activates its context tab."
+                """
+                        &e&lPanels&r
+                        &7Panels are independent chat windows. The &fmain panel&r&7 is always on the left.
+                        Additional panels can be positioned anywhere on screen.
+                        Open &fMod Menu → MultiChat → Panels&r&7 or run &f/multichat panels&r&7 to manage panels.
+                        Use &fPanel Layout&r&7 to drag and resize panels visually with snap-to-grid.
+                        &fArrow keys&r&7 switch tabs on the focused panel. &fCtrl+Arrow&r&7 cycles the focused panel.
+                        Each panel can have a &fPanel Context Tab&r&7 — set in Panel → Tabs → &fSet CTX&r&7.
+                        When &fPanel Context on Switch&r&7 is enabled, focusing a panel via Ctrl+Arrow auto-activates its context tab."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lFilters (Whitelist / Blacklist)&r\n" +
-            "&7Filtered tabs use rules to decide which messages they receive.\n" +
-            "  &fWhitelist&r&7 — message must match at least one rule (or all, if mode is ALL).\n" +
-            "  &fBlacklist&r&7 — matching messages are excluded even if whitelisted.\n" +
-            "Rule types: &fCONTAINS, STARTS_WITH, ENDS_WITH, REGEX, EXACT.&r\n" +
-            "&7Indicator filter: &fANY, CHAT, SYSTEM&r&7, etc. — filters by message source type."
+                """
+                        &e&lFilters (Whitelist / Blacklist)&r
+                        &7Filtered tabs use rules to decide which messages they receive.
+                          &fWhitelist&r&7 — message must match at least one rule (or all, if mode is ALL).
+                          &fBlacklist&r&7 — matching messages are excluded even if whitelisted.
+                        Rule types: &fCONTAINS, STARTS_WITH, ENDS_WITH, REGEX, EXACT.&r
+                        &7Indicator filter: &fANY, CHAT, SYSTEM&r&7, etc. — filters by message source type."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lDifference Mode&r\n" +
-            "&7Routes messages through a priority pipeline based on the active tab on each enabled panel.\n" +
-            "  &fLayer index&r&7 — higher number = higher priority. Tabs at the same index share a layer.\n" +
-            "  &fPipeline order&r&7 — highest layer checked first. If any tab at that layer matches,\n" +
-            "    all matching tabs at that layer receive the message and the pipeline stops.\n" +
-            "    Lower layers never see that message.\n" +
-            "  &fNon-diff tab wins&r&7 — if the active tab on any panel is a normal (non-diff) filtered tab\n" +
-            "    and it matches, the entire diff pipeline is suppressed.\n" +
-            "  &fDifference Exception&r&7 — tab receives messages normally but never blocks the pipeline.\n" +
-            "    Other diff tabs are unaffected by what an exception tab matches.\n" +
-            "Layers use the &factive tab per panel&r&7 — switching panels changes which tabs participate.\n" +
-            "Negative layer indices are allowed (useful for low-priority catch-all tabs)."
+                """
+                        &e&lDifference Mode&r
+                        &7Routes messages through a priority pipeline based on the active tab on each enabled panel.
+                          &fLayer index&r&7 — higher number = higher priority. Tabs at the same index share a layer.
+                          &fPipeline order&r&7 — highest layer checked first. If any tab at that layer matches,
+                            all matching tabs at that layer receive the message and the pipeline stops.
+                            Lower layers never see that message.
+                          &fNon-diff tab wins&r&7 — if the active tab on any panel is a normal (non-diff) filtered tab
+                            and it matches, the entire diff pipeline is suppressed.
+                          &fDifference Exception&r&7 — tab receives messages normally but never blocks the pipeline.
+                            Other diff tabs are unaffected by what an exception tab matches.
+                        Layers use the &factive tab per panel&r&7 — switching panels changes which tabs participate.
+                        Negative layer indices are allowed (useful for low-priority catch-all tabs)."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lContext Tab&r\n" +
-            "&7Right-click a tab → &fToggle Context&r&7 to make it active, or use &f/multichat context <tab>&r&7.\n" +
-            "While a context tab is set, messages you send are prefixed automatically.\n" +
-            "  &fContext Prefix&r&7 — text prepended to your message (set in Tab Edit).\n" +
-            "  &fCommand Mode ON&r&7 — sent as a command (e.g. prefix &f/tell Steve&r&7 + your message).\n" +
-            "  &fCommand Mode OFF&r&7 — sent as plain chat text.\n" +
-            "The active context is shown above the chat input bar.\n" +
-            "&fPanel Context&r&7 — assign a context tab to a panel in Panel → Tabs → &fSet CTX&r&7.\n" +
-            "Switching to that panel via &fCtrl+Arrow&r&7 then auto-activates its context tab."
+                """
+                        &e&lContext Tab&r
+                        &7Right-click a tab → &fToggle Context&r&7 to make it active, or use &f/multichat context <tab>&r&7.
+                        While a context tab is set, messages you send are prefixed automatically.
+                          &fContext Prefix&r&7 — text prepended to your message (set in Tab Edit).
+                          &fCommand Mode ON&r&7 — sent as a command (e.g. prefix &f/tell Steve&r&7 + your message).
+                          &fCommand Mode OFF&r&7 — sent as plain chat text.
+                        The active context is shown above the chat input bar.
+                        &fPanel Context&r&7 — assign a context tab to a panel in Panel → Tabs → &fSet CTX&r&7.
+                        Switching to that panel via &fCtrl+Arrow&r&7 then auto-activates its context tab."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lText Selection & Search&r\n" +
-            "&7Click and drag in chat to select text. &fCtrl+C&r&7 copies the selection.\n" +
-            "&fCtrl+F&r&7 (or your configured key) opens Search. With text selected, it pre-fills the query.\n" +
-            "Right-click any message for: &fCopy, Search for this, Jump to All, Delete.&r\n" +
-            "&7Search supports &fCONTAINS, REGEX, FUZZY&r&7 modes and live updates as new messages arrive."
+                """
+                        &e&lText Selection & Search&r
+                        &7Click and drag in chat to select text. &fCtrl+C&r&7 copies the selection.
+                        &fCtrl+F&r&7 (or your configured key) opens Search. With text selected, it pre-fills the query.
+                        Right-click any message for: &fCopy, Search for this, Jump to All, Delete.&r
+                        &7Search supports &fCONTAINS, REGEX, FUZZY&r&7 modes and live updates as new messages arrive."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
-            "&e&lFormat Codes&r\n" +
-            "&7Used in Timestamp Format and Collapse Counter Format fields.\n" +
-            "  &f&#RRGGBB&r&7 — hex color   " +
-            "&aa&r&7 — green   &bb&r&7 — aqua   &cc&r&7 — red   &dd&r&7 — purple\n" +
-            "  &ee&r&7 — yellow   &ff&r&7 — white   &77 — gray   &88 — dark gray\n" +
-            "  &l&fBold&r&7   &o&fItalic&r&7   &n&fUnderline&r&7   &m&fStrike&r&7   " +
-            "&fr&7 — reset   k — obfuscate"
+                """
+                        &e&lFormat Codes&r
+                        &7Used in Timestamp Format and Collapse Counter Format fields.
+                          &f&#RRGGBB&r&7 — hex color   \
+                        &aa&r&7 — green   &bb&r&7 — aqua   &cc&r&7 — red   &dd&r&7 — purple
+                          &ee&r&7 — yellow   &ff&r&7 — white   &77 — gray   &88 — dark gray
+                          &l&fBold&r&7   &o&fItalic&r&7   &n&fUnderline&r&7   &m&fStrike&r&7   \
+                        &fr&7 — reset   k — obfuscate"""
         ).mc()).build());
 
         return builder.build();

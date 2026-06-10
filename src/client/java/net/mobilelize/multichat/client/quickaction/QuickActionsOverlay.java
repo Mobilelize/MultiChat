@@ -115,14 +115,14 @@ public class QuickActionsOverlay extends LzScreen {
         int x = overlayX(), y = overlayY(), h = totalH();
         ox = x; oy = y; oh = h;
 
-        LzDraw.fill(ctx, x, y, x + W, y + h, 0xEE111111);
+        LzDraw.fill(ctx, x, y, x + W, y + h, 0x88111111);
         LzDraw.drawBorder(ctx, x, y, x + W, y + h, 0xFF666666);
 
         LzDraw.drawText(ctx, LzText.literal("Quick Actions"), x + PAD, y + PAD, 0xFFFFCC44);
         LzDraw.drawText(ctx, LzText.format("&7Selected text &8(editable)&7:"), x + PAD, y + PAD + 12, 0xFFFFFFFF);
         selectionField.render(ctx.mc(), mouseX, mouseY, delta);
 
-        LzDraw.fill(ctx, x + 1, y + HEADER_H - 1, x + W - 1, y + HEADER_H, 0xFF444444);
+        LzDraw.fill(ctx, x + 1, y + HEADER_H - 1, x + W - 1, y + HEADER_H, 0x88111111);
 
         List<MultiChatConfig.QuickActionConfig> list = actions();
         int listStart = listStartY();

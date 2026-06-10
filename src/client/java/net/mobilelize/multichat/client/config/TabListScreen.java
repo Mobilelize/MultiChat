@@ -239,18 +239,18 @@ public class TabListScreen extends ConfigScreen {
 
                 // Settings flags
                 StringBuilder flags = new StringBuilder();
-                if (tab.showTimestamps())           { if (flags.length() > 0) flags.append(' '); flags.append('T'); }
-                if (tab.collapseRepeating())        { if (flags.length() > 0) flags.append(' '); flags.append('C'); }
+                if (tab.showTimestamps())           { if (!flags.isEmpty()) flags.append(' '); flags.append('T'); }
+                if (tab.collapseRepeating())        { if (!flags.isEmpty()) flags.append(' '); flags.append('C'); }
                 if (tab.differenceMode()) {
-                    if (flags.length() > 0) flags.append(' ');
+                    if (!flags.isEmpty()) flags.append(' ');
                     flags.append('D');
                     if (tab.differenceLayerIndex() != 0) flags.append(tab.differenceLayerIndex());
                 }
-                if (tab.differenceException())      { if (flags.length() > 0) flags.append(' '); flags.append('E'); }
-                if (!tab.showBadge())               { if (flags.length() > 0) flags.append(' '); flags.append('B'); }
-                if (!tab.contextPrefix().isEmpty()) { if (flags.length() > 0) flags.append(' '); flags.append('P'); }
-                if (tab.pingEnabled())              { if (flags.length() > 0) flags.append(' '); flags.append('S'); }
-                if (flags.length() > 0)
+                if (tab.differenceException())      { if (!flags.isEmpty()) flags.append(' '); flags.append('E'); }
+                if (!tab.showBadge())               { if (!flags.isEmpty()) flags.append(' '); flags.append('B'); }
+                if (!tab.contextPrefix().isEmpty()) { if (!flags.isEmpty()) flags.append(' '); flags.append('P'); }
+                if (tab.pingEnabled())              { if (!flags.isEmpty()) flags.append(' '); flags.append('S'); }
+                if (!flags.isEmpty())
                     LzDraw.drawText(ctx, "  " + flags, infoX, textY, 0xFF9999CC);
             } else {
                 String typeTag = switch (tab.type()) {
@@ -384,11 +384,9 @@ public class TabListScreen extends ConfigScreen {
             if (quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemoveTab(idx, tab);
             } else {
-                int capturedIdx = idx;
-                ChatTab capturedTab = tab;
                 LzClient.mc().setScreen(new DeleteConfirmScreen(this,
                     "Delete tab \"" + tab.name() + "\"?",
-                    () -> doRemoveTab(capturedIdx, capturedTab)));
+                    () -> doRemoveTab(idx, tab)));
             }
             return true;
         }

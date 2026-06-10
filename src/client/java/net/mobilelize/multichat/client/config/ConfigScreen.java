@@ -4,7 +4,10 @@ import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
+import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 
 public abstract class ConfigScreen extends LzScreen {
@@ -19,6 +22,12 @@ public abstract class ConfigScreen extends LzScreen {
     protected ConfigScreen(String title, Screen parent) {
         super(title);
         this.parent = parent;
+    }
+
+    @Override
+    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        super.lzRender(ctx, mouseX, mouseY, delta);
     }
 
     /** Called before any nav-button navigation. Override to save state, etc. */

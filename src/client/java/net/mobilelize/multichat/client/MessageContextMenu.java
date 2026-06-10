@@ -91,7 +91,7 @@ public class MessageContextMenu {
         }
 
         int relY    = mouseY - my - PADDING / 2;
-        int itemIdx = relY / ITEM_H;
+        int itemIdx = relY < 0 ? -1 : relY / ITEM_H;
         close();
         if (itemIdx < 0 || itemIdx >= items.size()) return true;
 
