@@ -13,6 +13,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
@@ -45,7 +46,8 @@ public class TabListScreen extends ConfigScreen {
     private int maxScroll()         { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
     private boolean isMoveable(ChatTab tab) {
-        return tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.SEARCH;
+        return tab.type() == TabType.FILTERED || tab.type() == TabType.API
+            || tab.type() == TabType.SEARCH || tab.type() == TabType.NOTES;
     }
 
     private int firstMoveableIdx() {
@@ -60,10 +62,11 @@ public class TabListScreen extends ConfigScreen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
         if (selectedIdx >= allTabs().size()) selectedIdx = -1;
 
-        nameField = new LzTextField(width / 2 - 198, height - 74, 350, 20);
+        nameField = new LzTextField(width / 2 - 198, height - 74, 248, 20);
         nameField.setPlaceholder(LzText.literal("New tab name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         this.addSelectableChild(nameField);
-        addDrawableChild(LzButton.of("Add", width / 2 + 156, height - 74, 40, 20, b -> addTab()));
+        addDrawableChild(LzButton.of("Add", width / 2 + 54,  height - 74, 40, 20, b -> addTab()));
+        addDrawableChild(LzButton.of("Add Note Tab", width / 2 + 98, height - 74, 100, 20, b -> addNoteTab()));
 
         addConfigNav(width, height, NavPage.TABS);
     }
@@ -82,6 +85,26 @@ public class TabListScreen extends ConfigScreen {
             name = raw;
         }
         ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, java.util.List.of(0, 1)));
+        MultichatClient.saveTabsToConfig();
+        clearAndInit();
+    }
+
+    private void addNoteTab() {
+        String raw = nameField.getText().trim();
+        String name;
+        if (raw.isEmpty()) {
+            java.util.Set<String> existing = new java.util.HashSet<>();
+            for (ChatTab t : ChatRenderer.TABS) existing.add(t.name().toLowerCase());
+            int n = 1;
+            while (existing.contains("notes " + n)) n++;
+            name = "Notes " + n;
+        } else {
+            if (ChatRenderer.TABS.stream().anyMatch(t -> t.type() == TabType.NOTES && t.name().equalsIgnoreCase(raw))) return;
+            name = raw;
+        }
+        NoteTab nt = new NoteTab(name, java.util.List.of(0, 1));
+        ChatRenderer.TABS.add(nt);
+        if (ChatRenderer.activeNoteTab == null) ChatRenderer.activeNoteTab = nt;
         MultichatClient.saveTabsToConfig();
         clearAndInit();
     }
@@ -180,12 +203,14 @@ public class TabListScreen extends ConfigScreen {
                 case FILTERED -> 0x55FFFFFF;
                 case SEARCH   -> 0x4400FFAA;
                 case API      -> 0x44FF9900;
+                case NOTES    -> 0x44FFDD55;
                 default       -> 0x44AAAAFF;
             };
             int rowBdr = switch (tab.type()) {
                 case FILTERED -> 0x88AAAAAA;
                 case SEARCH   -> 0x8800CC88;
                 case API      -> 0x88CC6600;
+                case NOTES    -> 0x88DDAA00;
                 default       -> 0x886688CC;
             };
             LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, rowBg);
@@ -211,6 +236,7 @@ public class TabListScreen extends ConfigScreen {
                 case FILTERED -> 0xFFFFFF;
                 case SEARCH   -> 0xAAFFDD;
                 case API      -> 0xFFCC88;
+                case NOTES    -> 0xFFEE88;
                 default       -> 0xAADDFF;
             };
 
@@ -257,16 +283,36 @@ public class TabListScreen extends ConfigScreen {
                     case ALL     -> "[all]";
                     case VANILLA -> "[vanilla]";
                     case SEARCH  -> "[search]";
+                    case NOTES   -> "[note]";
                     default      -> "";
                 };
                 if (!typeTag.isEmpty())
                     LzDraw.drawText(ctx, typeTag, infoX, textY, 0xFF666666);
+                if (tab.type() == TabType.NOTES) {
+                    int noteCount = ((NoteTab) tab).noteEntries().size();
+                    LzDraw.drawText(ctx, "  " + noteCount + " note" + (noteCount == 1 ? "" : "s"),
+                        infoX + LzDraw.textWidth(typeTag), textY, 0xFF888888);
+                }
             }
 
-            boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL;
-            boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH;
+            boolean isNotes   = tab.type() == TabType.NOTES;
+            boolean isActive  = isNotes && tab == ChatRenderer.activeNoteTab;
+            boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API
+                             || tab.type() == TabType.ALL || isNotes;
+            boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || isNotes;
+
+            boolean hoverActive = isNotes && mouseX >= lx + 282 && mouseX < lx + 318 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverEdit   = canEdit   && mouseX >= lx + 322 && mouseX < lx + 358 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverRemove = canRemove && mouseX >= lx + 362 && mouseX < lx + 398 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+
+            if (isNotes) {
+                int activeBg  = isActive ? 0x88FFDD00 : (hoverActive ? 0x66FFDD44 : 0x33AA8800);
+                int activeBdr = isActive ? 0xFFFFDD00 : 0x66DDAA00;
+                int activeCol = isActive ? 0xFFFFEE00 : 0xFFBBAA44;
+                LzDraw.fill(ctx, lx + 282, btnY1, lx + 318, btnY2, activeBg);
+                LzDraw.drawBorder(ctx, lx + 282, btnY1, lx + 318, btnY2, activeBdr);
+                LzDraw.drawCenteredText(ctx, LzText.literal(isActive ? "★ Set" : "☆ Set"), lx + 300, textY, activeCol);
+            }
 
             LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? (hoverEdit ? 0xAAFFCC44 : 0x44FFCC44) : 0x33333333);
             LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? 0x88FFCC44 : 0x44444444);
@@ -372,15 +418,25 @@ public class TabListScreen extends ConfigScreen {
 
         ChatTab tab = tabs.get(idx);
 
+        // Set Active button (NOTES only)
+        if (tab.type() == TabType.NOTES && mx >= lx + 282 && mx < lx + 318) {
+            ChatRenderer.activeNoteTab = (NoteTab) tab;
+            MultichatClient.saveTabsToConfig();
+            return true;
+        }
+
         // Edit button
         if (mx >= lx + 322 && mx < lx + 358) {
             if (tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL)
                 LzClient.mc().setScreen(TabEditScreen.create(this, tab));
+            else if (tab.type() == TabType.NOTES)
+                LzClient.mc().setScreen(new NoteEditorScreen(this, (NoteTab) tab));
             return true;
         }
 
         // Remove button
-        if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH) && mx >= lx + 362 && mx < lx + 398) {
+        if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || tab.type() == TabType.NOTES)
+                && mx >= lx + 362 && mx < lx + 398) {
             if (quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemoveTab(idx, tab);
             } else {
@@ -445,7 +501,15 @@ public class TabListScreen extends ConfigScreen {
         else if (idx < selectedIdx) selectedIdx--;
         swapPending = false;
         ChatRenderer.TABS.remove(tab);
-        if (tab.type() == TabType.FILTERED) MultichatClient.saveTabsToConfig();
+        if (tab.type() == TabType.NOTES) {
+            if (ChatRenderer.activeNoteTab == tab) {
+                ChatRenderer.activeNoteTab = (NoteTab) ChatRenderer.TABS.stream()
+                    .filter(t -> t.type() == TabType.NOTES).findFirst().orElse(null);
+            }
+            MultichatClient.saveTabsToConfig();
+        } else if (tab.type() == TabType.FILTERED) {
+            MultichatClient.saveTabsToConfig();
+        }
         clearAndInit();
     }
 

@@ -42,6 +42,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean earlyMessageCapture    = true;
     public boolean panelContextEnabled    = true;
     public boolean logApiMessages         = true;
+    public boolean notesAlwaysOpen        = false;
 
     // Quick Actions
     public boolean quickActionPasteToChat        = false;
@@ -85,8 +86,10 @@ public class MultiChatConfig extends LzConfig {
     public int      pingSilenceThresholdSec     = 30;
     public int      pingAfkThresholdSec         = 120;
 
-    public List<TabConfig>    tabs    = new ArrayList<>();
-    public List<ApiTabConfig> apiTabs = new ArrayList<>();
+    public List<TabConfig>     tabs     = new ArrayList<>();
+    public List<ApiTabConfig>  apiTabs  = new ArrayList<>();
+    public List<NoteTabConfig> noteTabs = new ArrayList<>();
+    public String activeNoteTabName = "";
 
     // visibleOnPanels for the two fixed system tabs
     public List<Integer> allTabPanels     = new java.util.ArrayList<>(java.util.List.of(0, 1));
@@ -106,6 +109,7 @@ public class MultiChatConfig extends LzConfig {
         public int     activeTab           = 0;
         public String  activeTabName       = "";
         public boolean showOnlyWhenFocused = false;
+        public java.util.Map<String, Integer> noteScrollPositions = new java.util.HashMap<>();
         public boolean showBadges          = true;
         public boolean showTabs            = true;
         public boolean tabsAtTop           = false;
@@ -198,6 +202,18 @@ public class MultiChatConfig extends LzConfig {
         public FilterType      type      = FilterType.CONTAINS;
         public String          value     = "";
         public IndicatorFilter indicator = IndicatorFilter.ANY;
+    }
+
+    public static class NoteEntryConfig {
+        public String textJson = "";
+        public int    tick     = 0;
+    }
+
+    public static class NoteTabConfig {
+        public String              name            = "";
+        public List<Integer>       visibleOnPanels = new java.util.ArrayList<>();
+        public int                 tabColor        = 0;
+        public List<NoteEntryConfig> entries       = new ArrayList<>();
     }
 
     public static int pct(double v)    { return v < 0 ? -1 : Math.min(100, Math.max(0, (int) Math.round(v * 100))); }

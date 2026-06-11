@@ -5,5 +5,6 @@ public enum TabType {
     VANILLA,
     FILTERED,
     SEARCH,
-    API
+    API,
+    NOTES
 }

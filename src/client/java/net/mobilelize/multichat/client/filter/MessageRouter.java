@@ -64,6 +64,7 @@ public class MessageRouter {
 
         for (ChatTab tab : ChatRenderer.TABS) {
             switch (tab.type()) {
+                case NOTES -> { /* notes tabs only receive user-added entries, never routed messages */ }
                 case ALL -> addLines(tab, tick, content, indicator, lines, rawLzText, sharedEntry);
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case FILTERED -> {

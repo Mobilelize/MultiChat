@@ -37,10 +37,10 @@ public class ContextMenu {
 
     private static List<String> buildItems(ChatTab t) {
         List<String> list = new ArrayList<>();
-        if (t.type() != TabType.SEARCH) list.add("Toggle Context");
-        list.add("Clear Messages");
+        if (t.type() != TabType.SEARCH && t.type() != TabType.NOTES) list.add("Toggle Context");
+        if (t.type() != TabType.NOTES) list.add("Clear Messages");
         list.add("Clear Badge");
-        if (t.type() != TabType.SEARCH) list.add("Toggle Badge");
+        if (t.type() != TabType.SEARCH && t.type() != TabType.NOTES) list.add("Toggle Badge");
         if (t.type() == TabType.ALL || t.type() == TabType.FILTERED) list.add("Search in tab…");
         if (t.type() == TabType.SEARCH) list.add("Close Search");
         return list;

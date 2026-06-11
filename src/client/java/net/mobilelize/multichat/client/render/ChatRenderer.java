@@ -17,6 +17,7 @@ import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.ping.PingPlayer;
@@ -60,6 +61,7 @@ public class ChatRenderer {
     public static ChatPanel primaryPanel() { return PANELS.getFirst(); }
 
     public static ChatTab   contextTab    = null;
+    public static NoteTab   activeNoteTab = null;
     public static ChatPanel focusedPanel  = LEFT;
 
     public static int             currentTick        = 0;
@@ -151,10 +153,12 @@ public class ChatRenderer {
             updateCursor(context, panel, hoveredIndex);
 
             int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panel.bgColor()) & 0xFFFFFF;
-            renderAt(context, currentTick, focused,
+            boolean effectiveFocused = focused || (activeTab instanceof NoteTab);
+            renderAt(context, currentTick, effectiveFocused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
-                    lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset, panel, lineBgRgb);
+                    lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset, panel, lineBgRgb,
+                    focused);
         }
 
         LzClient.mc().getProfiler().pop();
@@ -270,7 +274,8 @@ public class ChatRenderer {
                                   int chatWidth, int topY, float scale,
                                   double chatOpacity, double bgOpacity,
                                   int lineHeight, int textOffset, int visibleLineCount,
-                                  int hoveredIndex, int xOffset, ChatPanel panel, int lineBgRgb) {
+                                  int hoveredIndex, int xOffset, ChatPanel panel, int lineBgRgb,
+                                  boolean showScrollbar) {
         LzDraw.pushMatrix(context);
         LzDraw.scale(context, scale, scale);
         LzDraw.translate(context, 4.0F + xOffset, 0.0F);
@@ -358,7 +363,7 @@ public class ChatRenderer {
             LzDraw.popMatrix(context);
         }
 
-        if (focused && totalMessages > 0) {
+        if (showScrollbar && totalMessages > 0) {
             int totalHeight = totalMessages * lineHeight;
             int drawnHeight = linesDrawn * lineHeight;
             if (totalHeight != drawnHeight) {

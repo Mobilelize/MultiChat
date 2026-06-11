@@ -10,6 +10,8 @@ import net.mobilelize.multichat.api.MessageAddedToTabCallback;
 import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.ApiTabConfig;
+import net.mobilelize.multichat.client.config.MultiChatConfig.NoteEntryConfig;
+import net.mobilelize.multichat.client.config.MultiChatConfig.NoteTabConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.PanelConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.TabConfig;
 import net.mobilelize.multichat.client.config.MultiChatConfig.RuleConfig;
@@ -35,6 +37,35 @@ public class MultichatClient implements ClientModInitializer {
         restoreTabsFromConfig();
         MultiChatCommand.register();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveTabsToConfig());
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            for (ChatTab tab : ChatRenderer.TABS)
+                if (tab instanceof NoteTab nt) nt.rebuildMessages();
+            // Restore note tab scroll positions (done after rebuild so widths are correct)
+            for (ChatPanel panel : ChatRenderer.PANELS) {
+                CONFIG.panels.stream().filter(pc -> pc.id == panel.id()).findFirst()
+                    .ifPresent(pc -> pc.noteScrollPositions.forEach((tabName, scroll) ->
+                        ChatRenderer.TABS.stream()
+                            .filter(t -> t.type() == TabType.NOTES && t.name().equals(tabName))
+                            .findFirst()
+                            .ifPresent(t -> {
+                                var msgs = ChatRenderer.getMessages(panel, t);
+                                if (!msgs.isEmpty())
+                                    panel.setScrolledLines(t, Math.min(scroll, msgs.size() - 1));
+                            })));
+            }
+            // Override active tab to first note tab if configured
+            if (CONFIG.notesAlwaysOpen) {
+                for (ChatPanel panel : ChatRenderer.PANELS) {
+                    List<ChatTab> visible = panel.getVisibleTabs();
+                    for (int idx = 0; idx < visible.size(); idx++) {
+                        if (visible.get(idx).type() == TabType.NOTES) {
+                            panel.setActiveTab(idx);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
 
         MessageAddedToTabCallback.EVENT.register((tab, message) -> PingPlayer.playForTab(tab));
 
@@ -82,6 +113,14 @@ public class MultichatClient implements ClientModInitializer {
             pc.tabFgOpacity         = panel.tabFgOpacity();
             pc.panelContextTabName  = panel.panelContextTab() != null ? panel.panelContextTab().name() : "";
             pc.useActiveTabContext  = panel.useActiveTabContext();
+            java.util.Map<String, Integer> scrollMap = new java.util.HashMap<>();
+            for (ChatTab tab : ChatRenderer.TABS) {
+                if (tab.type() == TabType.NOTES) {
+                    int scroll = panel.getScrolledLines(tab);
+                    if (scroll > 0) scrollMap.put(tab.name(), scroll);
+                }
+            }
+            pc.noteScrollPositions = scrollMap;
             panelOut.add(pc);
         }
         CONFIG.panels = panelOut;
@@ -169,8 +208,50 @@ public class MultichatClient implements ClientModInitializer {
             }
         }
 
+        List<NoteTabConfig> noteOut = new ArrayList<>();
+        for (ChatTab tab : ChatRenderer.TABS) {
+            if (tab.type() != TabType.NOTES || !(tab instanceof NoteTab nt)) continue;
+            NoteTabConfig ntc     = new NoteTabConfig();
+            ntc.name              = nt.name();
+            ntc.visibleOnPanels   = new java.util.ArrayList<>(nt.visibleOnPanels());
+            ntc.tabColor          = nt.tabColor();
+            ntc.entries           = new java.util.ArrayList<>();
+            for (NoteTab.NoteEntry entry : nt.noteEntries()) {
+                NoteEntryConfig nec = new NoteEntryConfig();
+                nec.textJson        = textToJson(entry.content());
+                nec.tick            = entry.tick();
+                ntc.entries.add(nec);
+            }
+            noteOut.add(ntc);
+        }
+        CONFIG.noteTabs         = noteOut;
+        CONFIG.activeNoteTabName = ChatRenderer.activeNoteTab != null ? ChatRenderer.activeNoteTab.name() : "";
+
         CONFIG.contextTabName = ChatRenderer.contextTab != null ? ChatRenderer.contextTab.name() : "";
         CONFIG.save();
+    }
+
+    private static net.minecraft.registry.RegistryWrapper.WrapperLookup LOOKUP = null;
+    private static net.minecraft.registry.RegistryWrapper.WrapperLookup lookup() {
+        if (LOOKUP == null) LOOKUP = net.minecraft.registry.BuiltinRegistries.createWrapperLookup();
+        return LOOKUP;
+    }
+
+    static String textToJson(LzText text) {
+        try {
+            return net.minecraft.text.Text.Serialization.toJsonString(text.mc(), lookup());
+        } catch (Exception e) {
+            return "\"" + text.mc().getString().replace("\"", "\\\"") + "\"";
+        }
+    }
+
+    static LzText textFromJson(String json) {
+        try {
+            net.minecraft.text.Text t = net.minecraft.text.Text.Serialization.fromJson(json, lookup());
+            return t != null ? LzText.wrapMc(t) : LzText.literal(json);
+        } catch (Exception e) {
+            return LzText.literal(json);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -280,6 +361,32 @@ public class MultichatClient implements ClientModInitializer {
                     rc.indicator != null ? rc.indicator : net.mobilelize.multichat.client.filter.IndicatorFilter.ANY));
             }
             ChatRenderer.TABS.add(tab);
+        }
+
+        ChatRenderer.TABS.removeIf(t -> t.type() == TabType.NOTES);
+        for (NoteTabConfig ntc : CONFIG.noteTabs) {
+            NoteTab nt = new NoteTab(ntc.name, new java.util.LinkedHashSet<>(ntc.visibleOnPanels));
+            nt.setTabColor(ntc.tabColor);
+            for (NoteEntryConfig nec : ntc.entries) {
+                nt.noteEntries().add(new NoteTab.NoteEntry(textFromJson(nec.textJson), nec.tick));
+            }
+            ChatRenderer.TABS.add(nt);
+        }
+
+        if (ChatRenderer.TABS.stream().noneMatch(t -> t.type() == TabType.NOTES)) {
+            NoteTab defaultNote = new NoteTab("Notes", java.util.List.of(0, 1));
+            ChatRenderer.TABS.add(defaultNote);
+        }
+
+        if (!CONFIG.activeNoteTabName.isEmpty()) {
+            ChatRenderer.activeNoteTab = (NoteTab) ChatRenderer.TABS.stream()
+                .filter(t -> t.type() == TabType.NOTES && t.name().equals(CONFIG.activeNoteTabName))
+                .findFirst().orElse(null);
+        }
+        if (ChatRenderer.activeNoteTab == null) {
+            ChatRenderer.activeNoteTab = (NoteTab) ChatRenderer.TABS.stream()
+                .filter(t -> t.type() == TabType.NOTES)
+                .findFirst().orElse(null);
         }
 
         if (!CONFIG.contextTabName.isEmpty()) {

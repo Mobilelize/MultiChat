@@ -207,6 +207,7 @@ public class ChatPanel {
     public int  getScrolledLines(ChatTab tab)               { return scrollPositions.getOrDefault(tab, 0); }
     public void setScrolledLines(ChatTab tab, int lines)    { scrollPositions.put(tab, lines); }
     public void resetScrollPositions()                      { scrollPositions.clear(); }
+    public void resetScrollPositionsExcept(TabType keep)    { scrollPositions.keySet().removeIf(t -> t.type() != keep); }
 
     public void scrollActiveTabIntoView() {
         if (activeTab < tabScrollOffset) {

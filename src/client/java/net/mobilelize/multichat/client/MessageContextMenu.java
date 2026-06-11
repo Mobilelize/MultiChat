@@ -6,6 +6,8 @@ import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.search.SearchOverlay;
@@ -43,9 +45,10 @@ public class MessageContextMenu {
         if (ChatSelection.hasSelection()) list.add("Copy Selected");
         list.add("Search for this");
         if (ChatSelection.hasSelection()) list.add("Quick Actions...");
+        if (ChatRenderer.activeNoteTab != null) list.add("Add to Notes");
         ChatTab active = panel.getActiveTab();
-        if (active != null && active.type() != TabType.ALL) list.add("Jump to All");
-        if (active != null && active.type() != TabType.ALL) list.add("Delete message");
+        if (active != null && active.type() != TabType.ALL && active.type() != TabType.NOTES) list.add("Jump to All");
+        if (active != null && active.type() != TabType.ALL && active.type() != TabType.NOTES) list.add("Delete message");
         return list;
     }
 
@@ -116,6 +119,7 @@ public class MessageContextMenu {
                     ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
                 LzClient.mc().setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
             }
+            case "Add to Notes" -> addToNotes();
             case "Jump to All" -> jumpToAll();
             case "Delete message" -> deleteMessage(sourcePanel);
         }
@@ -229,6 +233,26 @@ public class MessageContextMenu {
             }
             ChatSelection.clampOrClear(active);
         }
+    }
+
+    private static void addToNotes() {
+        NoteTab noteTab = ChatRenderer.activeNoteTab;
+        if (noteTab == null) return;
+        LzChatEntry entry = line.entry();
+        net.mobilelize.fabriclib.text.LzText text = (entry != null && entry.originalContent != null)
+            ? entry.originalContent
+            : net.mobilelize.fabriclib.text.LzText.literal(extractText(line));
+        int before = noteTab.messageCount();
+        noteTab.addNote(text, line.addedTime());
+        int linesAdded = noteTab.messageCount() - before;
+        if (linesAdded > 0) {
+            for (ChatPanel panel : ChatRenderer.PANELS) {
+                int scrolled = panel.getScrolledLines(noteTab);
+                if (scrolled > 0) panel.setScrolledLines(noteTab, scrolled + linesAdded);
+            }
+        }
+        MultichatClient.saveTabsToConfig();
+        flashGreen(line, sourcePanel);
     }
 
     private static void flashGreen(LzChatLine target, ChatPanel panel) {

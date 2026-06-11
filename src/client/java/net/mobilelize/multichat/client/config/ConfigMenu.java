@@ -319,6 +319,17 @@ public class ConfigMenu {
                 "Templates support &e{selected}&7 — replaced with your selected chat text at run time."
         ).mc()).build());
 
+        // ── Notes ─────────────────────────────────────────────────────────────
+        ConfigCategory notesCategory = builder.getOrCreateCategory(LzText.literal("Notes").mc());
+
+        notesCategory.addEntry(eb.startBooleanToggle(
+                LzText.literal("Notes Always Open").mc(),
+                MultichatClient.CONFIG.notesAlwaysOpen)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("On startup, switch each panel to its first Notes tab instead of restoring the last active tab.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.notesAlwaysOpen = v)
+                .build());
+
         // ── Sound Pings ───────────────────────────────────────────────────────
         ConfigCategory pings = builder.getOrCreateCategory(LzText.literal("Sound Pings").mc());
 

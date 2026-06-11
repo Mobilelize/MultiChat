@@ -11,8 +11,10 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.config.ConfigMenu;
+import net.mobilelize.multichat.client.config.NoteEditorScreen;
 import net.mobilelize.multichat.client.config.PanelEditScreen;
 import net.mobilelize.multichat.client.config.PanelLayoutScreen;
 import net.mobilelize.multichat.client.config.PanelListScreen;
@@ -75,7 +77,40 @@ public class MultiChatCommand {
                     })
                     .then(argument("tab", StringArgumentType.word())
                         .suggests(contextSuggestions())
-                        .executes(MultiChatCommand::setContext)))));
+                        .executes(MultiChatCommand::setContext)))
+                .then(literal("note")
+                    .executes(ctx -> {
+                        NoteTab nt = ChatRenderer.activeNoteTab;
+                        if (nt == null) { feedback(ctx, "No active note tab."); return 0; }
+                        LzClient.send(() -> LzClient.mc().setScreen(new NoteEditorScreen(null, nt)));
+                        return 1;
+                    })
+                    .then(literal("add")
+                        .then(argument("text", StringArgumentType.greedyString())
+                            .executes(MultiChatCommand::noteAdd)))
+                    .then(argument("name", StringArgumentType.greedyString())
+                        .suggests(noteSuggestions())
+                        .executes(MultiChatCommand::noteOpen)))));
+    }
+
+    private static int noteAdd(CommandContext<FabricClientCommandSource> ctx) {
+        NoteTab nt = ChatRenderer.activeNoteTab;
+        if (nt == null) { feedback(ctx, "No active note tab."); return 0; }
+        String text = StringArgumentType.getString(ctx, "text");
+        nt.addNote(LzText.format(text), ChatRenderer.currentTick);
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Note added to [" + nt.name() + "].");
+        return 1;
+    }
+
+    private static int noteOpen(CommandContext<FabricClientCommandSource> ctx) {
+        String name = StringArgumentType.getString(ctx, "name");
+        NoteTab nt = (NoteTab) ChatRenderer.TABS.stream()
+            .filter(t -> t.type() == TabType.NOTES && t.name().equalsIgnoreCase(name))
+            .findFirst().orElse(null);
+        if (nt == null) { feedback(ctx, "Note tab '" + name + "' not found."); return 0; }
+        LzClient.send(() -> LzClient.mc().setScreen(new NoteEditorScreen(null, nt)));
+        return 1;
     }
 
     private static int openPanel(CommandContext<FabricClientCommandSource> ctx) {
@@ -109,6 +144,16 @@ public class MultiChatCommand {
     // ------------------------------------------------------------------
     // Suggestions
     // ------------------------------------------------------------------
+
+    private static SuggestionProvider<FabricClientCommandSource> noteSuggestions() {
+        return (ctx, builder) -> {
+            for (ChatTab tab : ChatRenderer.TABS)
+                if (tab.type() == TabType.NOTES
+                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
+                    builder.suggest(tab.name());
+            return builder.buildFuture();
+        };
+    }
 
     private static SuggestionProvider<FabricClientCommandSource> panelSuggestions() {
         return (ctx, builder) -> {

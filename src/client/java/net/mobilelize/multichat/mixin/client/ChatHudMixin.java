@@ -81,7 +81,8 @@ public class ChatHudMixin {
 
     @Inject(method = "resetScroll", at = @At("HEAD"))
     private void resetPanelScroll(CallbackInfo ci) {
-        ChatRenderer.PANELS.forEach(ChatPanel::resetScrollPositions);
+        for (ChatPanel panel : ChatRenderer.PANELS)
+            panel.resetScrollPositionsExcept(TabType.NOTES);
     }
 
     @Inject(method = "scroll", at = @At("HEAD"), cancellable = true)
