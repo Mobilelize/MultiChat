@@ -42,6 +42,7 @@ public class MessageContextMenu {
     private static List<String> buildItems(ChatPanel panel) {
         List<String> list = new ArrayList<>();
         list.add("Copy");
+        list.add("Copy with Timestamp");
         if (ChatSelection.hasSelection()) list.add("Copy Selected");
         list.add("Search for this");
         if (ChatSelection.hasSelection()) list.add("Quick Actions...");
@@ -102,6 +103,12 @@ public class MessageContextMenu {
             case "Copy" -> {
                 String text = extractFullMessage(line, sourcePanel);
                 LzClient.setClipboard(text);
+                flashGreen(line, sourcePanel);
+            }
+            case "Copy with Timestamp" -> {
+                String text = extractFullMessage(line, sourcePanel);
+                String ts   = ChatRenderer.getPlainTimestamp(line.addedTime());
+                LzClient.setClipboard(ts.isEmpty() ? text : ts + " " + text);
                 flashGreen(line, sourcePanel);
             }
             case "Copy Selected" -> {

@@ -101,6 +101,9 @@ public class ChatRenderer {
             t.clearMessages();
             t.clearUnread();
         });
+        // NoteTab messages don't come through addVisibleMessage, so rebuild them now
+        for (ChatTab t : TABS)
+            if (t instanceof NoteTab nt) nt.rebuildMessages();
     }
 
     public static void render(ChatHud chat, LzDrawContext context, int currentTick,
@@ -620,6 +623,12 @@ public class ChatRenderer {
                                                             int panelWidth) {
         int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
         return LzChat.breakLines(content, panelWidth - indicatorW);
+    }
+
+    public static String getPlainTimestamp(int tick) {
+        if (wallTimeStart < 0) return "";
+        String ts = formatTimestamp(MultichatClient.CONFIG.timestampFormat, getWallTime(tick));
+        return ts.replaceAll("&[0-9a-fklmnorA-FKLMNOR]", "");
     }
 
     private static java.time.LocalTime getWallTime(int addedTick) {

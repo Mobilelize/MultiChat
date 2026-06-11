@@ -86,6 +86,8 @@ public class MultiChatConfig extends LzConfig {
     public int      pingSilenceThresholdSec     = 30;
     public int      pingAfkThresholdSec         = 120;
 
+    public java.util.Set<String> hiddenContextMenuItems = new java.util.HashSet<>();
+
     public List<TabConfig>     tabs     = new ArrayList<>();
     public List<ApiTabConfig>  apiTabs  = new ArrayList<>();
     public List<NoteTabConfig> noteTabs = new ArrayList<>();

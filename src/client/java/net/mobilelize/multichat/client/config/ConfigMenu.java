@@ -457,6 +457,27 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.pingCooldownSec = v)
                 .build());
 
+        // ── Context Menus ─────────────────────────────────────────────────────
+        ConfigCategory ctxMenus = builder.getOrCreateCategory(LzText.literal("Context Menus").mc());
+
+        ctxMenus.addEntry(eb.startTextDescription(LzText.literal(
+                "Toggle which items appear when you right-click a tab. " +
+                "Items that only appear conditionally (e.g. Set Active Note Tab on note tabs) " +
+                "are still filtered by their normal conditions when enabled.").mc()).build());
+
+        for (String[] entry : net.mobilelize.multichat.client.ContextMenu.ALL_ITEMS) {
+            String id    = entry[0];
+            String label = entry[1];
+            boolean enabled = !MultichatClient.CONFIG.hiddenContextMenuItems.contains(id);
+            ctxMenus.addEntry(eb.startBooleanToggle(LzText.literal(label).mc(), enabled)
+                .setDefaultValue(true)
+                .setSaveConsumer(v -> {
+                    if (v) MultichatClient.CONFIG.hiddenContextMenuItems.remove(id);
+                    else   MultichatClient.CONFIG.hiddenContextMenuItems.add(id);
+                })
+                .build());
+        }
+
         // ── Help ──────────────────────────────────────────────────────────
         ConfigCategory help = builder.getOrCreateCategory(LzText.literal("Help").mc());
 
