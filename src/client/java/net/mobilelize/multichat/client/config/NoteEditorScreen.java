@@ -38,6 +38,7 @@ public class NoteEditorScreen extends LzScreen {
     private int     scrollDragStartOff = 0;
     private int     editingIdx         = -1;
     private int     selectedIdx        = -1;
+    private boolean swapPending        = false;
 
     private LzTextField editField;
 
@@ -60,6 +61,8 @@ public class NoteEditorScreen extends LzScreen {
     private int cbUpY2() { return cbUpY1() + BTN_H; }
     private int cbDnY1() { return cbUpY2() + BTN_GAP; }
     private int cbDnY2() { return cbDnY1() + BTN_H; }
+    private int cbSwY1() { return cbDnY2() + BTN_GAP; }
+    private int cbSwY2() { return cbSwY1() + BTN_H; }
 
     @Override
     protected void init() {
@@ -84,7 +87,8 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     private void cancelEdit() {
-        editingIdx = -1;
+        editingIdx  = -1;
+        swapPending = false;
         clearChildren();
         init();
     }
@@ -130,8 +134,10 @@ public class NoteEditorScreen extends LzScreen {
         LzDraw.drawCenteredText(ctx, LzText.literal("Notes — " + noteTab.name()), width / 2, 10, 0xFFFFCC44);
         if (editingIdx >= 0)
             LzDraw.drawCenteredText(ctx, LzText.format("&fEnter &7to save  ·  &fEsc &7to cancel"), width / 2, 23, 0xFFFFFFFF);
+        else if (swapPending)
+            LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target row  ·  &fEsc &7to cancel"), width / 2, 23, 0xFFFFFFFF);
         else
-            LzDraw.drawCenteredText(ctx, LzText.format("&7Click row to select  ·  &f↑↓ &7to move"), width / 2, 23, 0xFFFFFFFF);
+            LzDraw.drawCenteredText(ctx, LzText.format("&7Click row to select  ·  &f↑↓ &7to move  ·  Swap &7to reorder"), width / 2, 23, 0xFFFFFFFF);
 
         if (editingIdx >= 0)
             editField.render(ctx.mc(), mouseX, mouseY, delta);
@@ -171,6 +177,12 @@ public class NoteEditorScreen extends LzScreen {
         LzDraw.drawBorder(ctx, cx1, cbDnY1(), cx2, cbDnY2(), 0x88666666);
         LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxM, cbDnY1() + (BTN_H - 8) / 2, canDown ? 0xFFFFFF : 0x555555);
 
+        boolean hSw   = mouseX >= cx1 && mouseX < cx2 && mouseY >= cbSwY1() && mouseY < cbSwY2();
+        int swapBg = swapPending ? 0xAA4455FF : (hasSel ? (hSw ? 0xAA888888 : 0x66555555) : 0x33333333);
+        LzDraw.fill(ctx, cx1, cbSwY1(), cx2, cbSwY2(), swapBg);
+        LzDraw.drawBorder(ctx, cx1, cbSwY1(), cx2, cbSwY2(), 0x88666666);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxM, cbSwY1() + (BTN_H - 8) / 2, hasSel ? 0xFFFFFF : 0x555555);
+
         // Rows
         List<NoteTab.NoteEntry> list = notes();
         LzDraw.enableScissor(ctx, lx1, LIST_TOP, lx2, listBottom());
@@ -184,8 +196,8 @@ public class NoteEditorScreen extends LzScreen {
             boolean hov     = !editing && !sel && mouseX >= lx1 && mouseX < lx2 && mouseY >= ry && mouseY < ry + ROW_H;
 
             if (editing)  LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, 0x55FFCC44);
-            else if (sel) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, 0x55FFFF44);
-            else if (hov) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, 0x22FFFFFF);
+            else if (sel) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? 0x553366FF : 0x55FFFF44);
+            else if (hov) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? 0x3300FFAA : 0x22FFFFFF);
 
             String raw     = note.content().mc().getString();
             String preview = raw.length() > 52 ? raw.substring(0, 50) + "…" : raw;
@@ -240,11 +252,12 @@ public class NoteEditorScreen extends LzScreen {
             return true;
         }
 
-        // Sidebar ↑↓
+        // Sidebar ↑↓ Swap
         if (mouseX >= cbX1() && mouseX < cbX2() && editingIdx < 0) {
             boolean hasSel = selectedIdx >= 0 && selectedIdx < notes().size();
             if (mouseY >= cbUpY1() && mouseY < cbUpY2()) { if (hasSel) move(selectedIdx, true);  return true; }
             if (mouseY >= cbDnY1() && mouseY < cbDnY2()) { if (hasSel) move(selectedIdx, false); return true; }
+            if (mouseY >= cbSwY1() && mouseY < cbSwY2()) { if (hasSel) swapPending = !swapPending; return true; }
         }
 
         // List rows
@@ -279,7 +292,17 @@ public class NoteEditorScreen extends LzScreen {
             }
 
             if (mouseX >= lx1 && mouseX < lx2 && mouseY >= ry && mouseY < ry + ROW_H && editingIdx < 0) {
-                selectedIdx = (i == selectedIdx) ? -1 : i;
+                if (swapPending && i != selectedIdx) {
+                    Collections.swap(notes(), selectedIdx, i);
+                    selectedIdx = i;
+                    swapPending = false;
+                    noteTab.rebuildMessages();
+                    MultichatClient.saveTabsToConfig();
+                    scrollToSelected();
+                } else {
+                    swapPending = false;
+                    selectedIdx = (i == selectedIdx) ? -1 : i;
+                }
                 return true;
             }
         }
@@ -323,6 +346,7 @@ public class NoteEditorScreen extends LzScreen {
             commitEdit(); return true;
         }
         if (keyCode == Keys.ESCAPE) {
+            if (swapPending) { swapPending = false; return true; }
             if (editingIdx >= 0) { cancelEdit(); return true; }
             close(); return true;
         }
