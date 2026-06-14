@@ -146,8 +146,11 @@ public class TabListScreen extends ConfigScreen {
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, 0xAADDFF);
-        LzDraw.drawCenteredText(ctx, LzText.format("&7add, edit & reorder tabs  ·  WL/BL filter rules"), width / 2, 21, 0xFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, 0xFFAADDFF);
+        if (swapPending)
+            LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target tab  ·  &fEsc &7to cancel"), width / 2, 21, 0xFFFFFFFF);
+        else
+            LzDraw.drawCenteredText(ctx, LzText.format("&7add, edit & reorder tabs  ·  WL/BL filter rules"), width / 2, 21, 0xFFFFFFFF);
         nameField.render(ctx.mc(), mouseX, mouseY, delta);
 
         int lx = width / 2 - 200;
@@ -177,15 +180,15 @@ public class TabListScreen extends ConfigScreen {
 
         LzDraw.fill(ctx, cx1, uy1, cx2, uy2, upBg);
         LzDraw.drawBorder(ctx, cx1, uy1, cx2, uy2, 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("↑"), cxMid, uy1 + (BTN_H - 8) / 2, canUp ? 0xFFFFFF : 0x555555);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↑"), cxMid, uy1 + (BTN_H - 8) / 2, canUp ? 0xFFFFFFFF : 0xFF555555);
 
         LzDraw.fill(ctx, cx1, dy1, cx2, dy2, dnBg);
         LzDraw.drawBorder(ctx, cx1, dy1, cx2, dy2, 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxMid, dy1 + (BTN_H - 8) / 2, canDown ? 0xFFFFFF : 0x555555);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxMid, dy1 + (BTN_H - 8) / 2, canDown ? 0xFFFFFFFF : 0xFF555555);
 
         LzDraw.fill(ctx, cx1, sy1, cx2, sy2, swapBg);
         LzDraw.drawBorder(ctx, cx1, sy1, cx2, sy2, 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxMid, sy1 + (BTN_H - 8) / 2, hasSelected ? 0xFFFFFF : 0x555555);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxMid, sy1 + (BTN_H - 8) / 2, hasSelected ? 0xFFFFFFFF : 0xFF555555);
 
         // --- Tab rows ---
         LzDraw.enableScissor(ctx, 0, LIST_TOP, width, listBottom());
@@ -233,11 +236,11 @@ public class TabListScreen extends ConfigScreen {
             }
 
             int nameColor = switch (tab.type()) {
-                case FILTERED -> 0xFFFFFF;
-                case SEARCH   -> 0xAAFFDD;
-                case API      -> 0xFFCC88;
-                case NOTES    -> 0xFFEE88;
-                default       -> 0xAADDFF;
+                case FILTERED -> 0xFFFFFFFF;
+                case SEARCH   -> 0xFFAAFFDD;
+                case API      -> 0xFFFFCC88;
+                case NOTES    -> 0xFFFFEE88;
+                default       -> 0xFFAADDFF;
             };
 
             // Name
@@ -316,7 +319,7 @@ public class TabListScreen extends ConfigScreen {
 
             LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? (hoverEdit ? 0xAAFFCC44 : 0x44FFCC44) : 0x33333333);
             LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? 0x88FFCC44 : 0x44444444);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, canEdit ? 0xFFFFCC44 : 0x555555);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, canEdit ? 0xFFFFCC44 : 0xFF555555);
 
             if (canRemove) {
                 boolean instantDelete = quickDeleteMode || LzKeys.isCtrlDown();

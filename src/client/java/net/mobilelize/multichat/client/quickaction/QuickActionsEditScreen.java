@@ -144,6 +144,8 @@ public class QuickActionsEditScreen extends ConfigScreen {
         LzDraw.drawCenteredText(ctx, LzText.literal("Quick Actions"), width / 2, 10, 0xFFFFCC44);
         if (editingIdx >= 0)
             LzDraw.drawCenteredText(ctx, LzText.format("&fEnter &7to save  ·  &fEsc &7to cancel"), width / 2, 23, 0xFFFFFFFF);
+        else if (swapPending)
+            LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target action  ·  &fEsc &7to cancel"), width / 2, 23, 0xFFFFFFFF);
         else
             LzDraw.drawCenteredText(ctx, LzText.format("&7Use &e{selected}&7 in templates — replaced with selected chat text"), width / 2, 23, 0xFFFFFFFF);
 
