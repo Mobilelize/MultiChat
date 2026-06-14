@@ -199,10 +199,19 @@ public class NoteEditorScreen extends LzScreen {
             else if (sel) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? 0x553366FF : 0x55FFFF44);
             else if (hov) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? 0x3300FFAA : 0x22FFFFFF);
 
-            String raw     = note.content().mc().getString();
-            String preview = raw.length() > 52 ? raw.substring(0, 50) + "…" : raw;
-            LzDraw.drawText(ctx, LzText.literal(preview), lx1 + 4, ry + (ROW_H - 8) / 2,
-                editing ? 0xFFFFCC44 : 0xFFFFFFFF);
+            int textX     = lx1 + 4;
+            int textY     = ry + (ROW_H - 8) / 2;
+            int textClipX = editing ? lx2 - 4 : lx2 - 2 * ACT_W - 10;
+            int ellW      = LzDraw.textWidth("…");
+            boolean overfl = LzDraw.textWidth(note.content().mc().getString()) > (textClipX - textX);
+
+            LzDraw.disableScissor(ctx);
+            LzDraw.enableScissor(ctx, lx1, LIST_TOP, overfl ? textClipX - ellW : textClipX, listBottom());
+            LzDraw.drawText(ctx, note.content(), textX, textY, editing ? 0xFFFFCC44 : 0xFFFFFFFF);
+            LzDraw.disableScissor(ctx);
+            LzDraw.enableScissor(ctx, lx1, LIST_TOP, lx2, listBottom());
+            if (overfl)
+                LzDraw.drawText(ctx, LzText.literal("…"), textClipX - ellW + 2, textY, 0xFFAAAAAA);
 
             if (!editing) {
                 int dx    = lx2 - ACT_W - 2;
