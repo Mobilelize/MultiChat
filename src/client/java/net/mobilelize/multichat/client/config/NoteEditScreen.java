@@ -51,7 +51,7 @@ public class NoteEditScreen extends LzScreen {
     private int     prevDragStart = 0;
 
     public NoteEditScreen(Screen parent, NoteTab noteTab, int noteIdx) {
-        super("Edit Note");
+        super(noteIdx < 0 ? "New Note" : "Edit Note");
         this.parent  = parent;
         this.noteTab = noteTab;
         this.noteIdx = noteIdx;
@@ -106,7 +106,7 @@ public class NoteEditScreen extends LzScreen {
 
         LzDraw.fill(ctx, px1 - 6, cy - 72, px2 + 6, cy + 110, 0xAA111111);
         LzDraw.drawBorder(ctx, px1 - 6, cy - 72, px2 + 6, cy + 110, 0xFF555555);
-        LzDraw.drawCenteredText(ctx, LzText.literal("Edit Note"), cx, cy - 65, 0xFFFFCC44);
+        LzDraw.drawCenteredText(ctx, LzText.literal(noteIdx < 0 ? "New Note" : "Edit Note"), cx, cy - 65, 0xFFFFCC44);
 
         // Toolbar
         int swX0 = px1 + 36, swY = cy - 53;
@@ -256,15 +256,18 @@ public class NoteEditScreen extends LzScreen {
     }
 
     private void save() {
-        if (noteIdx < 0 || noteIdx >= noteTab.noteEntries().size()) { close(); return; }
         String text = field.getText().trim();
-        if (!text.isEmpty()) {
+        if (noteIdx < 0) {
+            NoteTab.NoteEntry e = new NoteTab.NoteEntry(LzText.format(text), 0);
+            e.setRawFormat(text);
+            noteTab.noteEntries().add(0, e);
+        } else if (noteIdx < noteTab.noteEntries().size()) {
             NoteTab.NoteEntry e = noteTab.noteEntries().get(noteIdx);
             e.setContent(LzText.format(text));
             e.setRawFormat(text);
-            noteTab.rebuildMessages();
-            MultichatClient.saveTabsToConfig();
         }
+        noteTab.rebuildMessages();
+        MultichatClient.saveTabsToConfig();
         close();
     }
 

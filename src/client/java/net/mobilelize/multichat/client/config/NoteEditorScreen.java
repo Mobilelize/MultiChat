@@ -62,7 +62,10 @@ public class NoteEditorScreen extends LzScreen {
     protected void init() {
         scrollOffset = Math.min(scrollOffset, maxScroll());
         if (selectedIdx >= notes().size()) selectedIdx = -1;
-        addDrawableChild(LzButton.of("Done", width / 2 - 25, height - 26, 50, 18, b -> close()));
+        addDrawableChild(LzButton.of("Add Note", width / 2 - 60, height - 26, 58, 18, b -> {
+            LzClient.mc().setScreen(new NoteEditScreen(this, noteTab, -1));
+        }));
+        addDrawableChild(LzButton.of("Done", width / 2 + 2, height - 26, 50, 18, b -> close()));
     }
 
     private void move(int idx, boolean up) {
@@ -156,7 +159,7 @@ public class NoteEditorScreen extends LzScreen {
             int textY     = ry + (ROW_H - 8) / 2;
             int textClipX = lx2 - 2 * ACT_W - 10;
             int ellW      = LzDraw.textWidth("…");
-            boolean overfl = LzDraw.textWidth(note.content().mc().getString()) > (textClipX - textX);
+            boolean overfl = LzDraw.textWidth(note.content().ordered()) > (textClipX - textX);
 
             LzDraw.disableScissor(ctx);
             LzDraw.enableScissor(ctx, lx1, LIST_TOP, overfl ? textClipX - ellW : textClipX, listBottom());
