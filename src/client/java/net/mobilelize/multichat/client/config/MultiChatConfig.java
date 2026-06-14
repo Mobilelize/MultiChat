@@ -207,8 +207,9 @@ public class MultiChatConfig extends LzConfig {
     }
 
     public static class NoteEntryConfig {
-        public String textJson = "";
-        public int    tick     = 0;
+        public String textJson   = "";
+        public String rawFormat  = "";
+        public int    tick       = 0;
     }
 
     public static class NoteTabConfig {

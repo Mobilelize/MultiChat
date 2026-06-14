@@ -219,6 +219,7 @@ public class MultichatClient implements ClientModInitializer {
             for (NoteTab.NoteEntry entry : nt.noteEntries()) {
                 NoteEntryConfig nec = new NoteEntryConfig();
                 nec.textJson        = textToJson(entry.content());
+                nec.rawFormat       = entry.rawFormat() != null ? entry.rawFormat() : "";
                 nec.tick            = entry.tick();
                 ntc.entries.add(nec);
             }
@@ -368,7 +369,9 @@ public class MultichatClient implements ClientModInitializer {
             NoteTab nt = new NoteTab(ntc.name, new java.util.LinkedHashSet<>(ntc.visibleOnPanels));
             nt.setTabColor(ntc.tabColor);
             for (NoteEntryConfig nec : ntc.entries) {
-                nt.noteEntries().add(new NoteTab.NoteEntry(textFromJson(nec.textJson), nec.tick));
+                NoteTab.NoteEntry ne = new NoteTab.NoteEntry(textFromJson(nec.textJson), nec.tick);
+                if (!nec.rawFormat.isEmpty()) ne.setRawFormat(nec.rawFormat);
+                nt.noteEntries().add(ne);
             }
             ChatRenderer.TABS.add(nt);
         }

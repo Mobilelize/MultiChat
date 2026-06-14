@@ -15,6 +15,7 @@ public class NoteTab extends ChatTab {
 
     public static class NoteEntry {
         private LzText content;
+        private String rawFormat;
         private int    tick;
 
         public NoteEntry(LzText content, int tick) {
@@ -22,9 +23,11 @@ public class NoteTab extends ChatTab {
             this.tick    = tick;
         }
 
-        public LzText content() { return content; }
-        public int    tick()    { return tick; }
-        public void   setContent(LzText v) { content = v; }
+        public LzText content()    { return content; }
+        public int    tick()       { return tick; }
+        public String rawFormat()  { return rawFormat; }
+        public void   setContent(LzText v)   { content = v; }
+        public void   setRawFormat(String v) { rawFormat = v; }
     }
 
     private final List<NoteEntry> noteEntries = new ArrayList<>();
