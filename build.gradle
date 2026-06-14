@@ -45,8 +45,8 @@ dependencies {
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    modImplementation "net.mobilelize:mobilelize-fabric-lib:${project.mobilelize_lib_version}"
-    include           "net.mobilelize:mobilelize-fabric-lib:${project.mobilelize_lib_version}"
+    modImplementation "net.mobilelize:mobilelize-fabric-lib:${project.mobilelize_lib_version}+${project.minecraft_version}"
+    include           "net.mobilelize:mobilelize-fabric-lib:${project.mobilelize_lib_version}+${project.minecraft_version}"
 }
 
 processResources {
