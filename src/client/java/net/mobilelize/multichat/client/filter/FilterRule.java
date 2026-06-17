@@ -3,43 +3,31 @@ package net.mobilelize.multichat.client.filter;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 
-public class FilterRule {
+import java.util.regex.Pattern;
 
-    private final FilterType      type;
-    private final String          value;
-    private final IndicatorFilter indicator;
+public record FilterRule (FilterType type, String value, IndicatorFilter indicator) {
 
     public FilterRule(FilterType type, String value) {
         this(type, value, IndicatorFilter.ANY);
     }
 
-    public FilterRule(FilterType type, String value, IndicatorFilter indicator) {
-        this.type      = type;
-        this.value     = value;
-        this.indicator = indicator;
-    }
-
-    public FilterType      type()      { return type; }
-    public String          value()     { return value; }
-    public IndicatorFilter indicator() { return indicator; }
-
     public boolean matches(String text, LzMessageIndicator ind) {
         if (!indicatorMatches(ind)) return false;
 
-        String lower = text.toLowerCase();
-        String val   = value.toLowerCase();
+        final String lower = text.toLowerCase();
+        final String val   = value.toLowerCase();
         return switch (type) {
             case CONTAINS    -> lower.contains(val);
             case STARTS_WITH -> lower.startsWith(val);
             case ENDS_WITH   -> lower.endsWith(val);
             case EXACT       -> lower.equals(val);
-            case WORD        -> java.util.regex.Pattern.compile(
-                                    "\\b" + java.util.regex.Pattern.quote(value) + "\\b",
-                                    java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text).find();
+            case WORD        -> Pattern.compile(
+                    "\\b" + Pattern.quote(value) + "\\b",
+                    Pattern.CASE_INSENSITIVE).matcher(text).find();
             case FUZZY       -> fuzzyMatches(lower, val);
-            case REGEX       -> { try { yield java.util.regex.Pattern.compile(value).matcher(text).find(); } catch (Exception e) { yield false; } }
-            case REGEX_START -> { try { yield java.util.regex.Pattern.compile(value).matcher(text).lookingAt(); } catch (Exception e) { yield false; } }
-            case REGEX_END   -> { try { yield java.util.regex.Pattern.compile(value + "\\z").matcher(text).find(); } catch (Exception e) { yield false; } }
+            case REGEX       -> { try { yield Pattern.compile(value).matcher(text).find(); } catch (Exception e) { yield false; } }
+            case REGEX_START -> { try { yield Pattern.compile(value).matcher(text).lookingAt(); } catch (Exception e) { yield false; } }
+            case REGEX_END   -> { try { yield Pattern.compile(value + "\\z").matcher(text).find(); } catch (Exception e) { yield false; } }
         };
     }
 
@@ -52,7 +40,7 @@ public class FilterRule {
     }
 
     private boolean indicatorMatches(LzMessageIndicator ind) {
-        MessageIndicator raw = ind != null ? ind.mc() : null;
+        final MessageIndicator raw = ind != null ? ind.mc() : null;
         return switch (indicator) {
             case ANY        -> true;
             case PLAYER     -> raw == null;
@@ -61,10 +49,5 @@ public class FilterRule {
             case MODIFIED   -> raw != null && raw.icon() == MessageIndicator.Icon.CHAT_MODIFIED;
             case CHAT_ERROR -> raw == MessageIndicator.chatError();
         };
-    }
-
-    @Override
-    public String toString() {
-        return type.name().toLowerCase() + ":" + value;
     }
 }
