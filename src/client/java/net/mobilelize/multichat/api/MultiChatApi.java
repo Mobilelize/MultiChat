@@ -1,11 +1,11 @@
 package net.mobilelize.multichat.api;
 
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
-import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -73,12 +73,12 @@ public final class MultiChatApi {
 
     /** All tabs currently registered (unmodifiable view). */
     public static List<ChatTab> getTabs() {
-        return Collections.unmodifiableList(ChatRenderer.TABS);
+        return Collections.unmodifiableList(ChatManager.getTabs());
     }
 
     /** Find a tab by its full API id ({@code "modid:name"}), or {@code null}. */
     public static ChatTab getTab(String fullId) {
-        return ChatRenderer.TABS.stream()
+        return ChatManager.getTabs().stream()
             .filter(t -> fullId.equals(t.apiId()))
             .findFirst().orElse(null);
     }
@@ -89,24 +89,27 @@ public final class MultiChatApi {
     }
 
     /** Clears the active context tab (no prefix applied to outgoing messages). */
-    public static void clearContext() { ChatRenderer.contextTab = null; }
+    public static void clearContext() { ChatManager.contextTab = null; }
 
     /** All currently registered panels (unmodifiable). */
     public static List<ChatPanel> getPanels() {
-        return Collections.unmodifiableList(ChatRenderer.PANELS);
+        return Collections.unmodifiableList(ChatManager.getAllPanels());
     }
 
     /** Panel by ID, or {@code null} if not found. */
     public static ChatPanel getPanel(int panelId) {
-        return ChatRenderer.PANELS.stream().filter(p -> p.id() == panelId).findFirst().orElse(null);
+        return ChatManager.getAllPanels().stream().filter(p -> p.id() == panelId).findFirst().orElse(null);
     }
 
-    public static ChatPanel getLeftPanel()  { return ChatRenderer.LEFT; }
-    public static ChatPanel getRightPanel() { return ChatRenderer.RIGHT; }
+    public static ChatPanel getLeftPanel()  { return ChatManager.primaryPanel(); }
+    public static ChatPanel getRightPanel() {
+        List<ChatPanel> p = ChatManager.getAllPanels();
+        return p.size() > 1 ? p.get(1) : null;
+    }
 
     /** Returns the All tab, or {@code null} if not found. */
     public static ChatTab getAllTab() {
-        return ChatRenderer.TABS.stream()
+        return ChatManager.getTabs().stream()
             .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
     }
 }

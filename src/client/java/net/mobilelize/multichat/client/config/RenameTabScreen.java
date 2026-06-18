@@ -13,7 +13,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 
 public class RenameTabScreen extends LzScreen {
 
@@ -53,13 +53,11 @@ public class RenameTabScreen extends LzScreen {
     private void save() {
         String name = field.getText().trim();
         if (name.isEmpty()) return;
-        boolean nameConflict = ChatRenderer.TABS.stream()
+        boolean nameConflict = ChatManager.getTabs().stream()
             .filter(t -> t != tab && t.type() == tab.type())
             .anyMatch(t -> t.name().equalsIgnoreCase(name));
         if (nameConflict) return;
         tab.setName(name);
-        if (tab.type() == TabType.NOTES && ChatRenderer.activeNoteTab == tab)
-            MultichatClient.CONFIG.activeNoteTabName = name;
         MultichatClient.saveTabsToConfig();
         close();
     }

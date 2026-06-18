@@ -7,7 +7,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.multichat.client.config.NoteEditorScreen;
 import net.mobilelize.multichat.client.config.RenameTabScreen;
 import net.mobilelize.multichat.client.config.TabEditScreen;
-import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ public class ContextMenu {
         open        = true;
         panel       = p;
         tab         = t;
-        tabIndex    = ChatRenderer.TABS.indexOf(t);
+        tabIndex    = ChatManager.getTabs().indexOf(t);
         anchorX     = x;
         anchorY     = y;
         anchorRight = p.anchor() == ChatPanel.Anchor.RIGHT;
@@ -58,6 +58,12 @@ public class ContextMenu {
 
     public static void close()        { open = false; }
     public static boolean isOpen()    { return open; }
+    public static boolean containsMouse(int mx, int my) {
+        if (!open || items == null) return false;
+        int menuW = menuWidth();
+        int menuH = items.size() * ITEM_H + PADDING;
+        return mx >= drawnX && mx <= drawnX + menuW && my >= drawnY && my <= drawnY + menuH;
+    }
 
     // ── All item IDs in display order, for use in settings screen ─────────────
     public static final String[][] ALL_ITEMS = {
@@ -88,9 +94,9 @@ public class ContextMenu {
     }
 
     private static int firstMoveableIdx() {
-        for (int i = 0; i < ChatRenderer.TABS.size(); i++)
-            if (isMoveable(ChatRenderer.TABS.get(i))) return i;
-        return ChatRenderer.TABS.size();
+        for (int i = 0; i < ChatManager.getTabs().size(); i++)
+            if (isMoveable(ChatManager.getTabs().get(i))) return i;
+        return ChatManager.getTabs().size();
     }
 
     private static List<String> buildItems(ChatTab t) {
@@ -119,7 +125,7 @@ public class ContextMenu {
             list.add("Rename Tab");
 
         if (t.type() == TabType.NOTES && shown(ID_SET_ACTIVE_NOTE))
-            list.add(ChatRenderer.activeNoteTab == t ? "★ Active Note Tab" : "Set Active Note Tab");
+            list.add(ChatManager.activeNoteTab == t ? "★ Active Note Tab" : "Set Active Note Tab");
 
         if ((t.type() == TabType.FILTERED || t.type() == TabType.API) && shown(ID_TOGGLE_TIMESTAMPS))
             list.add(t.showTimestamps() ? "Timestamps: ON" : "Timestamps: OFF");
@@ -133,7 +139,7 @@ public class ContextMenu {
 
         if (isMoveable(t) && tabIndex > firstMoveableIdx() && shown(ID_MOVE_LEFT))
             list.add("Move Left");
-        if (isMoveable(t) && tabIndex < ChatRenderer.TABS.size() - 1 && shown(ID_MOVE_RIGHT))
+        if (isMoveable(t) && tabIndex < ChatManager.getTabs().size() - 1 && shown(ID_MOVE_RIGHT))
             list.add("Move Right");
 
         // Close Search is never toggleable — it's the only way to close a search tab
@@ -204,12 +210,12 @@ public class ContextMenu {
         String item = items.get(itemIdx);
         switch (item) {
             case "Toggle Context" -> {
-                ChatRenderer.contextTab = (ChatRenderer.contextTab == tab) ? null : tab;
+                ChatManager.contextTab = (ChatManager.contextTab == tab) ? null : tab;
                 MultichatClient.saveTabsToConfig();
             }
             case "Clear Messages" -> {
                 tab.clearMessages();
-                for (ChatPanel p : ChatRenderer.PANELS) p.setScrolledLines(tab, 0);
+                for (ChatPanel p : ChatManager.getAllPanels()) p.setScrolledLines(tab, 0);
                 ChatSelection.clear();
             }
             case "Clear Badge"  -> tab.clearUnread();
@@ -228,7 +234,7 @@ public class ContextMenu {
             case "Rename Tab" ->
                 LzClient.mc().setScreen(new RenameTabScreen(LzClient.currentScreen(), tab));
             case "Set Active Note Tab", "★ Active Note Tab" -> {
-                ChatRenderer.activeNoteTab = (NoteTab) tab;
+                ChatManager.activeNoteTab = (NoteTab) tab;
                 MultichatClient.saveTabsToConfig();
             }
             case "Timestamps: ON", "Timestamps: OFF" -> {
@@ -240,13 +246,14 @@ public class ContextMenu {
                 MultichatClient.saveTabsToConfig();
             }
             case "Scroll to Top" -> {
-                List<LzChatLine> msgs = ChatRenderer.getMessages(panel, tab);
-                int max = Math.max(0, msgs.size() - panel.resolveLines());
+                List<LzChatLine> msgs = panel.getTabLines(tab);
+                int max = Math.max(0, (msgs != null ? msgs.size() : 0) - panel.resolveLines());
                 panel.setScrolledLines(tab, max);
             }
             case "Scroll to Bottom" -> panel.setScrolledLines(tab, 0);
             case "Export All" -> {
-                List<LzChatLine> msgs = ChatRenderer.getMessages(panel, tab);
+                List<LzChatLine> msgs = panel.getTabLines(tab);
+                if (msgs == null) break;
                 StringBuilder sb = new StringBuilder();
                 for (int i = msgs.size() - 1; i >= 0; i--) {
                     LzChatLine l = msgs.get(i);
@@ -260,18 +267,18 @@ public class ContextMenu {
                 if (!sb.isEmpty()) LzClient.setClipboard(sb.toString());
             }
             case "Move Left" -> {
-                if (tabIndex > 0 && tabIndex < ChatRenderer.TABS.size()) {
-                    Collections.swap(ChatRenderer.TABS, tabIndex, tabIndex - 1);
+                if (tabIndex > 0 && tabIndex < ChatManager.getTabs().size()) {
+                    Collections.swap(ChatManager.getTabs(), tabIndex, tabIndex - 1);
                     MultichatClient.saveTabsToConfig();
                 }
             }
             case "Move Right" -> {
-                if (tabIndex >= 0 && tabIndex < ChatRenderer.TABS.size() - 1) {
-                    Collections.swap(ChatRenderer.TABS, tabIndex, tabIndex + 1);
+                if (tabIndex >= 0 && tabIndex < ChatManager.getTabs().size() - 1) {
+                    Collections.swap(ChatManager.getTabs(), tabIndex, tabIndex + 1);
                     MultichatClient.saveTabsToConfig();
                 }
             }
-            case "Close Search" -> ChatRenderer.TABS.remove(tab);
+            case "Close Search" -> ChatManager.getTabs().remove(tab);
         }
         return true;
     }

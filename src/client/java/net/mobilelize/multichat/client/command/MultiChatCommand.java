@@ -22,6 +22,7 @@ import net.mobilelize.multichat.client.config.TabEditScreen;
 import net.mobilelize.multichat.client.config.TabListScreen;
 import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
@@ -70,7 +71,7 @@ public class MultiChatCommand {
                         })))
                 .then(literal("context")
                     .executes(ctx -> {
-                        ChatRenderer.contextTab = null;
+                        ChatManager.contextTab = null;
                         MultichatClient.saveTabsToConfig();
                         feedback(ctx, "Context cleared.");
                         return 1;
@@ -80,7 +81,7 @@ public class MultiChatCommand {
                         .executes(MultiChatCommand::setContext)))
                 .then(literal("note")
                     .executes(ctx -> {
-                        NoteTab nt = ChatRenderer.activeNoteTab;
+                        NoteTab nt = ChatManager.activeNoteTab;
                         if (nt == null) { feedback(ctx, "No active note tab."); return 0; }
                         LzClient.send(() -> LzClient.mc().setScreen(new NoteEditorScreen(null, nt)));
                         return 1;
@@ -94,7 +95,7 @@ public class MultiChatCommand {
     }
 
     private static int noteAdd(CommandContext<FabricClientCommandSource> ctx) {
-        NoteTab nt = ChatRenderer.activeNoteTab;
+        NoteTab nt = ChatManager.activeNoteTab;
         if (nt == null) { feedback(ctx, "No active note tab."); return 0; }
         String text = StringArgumentType.getString(ctx, "text");
         nt.addNote(LzText.format(text), ChatRenderer.currentTick);
@@ -105,7 +106,7 @@ public class MultiChatCommand {
 
     private static int noteOpen(CommandContext<FabricClientCommandSource> ctx) {
         String name = StringArgumentType.getString(ctx, "name");
-        NoteTab nt = (NoteTab) ChatRenderer.TABS.stream()
+        NoteTab nt = (NoteTab) ChatManager.getTabs().stream()
             .filter(t -> t.type() == TabType.NOTES && t.name().equalsIgnoreCase(name))
             .findFirst().orElse(null);
         if (nt == null) { feedback(ctx, "Note tab '" + name + "' not found."); return 0; }
@@ -115,7 +116,7 @@ public class MultiChatCommand {
 
     private static int openPanel(CommandContext<FabricClientCommandSource> ctx) {
         String name = StringArgumentType.getString(ctx, "name");
-        ChatPanel panel = ChatRenderer.PANELS.stream()
+        ChatPanel panel = ChatManager.getAllPanels().stream()
             .filter(p -> p.name().equalsIgnoreCase(name)).findFirst().orElse(null);
         if (panel == null) { feedback(ctx, "Panel '" + name + "' not found."); return 0; }
         LzClient.send(() -> LzClient.mc().setScreen(PanelEditScreen.create(null, panel)));
@@ -134,7 +135,7 @@ public class MultiChatCommand {
         String name = StringArgumentType.getString(ctx, "tab");
         ChatTab tab = findContextTab(name);
         if (tab == null) { feedback(ctx, "Tab '" + name + "' not found."); return 0; }
-        ChatRenderer.contextTab = tab;
+        ChatManager.contextTab = tab;
         MultichatClient.saveTabsToConfig();
         String prefix = tab.contextPrefix().isEmpty() ? "(none)" : tab.contextPrefix();
         feedback(ctx, "Context → [" + tab.name() + "] prefix: " + prefix);
@@ -147,7 +148,7 @@ public class MultiChatCommand {
 
     private static SuggestionProvider<FabricClientCommandSource> noteSuggestions() {
         return (ctx, builder) -> {
-            for (ChatTab tab : ChatRenderer.TABS)
+            for (ChatTab tab : ChatManager.getTabs())
                 if (tab.type() == TabType.NOTES
                         && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
                     builder.suggest(tab.name());
@@ -157,7 +158,7 @@ public class MultiChatCommand {
 
     private static SuggestionProvider<FabricClientCommandSource> panelSuggestions() {
         return (ctx, builder) -> {
-            for (ChatPanel panel : ChatRenderer.PANELS)
+            for (ChatPanel panel : ChatManager.getAllPanels())
                 if (CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), panel.name().toLowerCase()))
                     builder.suggest(panel.name());
             return builder.buildFuture();
@@ -166,7 +167,7 @@ public class MultiChatCommand {
 
     private static SuggestionProvider<FabricClientCommandSource> editSuggestions() {
         return (ctx, builder) -> {
-            for (ChatTab tab : ChatRenderer.TABS)
+            for (ChatTab tab : ChatManager.getTabs())
                 if ((tab.type() == TabType.FILTERED || tab.type() == TabType.API)
                         && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
                     builder.suggest(tab.name());
@@ -176,7 +177,7 @@ public class MultiChatCommand {
 
     private static SuggestionProvider<FabricClientCommandSource> contextSuggestions() {
         return (ctx, builder) -> {
-            for (ChatTab tab : ChatRenderer.TABS)
+            for (ChatTab tab : ChatManager.getTabs())
                 if ((tab.type() == TabType.FILTERED || tab.type() == TabType.API)
                         && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
                     builder.suggest(tab.name());
@@ -191,7 +192,7 @@ public class MultiChatCommand {
     /** FILTERED tab wins over API if same name. */
     private static ChatTab findEditableTab(String name) {
         ChatTab api = null;
-        for (ChatTab tab : ChatRenderer.TABS) {
+        for (ChatTab tab : ChatManager.getTabs()) {
             if (!tab.name().equalsIgnoreCase(name)) continue;
             if (tab.type() == TabType.FILTERED) return tab;
             if (tab.type() == TabType.API) api = tab;
@@ -201,7 +202,7 @@ public class MultiChatCommand {
 
     private static ChatTab findContextTab(String name) {
         ChatTab api = null;
-        for (ChatTab tab : ChatRenderer.TABS) {
+        for (ChatTab tab : ChatManager.getTabs()) {
             if (!tab.name().equalsIgnoreCase(name)) continue;
             if (tab.type() == TabType.FILTERED) return tab;
             if (tab.type() == TabType.API) api = tab;

@@ -1,16 +1,11 @@
 package net.mobilelize.multichat.api;
 
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.config.MultiChatConfig.ApiTabConfig;
-import net.mobilelize.multichat.client.config.MultiChatConfig.RuleConfig;
-import net.mobilelize.multichat.client.filter.FilterRule;
-import net.mobilelize.multichat.client.filter.IndicatorFilter;
-import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.filter.WhitelistMode;
-import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -31,12 +26,10 @@ public class MultiChatMod {
     // Tab registration
     // ------------------------------------------------------------------
 
-    /** Register a tab visible on all panels. Use {@link TabHandle} setters to configure further. */
     public TabHandle registerTab(String name, String displayName) {
         return registerTabInternal(name, displayName, allPanelIds());
     }
 
-    /** Register a tab visible only on the specified panel IDs (0 = left, 1 = right, …). */
     public TabHandle registerTab(String name, String displayName, int... panelIds) {
         Set<Integer> ids = new LinkedHashSet<>();
         for (int id : panelIds) ids.add(id);
@@ -47,47 +40,42 @@ public class MultiChatMod {
         if (handles.containsKey(name)) return handles.get(name);
 
         String fullId = modId + ":" + name;
-        ApiTabConfig saved = findSaved(fullId);
+        ChatTab saved = findSaved(fullId);
 
-        String resolvedName = (saved != null && saved.displayName != null && !saved.displayName.isEmpty())
-            ? saved.displayName : displayName;
-
-        Set<Integer> resolvedPanels = (saved != null && !saved.visibleOnPanels.isEmpty())
-            ? new LinkedHashSet<>(saved.visibleOnPanels)
+        String resolvedName = (saved != null && !saved.name().isEmpty()) ? saved.name() : displayName;
+        Set<Integer> resolvedPanels = (saved != null && !saved.visibleOnPanels().isEmpty())
+            ? new LinkedHashSet<>(saved.visibleOnPanels())
             : defaultPanels;
 
         ChatTab tab = new ChatTab(resolvedName, TabType.API, resolvedPanels);
         tab.setApiId(fullId);
-        tab.setTabColor(saved != null ? saved.color : 0);
 
         if (saved != null) {
-            tab.filterRules().setWhitelistMode(saved.whitelistMode != null ? saved.whitelistMode : WhitelistMode.ANY);
-            tab.filterRules().setBlacklistMode(saved.blacklistMode != null ? saved.blacklistMode : WhitelistMode.ANY);
-            tab.setContextPrefix(saved.contextPrefix != null ? saved.contextPrefix : "");
-            tab.setContextCommandMode(saved.contextCommandMode);
-            for (RuleConfig rc : saved.whitelist)
-                if (rc.type != null) tab.filterRules().whitelist().add(
-                    new FilterRule(rc.type, rc.value, rc.indicator != null ? rc.indicator : IndicatorFilter.ANY));
-            for (RuleConfig rc : saved.blacklist)
-                if (rc.type != null) tab.filterRules().blacklist().add(
-                    new FilterRule(rc.type, rc.value, rc.indicator != null ? rc.indicator : IndicatorFilter.ANY));
-            tab.setPingEnabled(saved.pingEnabled);
-            tab.setPingSound(saved.pingSound != null ? saved.pingSound : "");
-            tab.setPingVolume(saved.pingVolume);
-            tab.setPingPitch(saved.pingPitch);
-            tab.setPingUseGlobalConditions(saved.pingUseGlobalConditions);
-            tab.setPingCondAlways(saved.pingCondAlways);
-            tab.setPingCondUnfocusedTab(saved.pingCondUnfocusedTab);
-            tab.setPingCondGameUnfocused(saved.pingCondGameUnfocused);
-            tab.setPingCondAfk(saved.pingCondAfk);
-            tab.setPingCondRequireSilence(saved.pingCondRequireSilence);
-            tab.setPingCooldownSec(saved.pingCooldownSec);
-            tab.setPingSilenceThresholdSec(saved.pingSilenceThresholdSec);
-            tab.setPingAfkThresholdSec(saved.pingAfkThresholdSec);
+            tab.setTabColor(saved.tabColor());
+            tab.filterRules().setWhitelistMode(saved.filterRules().whitelistMode());
+            tab.filterRules().setBlacklistMode(saved.filterRules().blacklistMode());
+            tab.filterRules().whitelist().addAll(saved.filterRules().whitelist());
+            tab.filterRules().blacklist().addAll(saved.filterRules().blacklist());
+            tab.setContextPrefix(saved.contextPrefix());
+            tab.setContextCommandMode(saved.contextCommandMode());
+            tab.setPingEnabled(saved.pingEnabled());
+            tab.setPingSound(saved.pingSound());
+            tab.setPingVolume(saved.pingVolume());
+            tab.setPingPitch(saved.pingPitch());
+            tab.setPingUseGlobalConditions(saved.pingUseGlobalConditions());
+            tab.setPingCondAlways(saved.pingCondAlways());
+            tab.setPingCondActiveTab(saved.pingCondActiveTab());
+            tab.setPingCondUnfocusedTab(saved.pingCondUnfocusedTab());
+            tab.setPingCondGameUnfocused(saved.pingCondGameUnfocused());
+            tab.setPingCondAfk(saved.pingCondAfk());
+            tab.setPingCondRequireSilence(saved.pingCondRequireSilence());
+            tab.setPingCooldownSec(saved.pingCooldownSec());
+            tab.setPingSilenceThresholdSec(saved.pingSilenceThresholdSec());
+            tab.setPingAfkThresholdSec(saved.pingAfkThresholdSec());
         }
 
-        ChatRenderer.TABS.add(tab);
-        MessageRouter.refilterTab(tab);
+        ChatManager.getTabs().add(tab);
+        ChatManager.refilterTab(tab);
 
         TabHandle handle = new TabHandle(fullId, tab);
         handles.put(name, handle);
@@ -98,17 +86,15 @@ public class MultiChatMod {
     // Tab management
     // ------------------------------------------------------------------
 
-    /** Removes the tab and saves config. */
     public void unregisterTab(String name) {
         TabHandle handle = handles.remove(name);
         if (handle == null) return;
-        ChatRenderer.TABS.remove(handle.getTab());
+        ChatManager.getTabs().remove(handle.getTab());
         MultichatClient.saveTabsToConfig();
     }
 
     public TabHandle getTab(String name) { return handles.get(name); }
 
-    /** All full tab IDs ({@code "modid:name"}) registered by this mod. */
     public List<String> getTabIds() {
         return handles.values().stream().map(TabHandle::getId).toList();
     }
@@ -119,14 +105,12 @@ public class MultiChatMod {
     // Panel access
     // ------------------------------------------------------------------
 
-    /** All currently registered panels (including disabled ones). */
     public List<ChatPanel> getPanels() {
-        return java.util.Collections.unmodifiableList(ChatRenderer.PANELS);
+        return java.util.Collections.unmodifiableList(ChatManager.getAllPanels());
     }
 
-    /** Panel by ID, or {@code null} if not found. */
     public ChatPanel getPanel(int panelId) {
-        return ChatRenderer.PANELS.stream().filter(p -> p.id() == panelId).findFirst().orElse(null);
+        return ChatManager.getAllPanels().stream().filter(p -> p.id() == panelId).findFirst().orElse(null);
     }
 
     // ------------------------------------------------------------------
@@ -135,14 +119,14 @@ public class MultiChatMod {
 
     private static Set<Integer> allPanelIds() {
         Set<Integer> ids = new LinkedHashSet<>();
-        for (ChatPanel p : ChatRenderer.PANELS) ids.add(p.id());
+        for (ChatPanel p : ChatManager.getAllPanels()) ids.add(p.id());
         return ids;
     }
 
-    private static ApiTabConfig findSaved(String fullId) {
+    private static ChatTab findSaved(String fullId) {
         if (MultichatClient.CONFIG == null) return null;
-        for (ApiTabConfig atc : MultichatClient.CONFIG.apiTabs)
-            if (fullId.equals(atc.id)) return atc;
-        return null;
+        return MultichatClient.CONFIG.tabs.stream()
+            .filter(t -> t.type() == TabType.API && fullId.equals(t.apiId()))
+            .findFirst().orElse(null);
     }
 }

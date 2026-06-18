@@ -2,7 +2,6 @@ package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.math.LzMath;
-import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzMutableText;
 import net.mobilelize.fabriclib.text.LzOrderedText;
@@ -48,7 +47,8 @@ public class ChatSelection {
 
     public static void clampOrClear(ChatTab tab) {
         if (selPanel == null || selPanel.getActiveTab() != tab) return;
-        int max = ChatRenderer.getMessages(selPanel, tab).size() - 1;
+        List<LzChatLine> _l = selPanel.getTabLines(tab);
+        int max = (_l != null ? _l.size() : 0) - 1;
         if (anchorLine > max || cursorLine > max || anchorLine < 0 || cursorLine < 0)
             clear();
     }
@@ -99,7 +99,8 @@ public class ChatSelection {
         if (!hasSelection() || selPanel == null) return "";
         ChatTab tab = selPanel.getActiveTab();
         if (tab == null) return "";
-        List<LzChatLine> msgs = ChatRenderer.getMessages(selPanel, tab);
+        List<LzChatLine> msgs = selPanel.getTabLines(tab);
+        if (msgs == null) return "";
         int[] n = norm();
         int tl = n[0], bl = n[1], tc = n[2], bc = n[3];
 
@@ -130,8 +131,8 @@ public class ChatSelection {
         if (active == null) return -1;
         int scrolled = panel.getScrolledLines(active);
         int idx = LzMath.floor(chatY + scrolled);
-        List<LzChatLine> panelMsgs = ChatRenderer.getMessages(panel, active);
-        if (idx < 0 || idx >= panelMsgs.size()) return -1;
+        List<LzChatLine> panelMsgs = panel.getTabLines(active);
+        if (panelMsgs == null || idx < 0 || idx >= panelMsgs.size()) return -1;
         if (idx >= visibleLineCount + scrolled) return -1;
         return idx;
     }
@@ -148,8 +149,8 @@ public class ChatSelection {
     public static void selectWord(ChatPanel panel, int lineIdx, int charIdx, boolean nameSelect) {
         ChatTab tab = panel.getActiveTab();
         if (tab == null) return;
-        List<LzChatLine> msgs = ChatRenderer.getMessages(panel, tab);
-        if (lineIdx < 0 || lineIdx >= msgs.size()) return;
+        List<LzChatLine> msgs = panel.getTabLines(tab);
+        if (msgs == null || lineIdx < 0 || lineIdx >= msgs.size()) return;
         LzOrderedText content = msgs.get(lineIdx).content();
         int[] bounds = wordBoundaries(content, charIdx, nameSelect);
         if (bounds[0] == bounds[1]) return;

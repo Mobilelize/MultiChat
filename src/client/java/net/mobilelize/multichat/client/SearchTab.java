@@ -1,6 +1,7 @@
 package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.client.LzChatEntry;
+import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchMode;
 
@@ -87,4 +88,12 @@ public class SearchTab extends ChatTab {
         if (timeToTicks   > 0 && age < timeToTicks)   return false;
         return true;
     }
+
+    public boolean matches(String text, LzMessageIndicator indicator, int tick) {
+        return liveUpdate()
+                && matchesText(text)
+                && matchesTime(tick)
+                && (sourceTab() == null || sourceTab().filterRules().matches(text, indicator));
+    }
+
 }

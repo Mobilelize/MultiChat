@@ -11,77 +11,35 @@ import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.client.LzOptions;
 import net.mobilelize.fabriclib.render.LzDraw;
-import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatSelection;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
-import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.ping.PingPlayer;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
 import net.minecraft.text.Style;
-import net.minecraft.client.gui.hud.MessageIndicator;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class ChatRenderer {
 
-    public static final List<ChatPanel> PANELS = new ArrayList<>();
-
-    // Convenience references — same objects as PANELS.get(0) and PANELS.get(1)
-    public static final ChatPanel LEFT;
-    public static final ChatPanel RIGHT;
-
-    static {
-        LEFT = new ChatPanel();
-        LEFT.setPrimary(true);
-        LEFT.setEnabled(true);
-        LEFT.setId(0);
-        LEFT.setName("Main");
-        LEFT.setLockUnfocusedToFocused(false);
-        PANELS.add(LEFT);
-
-        RIGHT = new ChatPanel();
-        RIGHT.setAnchor(ChatPanel.Anchor.RIGHT);
-        RIGHT.setEnabled(true);
-        RIGHT.setId(1);
-        RIGHT.setName("Second Panel");
-        RIGHT.setLockUnfocusedToFocused(false);
-        PANELS.add(RIGHT);
-    }
-
-    public static ChatPanel primaryPanel() { return PANELS.getFirst(); }
-
-    public static ChatTab   contextTab    = null;
-    public static NoteTab   activeNoteTab = null;
-    public static ChatPanel focusedPanel  = LEFT;
-
-    public static int             currentTick        = 0;
-    public static Set<LzChatEntry> highlightEntries   = new HashSet<>();
-    public static int              highlightUntilTick = 0;
+    public static int             currentTick          = 0;
+    public static Set<LzChatEntry> highlightEntries    = new HashSet<>();
+    public static int              highlightUntilTick  = 0;
     public static Set<LzChatEntry> copyHighlightEntries = new HashSet<>();
-    public static int              copyHighlightUntil = 0;
-
-    private static long wallTimeStart = -1;
-    private static int  tickStart     = 0;
-
-    public static final List<ChatTab> TABS = new ArrayList<>(List.of(
-        new ChatTab("All",     TabType.ALL,     List.of(0, 1)),
-        new ChatTab("Vanilla", TabType.VANILLA, List.of(0))
-    ));
+    public static int              copyHighlightUntil  = 0;
 
     public static int lastMouseX = 0;
 
-    public static final int TAB_HEIGHT    = 10;
-    public static final int ARROW_W      = 10;
+    public static final int TAB_HEIGHT = 10;
+    public static final int ARROW_W    = 10;
     private static final int FLASH_TICKS = 12;
 
     public static int getTabBarY(ChatPanel panel, int topY, int visibleLineCount, int lineHeight) {
@@ -94,29 +52,17 @@ public class ChatRenderer {
         return tab.name();
     }
 
-    public static void resetForRefresh() {
-        PingPlayer.suppressPingsUntil = System.currentTimeMillis() + 10_000L;
-        PANELS.forEach(ChatPanel::resetScrollPositions);
-        TABS.forEach(t -> {
-            t.clearMessages();
-            t.clearUnread();
-        });
-        // NoteTab messages don't come through addVisibleMessage, so rebuild them now
-        for (ChatTab t : TABS)
-            if (t instanceof NoteTab nt) nt.rebuildMessages();
-    }
-
     public static void render(ChatHud chat, LzDrawContext context, int currentTick,
                                int mouseX, int mouseY, boolean focused, boolean skipLeftMessages) {
         ChatHudAccessor accessor = (ChatHudAccessor) chat;
 
         lastMouseX = mouseX;
         ChatRenderer.currentTick = currentTick;
-        if (wallTimeStart < 0) { wallTimeStart = System.currentTimeMillis(); tickStart = currentTick; }
+        ChatManager.initWallTime(currentTick);
 
         if (LzOptions.chatVisibility() == LzChatVisibility.HIDDEN) return;
 
-        boolean anyVisible = PANELS.stream().anyMatch(p -> p.isVisibleInChat(focused));
+        boolean anyVisible = ChatManager.getAllPanels().stream().anyMatch(p -> p.isVisibleInChat(focused));
         if (!anyVisible) return;
 
         LzClient.mc().getProfiler().push("multichat");
@@ -126,7 +72,7 @@ public class ChatRenderer {
         double lineSpacing = LzOptions.chatLineSpacing();
         boolean hasUnread  = accessor.getHasUnreadNewMessages();
 
-        for (ChatPanel panel : PANELS) {
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
             if (!panel.isVisibleInChat(focused)) continue;
 
             ChatTab activeTab = panel.getActiveTab();
@@ -146,10 +92,10 @@ public class ChatRenderer {
             if (focused && panel.showTabs()) renderTabBar(context, panel, xOffset, tabY, scale, chatWidth);
 
             if (activeTab.type() == TabType.VANILLA) continue;
-            if (panel == LEFT && skipLeftMessages) continue;
+            if (panel == ChatManager.primaryPanel() && skipLeftMessages) continue;
 
-            List<LzChatLine> msgs = getMessages(panel, activeTab);
-            if (msgs.isEmpty()) continue;
+            List<LzChatLine> msgs = panel.getTabLines(activeTab);
+            if (msgs == null || msgs.isEmpty()) continue;
 
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
@@ -398,7 +344,8 @@ public class ChatRenderer {
         ChatTab activeTab = panel.getActiveTab();
         if (activeTab == null) return -1;
 
-        List<LzChatLine> visibleMessages = getMessages(panel, activeTab);
+        List<LzChatLine> visibleMessages = panel.getTabLines(activeTab);
+        if (visibleMessages == null) return -1;
         int scrolledLines = panel.getScrolledLines(activeTab);
         int maxLines = Math.min(visibleLineCount, visibleMessages.size());
 
@@ -414,65 +361,16 @@ public class ChatRenderer {
         return -1;
     }
 
-    public static List<LzOrderedText> stampedLines(int creationTick, LzText originalContent,
-                                                    LzMessageIndicator indicator,
-                                                    List<LzOrderedText> fallback) {
-        if (wallTimeStart < 0) return fallback;
-        var chat = LzChat.chatHud();
-        if (chat == null) return fallback;
-        int baseWidth = LzMath.floor((double) LzChat.chatWidth() / LzChat.chatScale());
-        return stampedLines(creationTick, originalContent, indicator, baseWidth);
-    }
-
-    /** Stamp + wrap at an explicit panel width (already in text-renderer units, indicator-unadjusted). */
-    public static List<LzOrderedText> stampedLines(int creationTick, LzText originalContent,
-                                                    @org.jetbrains.annotations.Nullable LzMessageIndicator indicator,
-                                                    int panelWidth) {
-        int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
-        int wrapWidth = panelWidth - indicatorW;
-        if (wallTimeStart < 0) return LzChat.breakLines(originalContent, wrapWidth);
-        String ts = formatTimestamp(MultichatClient.CONFIG.timestampFormat, getWallTime(creationTick));
-        LzText combined = LzText.empty().append(LzText.format(ts + " ")).append(originalContent);
-        return LzChat.breakLines(combined, wrapWidth);
-    }
-
-    // ── Per-panel message list ─────────────────────────────────────────────────
-
-    /**
-     * Lines the given message produces at a specific panel width.
-     * Used for secondary-panel scroll adjustment — much cheaper than rebuilding the full width cache.
-     */
-    public static int lineCountAtWidth(LzText text, @org.jetbrains.annotations.Nullable LzMessageIndicator indicator,
-                                        boolean stamped, int tick, int panelWidth) {
-        if (stamped) return stampedLines(tick, text, indicator, panelWidth).size();
-        int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
-        return LzChat.breakLines(text, panelWidth - indicatorW).size();
-    }
-
     // ── Version-sensitive API isolation ────────────────────────────────────────
-    // All logic that depends on specific vanilla methods lives here.
-    // When upgrading MC, only update the mixin injection descriptors and these methods.
 
-    /**
-     * Result of an indicator hit-test across our panels.
-     * NOT_IN_PANEL  → fell through; caller decides based on leftIsVanilla.
-     * found=true    → hit a panel (indicator may be null = suppress vanilla).
-     */
-    public record IndicatorResult(boolean found, @org.jetbrains.annotations.Nullable LzMessageIndicator indicator) {
+    public record IndicatorResult(boolean found, @Nullable LzMessageIndicator indicator) {
         public static final IndicatorResult NOT_IN_PANEL = new IndicatorResult(false, null);
     }
 
-    /**
-     * Hit-tests all custom panels for a text style at (x, y).
-     * Returns the style if found, null otherwise.
-     * Caller suppresses vanilla based on leftIsVanilla when null is returned.
-     * MC-VERSION-SENSITIVE: called from ChatHudMixin getTextStyleAt injection.
-     * If that method is removed, move the call to the replacement hook.
-     */
-    @org.jetbrains.annotations.Nullable
+    @Nullable
     public static Style resolveStyleAt(double x, double y, int windowWidth, int windowHeight) {
-        for (ChatPanel panel : PANELS) {
-            if (!panel.enabled()) continue;
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (!panel.isEnabled()) continue;
             ChatTab active = panel.getActiveTab();
             if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
 
@@ -487,7 +385,8 @@ public class ChatRenderer {
 
             if (localChatX < -4.0 || localChatX > chatWidth) continue;
 
-            List<LzChatLine> msgs = getMessages(panel, active);
+            List<LzChatLine> msgs = panel.getTabLines(active);
+            if (msgs == null) continue;
             int maxLines = Math.min(panel.resolveLines(), msgs.size());
             if (chatY < 0.0 || chatY >= maxLines) continue;
 
@@ -501,17 +400,10 @@ public class ChatRenderer {
         return null;
     }
 
-    /**
-     * Hit-tests all custom panels for a message indicator at (mouseX, mouseY).
-     * Returns NOT_IN_PANEL if no panel was hit; otherwise returns the indicator result
-     * (indicator may be null meaning "in panel, suppress vanilla").
-     * MC-VERSION-SENSITIVE: called from ChatHudMixin getIndicatorAt injection.
-     * If that method is removed, move the call to the replacement hook.
-     */
     public static IndicatorResult resolveIndicatorAt(double mouseX, double mouseY,
                                                       int windowWidth, int windowHeight) {
-        for (ChatPanel panel : PANELS) {
-            if (!panel.enabled()) continue;
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (!panel.isEnabled()) continue;
             ChatTab active = panel.getActiveTab();
             if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
 
@@ -526,7 +418,8 @@ public class ChatRenderer {
             double chatLineX = mouseX / scale - 4.0 - xOffset;
             if (chatLineX < -4.0 || chatLineX > chatWidth) continue;
 
-            List<LzChatLine> panelMsgs = getMessages(panel, active);
+            List<LzChatLine> panelMsgs = panel.getTabLines(active);
+            if (panelMsgs == null) continue;
             int maxLines = Math.min(visibleLineCount, panelMsgs.size());
             if (chatLineY < 0.0 || chatLineY >= maxLines) continue;
 
@@ -540,7 +433,7 @@ public class ChatRenderer {
             LzMessageIndicator indicator = line.indicator();
             if (indicator == null) return new IndicatorResult(true, null);
 
-            if (chatLineX < 0.0) return new IndicatorResult(true, indicator); // over color strip
+            if (chatLineX < 0.0) return new IndicatorResult(true, indicator);
             if (!indicator.hasIcon()) return new IndicatorResult(true, null);
             int indicatorX = LzDraw.textWidth(line.content()) + 4;
             int iconW = indicator.mc().icon() != null ? indicator.mc().icon().width : 0;
@@ -550,132 +443,8 @@ public class ChatRenderer {
         return IndicatorResult.NOT_IN_PANEL;
     }
 
-    /**
-     * Called each frame after the hovered message index is known.
-     * Currently a no-op placeholder.
-     * MC-VERSION-SENSITIVE: in newer MC (StandardCursors API), call
-     *   context.setCursor(StandardCursors.POINTING_HAND) when hoveredIndex >= 0
-     *   and the hovered line has a clickable/hoverable style.
-     */
     public static void updateCursor(LzDrawContext context, ChatPanel panel, int hoveredIndex) {
-        // TODO MC upgrade: implement cursor change via StandardCursors when available
-    }
-
-    /** Returns the right message list for this panel: primary uses tab.messages(), secondary uses width cache. */
-    public static List<LzChatLine> getMessages(ChatPanel panel, ChatTab tab) {
-        if (panel.primary()) return tab.messages();
-        int width = panel.resolveWidth();
-        return tab.getOrBuildWidth(width, w -> buildForWidth(tab, w));
-    }
-
-    public static boolean isActiveInAnyPanel(ChatTab tab) {
-        for (ChatPanel panel : PANELS) {
-            if (panel.enabled() && panel.getActiveTab() == tab) return true;
-        }
-        return false;
-    }
-
-    /** Builds a secondary panel's wrapped message list at {@code panelWidth} from the primary list. */
-    private static List<LzChatLine> buildForWidth(ChatTab tab, int panelWidth) {
-        List<LzChatLine> result = new ArrayList<>();
-        List<LzChatLine> src   = tab.messages();
-        int i = 0;
-        while (i < src.size()) {
-            LzChatLine endLine = src.get(i);
-            if (!endLine.endOfEntry()) { i++; continue; }
-
-            int groupEnd = i + 1;
-            while (groupEnd < src.size() && !src.get(groupEnd).endOfEntry()) groupEnd++;
-
-            LzChatEntry entry = endLine.entry();
-            if (entry != null) {
-                List<LzOrderedText> newLines = new ArrayList<>(tab.showTimestamps()
-                    ? stampedLines(entry.creationTick, entry.originalContent, entry.indicator, panelWidth)
-                    : breakLinesForPanel(entry.originalContent, entry.indicator, panelWidth));
-
-                if (tab instanceof SearchTab st && st.collapseIdentical()) {
-                    Integer count = st.collapseCounts().get(entry);
-                    if (count != null && count > 1) {
-                        String cStr = " " + MultichatClient.CONFIG.collapseCounterFormat
-                            .replace("{count}", String.valueOf(count));
-                        int last = newLines.size() - 1;
-                        newLines.set(last, LzOrderedText.concat(
-                            newLines.get(last), LzText.format(cStr).ordered()));
-                    }
-                }
-
-                List<LzChatLine> group = new ArrayList<>(newLines.size());
-                for (int j = 0; j < newLines.size(); j++)
-                    group.add(LzChatLine.create(entry.creationTick, newLines.get(j),
-                            entry.indicator, j == newLines.size() - 1, entry));
-                Collections.reverse(group);
-                result.addAll(group);
-            } else {
-                for (int k = i; k < groupEnd; k++) result.add(src.get(k));
-            }
-            i = groupEnd;
-        }
-        return result;
-    }
-
-    private static List<LzOrderedText> breakLinesForPanel(LzText content,
-                                                            @org.jetbrains.annotations.Nullable LzMessageIndicator indicator,
-                                                            int panelWidth) {
-        int indicatorW = indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
-        return LzChat.breakLines(content, panelWidth - indicatorW);
-    }
-
-    public static String getPlainTimestamp(int tick) {
-        if (wallTimeStart < 0) return "";
-        String ts = formatTimestamp(MultichatClient.CONFIG.timestampFormat, getWallTime(tick));
-        return ts.replaceAll("&[0-9a-fklmnorA-FKLMNOR]", "");
-    }
-
-    private static java.time.LocalTime getWallTime(int addedTick) {
-        long millis = wallTimeStart + (long)(addedTick - tickStart) * 50L;
-        return java.time.Instant.ofEpochMilli(millis)
-            .atZone(java.time.ZoneId.systemDefault())
-            .toLocalTime();
-    }
-
-    static String formatTimestamp(String fmtWithCodes, java.time.LocalTime time) {
-        StringBuilder pure = new StringBuilder();
-        java.util.List<int[]> inserts = new ArrayList<>();
-        for (int i = 0; i < fmtWithCodes.length(); i++) {
-            if (fmtWithCodes.charAt(i) == '&' && i + 1 < fmtWithCodes.length()) {
-                inserts.add(new int[]{pure.length(), fmtWithCodes.charAt(++i)});
-            } else {
-                pure.append(fmtWithCodes.charAt(i));
-            }
-        }
-
-        StringBuilder pat = new StringBuilder();
-        boolean quoted = false;
-        for (char c : pure.toString().toCharArray()) {
-            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
-                if (quoted) { pat.append('\''); quoted = false; }
-                pat.append(c);
-            } else {
-                if (!quoted) { pat.append('\''); quoted = true; }
-                if (c == '\'') pat.append('\'');
-                pat.append(c);
-            }
-        }
-        if (quoted) pat.append('\'');
-
-        String formatted;
-        try {
-            formatted = java.time.format.DateTimeFormatter.ofPattern(pat.toString()).format(time);
-        } catch (Exception e) { return "??"; }
-
-        StringBuilder result = new StringBuilder(formatted);
-        int offset = 0;
-        for (int[] ins : inserts) {
-            int pos = Math.min(ins[0] + offset, result.length());
-            result.insert(pos, "&" + (char) ins[1]);
-            offset += 2;
-        }
-        return result.toString();
+        // TODO MC upgrade: StandardCursors.POINTING_HAND when hoveredIndex >= 0
     }
 
     private static double getOpacityMultiplier(int age) {

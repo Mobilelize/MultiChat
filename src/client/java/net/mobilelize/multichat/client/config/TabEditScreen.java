@@ -9,16 +9,12 @@ import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.filter.FilterRule;
-import net.mobilelize.multichat.client.filter.FilterType;
-import net.mobilelize.multichat.client.filter.IndicatorFilter;
-import net.mobilelize.multichat.client.filter.WhitelistMode;
-import net.mobilelize.multichat.client.filter.MessageRouter;
+import net.mobilelize.multichat.client.filter.*;
 import net.mobilelize.multichat.client.ping.PingPlayer;
-import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,38 +46,7 @@ public class TabEditScreen {
 
         ConfigEntryBuilder eb = builder.entryBuilder();
 
-        // ── All Tab settings (only for ALL type) ──────────────────────────
-        if (tab.type() == TabType.ALL) {
-            ConfigCategory allCat = builder.getOrCreateCategory(LzText.literal("All Tab").mc());
-
-            allCat.addEntry(eb.startBooleanToggle(LzText.literal("Raw List").mc(), tab.allRawList())
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal(
-                    "Maintain a parallel list of messages captured directly from the Fabric API " +
-                    "(before Minecraft or any mod processes them). " +
-                    "Used as source for refilter and search when those options are ON.").mc())
-                .setSaveConsumer(tab::setAllRawList)
-                .build());
-
-            allCat.addEntry(eb.startBooleanToggle(LzText.literal("Refilter Reads Raw List").mc(), tab.allRefilterRaw())
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal(
-                    "ON (default): refiltering a tab reads from the raw list so timestamps and " +
-                    "collapse counters in the All display list do not affect filter text matching. " +
-                    "OFF: reads from the All display list (legacy behaviour).").mc())
-                .setSaveConsumer(tab::setAllRefilterRaw)
-                .build());
-
-            allCat.addEntry(eb.startBooleanToggle(LzText.literal("Search Reads Raw List").mc(), tab.allSearchRaw())
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal(
-                    "ON (default): search results are built from the raw list. " +
-                    "OFF: search reads from the All display list.").mc())
-                .setSaveConsumer(tab::setAllSearchRaw)
-                .build());
-
-            return builder.build();
-        }
+        if (tab.type() == TabType.ALL) return builder.build();
 
         // ── Settings ──────────────────────────────────────────────────────
         ConfigCategory settings = builder.getOrCreateCategory(LzText.literal("Settings").mc());
@@ -92,7 +57,7 @@ public class TabEditScreen {
                 .setErrorSupplier(v -> {
                     if (v.trim().isEmpty()) return Optional.of(LzText.literal("Name cannot be empty.").mc());
                     if (tab.apiId() == null) {
-                        boolean clash = ChatRenderer.TABS.stream()
+                        boolean clash = ChatManager.getTabs().stream()
                             .filter(t -> t != tab && t.type() == TabType.FILTERED)
                             .anyMatch(t -> t.name().equalsIgnoreCase(v.trim()));
                         if (clash) return Optional.of(LzText.literal("A tab with that name already exists.").mc());
@@ -159,7 +124,7 @@ public class TabEditScreen {
             settings.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
-                .setSaveConsumer(v -> { if (v) MessageRouter.refilterTab(tab); })
+                .setSaveConsumer(v -> { if (v) ChatManager.refilterTab(tab); })
                 .build());
         }
 
@@ -367,9 +332,9 @@ public class TabEditScreen {
         // ── Blacklist ──────────────────────────────────────────────────────
         ConfigCategory blCat = builder.getOrCreateCategory(LzText.literal("Blacklist").mc());
 
-        blCat.addEntry(eb.startEnumSelector(LzText.literal("Blacklist Mode").mc(), WhitelistMode.class,
+        blCat.addEntry(eb.startEnumSelector(LzText.literal("Blacklist Mode").mc(), BlacklistMode.class,
                 tab.filterRules().blacklistMode())
-            .setDefaultValue(WhitelistMode.ANY)
+            .setDefaultValue(BlacklistMode.ANY)
             .setTooltip(LzText.literal("ANY: exclude if any rule matches. ALL: exclude only if all rules match.").mc())
             .setSaveConsumer(tab.filterRules()::setBlacklistMode)
             .build());

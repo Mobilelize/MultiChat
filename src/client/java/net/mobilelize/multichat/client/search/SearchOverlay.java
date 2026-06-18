@@ -15,8 +15,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
-import net.mobilelize.multichat.client.filter.MessageRouter;
-import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 
 public class SearchOverlay extends LzScreen {
 
@@ -122,23 +121,23 @@ public class SearchOverlay extends LzScreen {
         String name = "Search: " + (query.isEmpty() ? "(all)"
                       : query.length() > 14 ? query.substring(0, 14) + "…" : query);
 
-        ChatRenderer.TABS.removeIf(t -> t.type() == net.mobilelize.multichat.client.TabType.SEARCH);
+        ChatManager.getTabs().removeIf(t -> t.type() == net.mobilelize.multichat.client.TabType.SEARCH);
 
         java.util.Set<Integer> allPanelIds = new java.util.LinkedHashSet<>();
-        for (ChatPanel p : ChatRenderer.PANELS) { if (p.enabled()) allPanelIds.add(p.id()); }
+        for (ChatPanel p : ChatManager.getAllPanels()) { if (p.isEnabled()) allPanelIds.add(p.id()); }
 
         SearchTab tab = new SearchTab(name, query, searchMode, caseSensitive,
             fromTicks, toTicks, sourceTab, liveUpdate, allPanelIds);
         tab.setShowBadge(showBadge);
         tab.setShowTimestamps(showTimestamps);
         tab.setCollapseIdentical(collapseIdentical);
-        ChatRenderer.TABS.add(tab);
-        MessageRouter.refilterSearch(tab);
+        ChatManager.getTabs().add(tab);
+        ChatManager.refilterSearch(tab);
 
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled()) continue;
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (!panel.isEnabled()) continue;
             int idx = panel.getVisibleTabs().indexOf(tab);
-            if (idx >= 0) { panel.setActiveTab(idx); panel.scrollActiveTabIntoView(); break; }
+            if (idx >= 0) { panel.setActiveTabId(idx); panel.scrollActiveTabIntoView(); break; }
         }
 
         close();

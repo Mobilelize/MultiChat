@@ -1,100 +1,81 @@
 package net.mobilelize.multichat.client;
 
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.text.LzText;
-import net.mobilelize.fabriclib.client.LzChatLine;
-import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.multichat.client.filter.FilterRuleSet;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
+import java.util.*;
 
 public class ChatTab {
 
-    // ── Collapse state ─────────────────────────────────────────────────────────
+    // ── Collapse state (runtime only) ──────────────────────────────────────────
     public static class CollapseState {
-        private String              lastText    = null;
-        private LzText              lastContent = null;
-        private int                 repeat      = 0;
-        private int                 lineCount   = 0;
-        private int                 lastTick    = 0;
-        private List<LzOrderedText> lastLines   = null;
+        private String lastText    = null;
+        private LzText lastContent = null;
+        private int    repeat      = 0;
+        private int    lastTick    = 0;
 
-        public String              lastText()                          { return lastText; }
-        public void                setLastText(String v)              { lastText = v; }
-        public LzText              lastContent()                      { return lastContent; }
-        public void                setLastContent(LzText v)           { lastContent = v; }
-        public int                 repeat()                           { return repeat; }
-        public void                setRepeat(int v)                   { repeat = v; }
-        public void                incrementRepeat()                  { repeat++; }
-        public int                 lineCount()                        { return lineCount; }
-        public void                setLineCount(int v)                { lineCount = v; }
-        public int                 lastTick()                         { return lastTick; }
-        public void                setLastTick(int v)                 { lastTick = v; }
-        public List<LzOrderedText> lastLines()                        { return lastLines; }
-        public void                setLastLines(List<LzOrderedText> v) { lastLines = v; }
-        public boolean             hasLastLines()                     { return lastLines != null; }
+        public String lastText()               { return lastText; }
+        public void   setLastText(String v)    { lastText = v; }
+        public LzText lastContent()            { return lastContent; }
+        public void   setLastContent(LzText v) { lastContent = v; }
+        public int    repeat()                 { return repeat; }
+        public void   setRepeat(int v)         { repeat = v; }
+        public void   incrementRepeat()        { repeat++; }
+        public int    lastTick()               { return lastTick; }
+        public void   setLastTick(int v)       { lastTick = v; }
 
         public void reset() {
             lastText    = null;
             lastContent = null;
             repeat      = 0;
-            lineCount   = 0;
-            lastLines   = null;
         }
     }
 
-    // ── All fields private ─────────────────────────────────────────────────────
-    private String             name;
-    private final TabType      type;
-    private String             apiId                   = null;
-    private final Set<Integer> visibleOnPanels         = new LinkedHashSet<>();
-    private final FilterRuleSet filterRules            = new FilterRuleSet();
-    private boolean            differenceMode          = false;
-    private int                differenceLayerIndex    = 0;
-    private boolean            differenceException     = false;
-    private boolean            showBadge               = true;
-    private boolean            showTimestamps          = false;
-    private int                tabColor                = 0;
-    private int                msgBgColor              = 0;
-    private boolean            collapseRepeating       = false;
-    private boolean            collapseMatchFormatting = false;
-    private int                messageCap              = 0;
-    private String             contextPrefix           = "";
-    private boolean            contextCommandMode      = true;
-    private final CollapseState collapse               = new CollapseState();
-    private final List<LzChatLine>               messages        = new ArrayList<>();
-    private final Map<Integer, List<LzChatLine>> messagesByWidth = new HashMap<>();
-    private int                unreadCount             = 0;
-    private boolean            pingEnabled              = false;
-    private String             pingSound                = "";
-    private float              pingVolume               = -1f;
-    private float              pingPitch                = -1f;
-    private boolean            pingUseGlobalConditions  = true;
-    private boolean            pingCondAlways           = false;
-    private boolean            pingCondActiveTab        = false;
-    private boolean            pingCondUnfocusedTab     = false;
-    private boolean            pingCondGameUnfocused    = false;
-    private boolean            pingCondAfk              = false;
-    private boolean            pingCondRequireSilence   = false;
-    private int                pingCooldownSec          = -1;
-    private int                pingSilenceThresholdSec  = -1;
-    private int                pingAfkThresholdSec      = -1;
+    public record MessageEntry(LzText rendered, LzText content, LzChatEntry entry) {
+        public MessageEntry newRender(LzText rendered) {
+            return new MessageEntry(rendered, content, entry);
+        }
+    }
 
-    // ── All-tab raw list (only meaningful when type == ALL) ────────────────────
-    // Parallel list storing messages as captured from the Fabric packet event
-    // (rawLzText — before any mod or Minecraft rendering touches them). No timestamps,
-    // no collapse. Used as the preferred source for refilter and search so that
-    // display-side changes never affect filter text matching.
-    private boolean            allRawList      = true;  // maintain the raw list
-    private boolean            allRefilterRaw  = true;  // refilterTab reads rawMessages instead of display list
-    private boolean            allSearchRaw    = true;  // search reads rawMessages instead of display list
-    private final List<LzChatLine> rawMessages = new ArrayList<>();
+    // ── Config fields (serialized) ─────────────────────────────────────────────
+    private String           name;
+    private final TabType    type;
+    private final UUID       tabId                   = ChatManager.getNextTabId();
+    private String           apiId                   = null;
+    private final Set<Integer> visibleOnPanels       = new LinkedHashSet<>();
+    private final FilterRuleSet filterRules          = new FilterRuleSet();
+    private boolean          differenceMode          = false;
+    private int              differenceLayerIndex    = 0;
+    private boolean          differenceException     = false;
+    private boolean          showBadge               = true;
+    private boolean          showTimestamps          = false;
+    private int              tabColor                = 0;
+    private int              msgBgColor              = 0;
+    private boolean          collapseRepeating       = false;
+    private boolean          collapseMatchFormatting = false;
+    private int              messageCap              = 0;
+    private String           contextPrefix           = "";
+    private boolean          contextCommandMode      = true;
+    private boolean          pingEnabled             = false;
+    private String           pingSound               = "";
+    private float            pingVolume              = -1f;
+    private float            pingPitch               = -1f;
+    private boolean          pingUseGlobalConditions = true;
+    private boolean          pingCondAlways          = false;
+    private boolean          pingCondActiveTab       = false;
+    private boolean          pingCondUnfocusedTab    = false;
+    private boolean          pingCondGameUnfocused   = false;
+    private boolean          pingCondAfk             = false;
+    private boolean          pingCondRequireSilence  = false;
+    private int              pingCooldownSec         = -1;
+    private int              pingSilenceThresholdSec = -1;
+    private int              pingAfkThresholdSec     = -1;
+
+    // ── Runtime fields (not serialized) — lazy-init because Gson uses Unsafe ──
+    private transient List<MessageEntry> messages;
+    private transient CollapseState      collapse;
+    private transient int                unreadCount = 0;
 
     public ChatTab(String name, TabType type, Collection<Integer> visibleOnPanels) {
         this.name = name;
@@ -106,6 +87,7 @@ public class ChatTab {
     public String  name()             { return name; }
     public void    setName(String v)  { name = v != null ? v : ""; }
     public TabType type()             { return type; }
+    public UUID    id()               { return tabId; }
     public String  apiId()            { return apiId; }
     public void    setApiId(String v) { apiId = v; }
 
@@ -114,13 +96,16 @@ public class ChatTab {
     }
 
     // ── Visibility ─────────────────────────────────────────────────────────────
-    public Set<Integer>  visibleOnPanels() { return visibleOnPanels; }
+    public Set<Integer> visibleOnPanels() { return visibleOnPanels; }
 
     // ── Filtering ──────────────────────────────────────────────────────────────
-    public FilterRuleSet filterRules()     { return filterRules; }
+    public FilterRuleSet filterRules() { return filterRules; }
 
     // ── Collapse tracking ──────────────────────────────────────────────────────
-    public CollapseState collapse()        { return collapse; }
+    public CollapseState collapseState() {
+        if (collapse == null) collapse = new CollapseState();
+        return collapse;
+    }
 
     // ── Display settings ───────────────────────────────────────────────────────
     public boolean differenceMode()                      { return differenceMode; }
@@ -145,42 +130,29 @@ public class ChatTab {
     public void    setMessageCap(int v)                  { messageCap = Math.max(0, v); }
 
     // ── Context ────────────────────────────────────────────────────────────────
-    public String  contextPrefix()                        { return contextPrefix; }
-    public void    setContextPrefix(String v)             { contextPrefix = v != null ? v : ""; }
-    public boolean contextCommandMode()                   { return contextCommandMode; }
-    public void    setContextCommandMode(boolean v)       { contextCommandMode = v; }
+    public String  contextPrefix()                   { return contextPrefix; }
+    public void    setContextPrefix(String v)        { contextPrefix = v != null ? v : ""; }
+    public boolean contextCommandMode()              { return contextCommandMode; }
+    public void    setContextCommandMode(boolean v)  { contextCommandMode = v; }
 
-    // ── Message access ─────────────────────────────────────────────────────────
+    // ── Messages ───────────────────────────────────────────────────────────────
+    private List<MessageEntry> msgs() {
+        if (messages == null) messages = new ArrayList<>();
+        return messages;
+    }
 
-    /** Raw primary list. Primary panel renders from this directly. */
-    public List<LzChatLine> messages()      { return messages; }
-
-    public void       addFirst(LzChatLine line) { messages.addFirst(line); }
-    public void       addLast(LzChatLine line)  { messages.addLast(line); }
-    public void       removeFirst()             { messages.removeFirst(); }
-    public void       removeLast()              { messages.removeLast(); }
-    public LzChatLine getMessage(int i)         { return messages.get(i); }
-    public LzChatLine getFirstMessage()         { return messages.getFirst(); }
-    public int        messageCount()            { return messages.size(); }
-    public boolean    hasMessages()             { return !messages.isEmpty(); }
+    public List<MessageEntry> messages()          { return msgs(); }
+    public void          addFirst(MessageEntry e) { msgs().addFirst(e); }
+    public void          addLast(MessageEntry e)  { msgs().addLast(e); }
+    public void          removeFirst()            { msgs().removeFirst(); }
+    public void          removeLast()             { msgs().removeLast(); }
+    public MessageEntry  getFirstMessage()        { return msgs().getFirst(); }
+    public int           messageCount()           { return msgs().size(); }
+    public boolean       hasMessages()            { return !msgs().isEmpty(); }
 
     public void clearMessages() {
-        messages.clear();
-        rawMessages.clear();
-        collapse.reset();
-        messagesByWidth.clear();
-    }
-
-    // ── Width cache (secondary panels render at their own width) ───────────────
-
-    /** Returns or builds the wrapped line list for a secondary panel at {@code width}. */
-    public List<LzChatLine> getOrBuildWidth(int width, Function<Integer, List<LzChatLine>> builder) {
-        return messagesByWidth.computeIfAbsent(width, builder);
-    }
-
-    /** Invalidates all per-width caches so they rebuild from scratch on next render. */
-    public void clearWidthCaches() {
-        messagesByWidth.clear();
+        msgs().clear();
+        collapseState().reset();
     }
 
     // ── Unread ─────────────────────────────────────────────────────────────────
@@ -189,42 +161,33 @@ public class ChatTab {
     public void    incrementUnread() { unreadCount++; }
     public void    clearUnread()     { unreadCount = 0; }
 
-    // ── All-tab raw list ───────────────────────────────────────────────────────
-    public List<LzChatLine> rawMessages()                 { return rawMessages; }
-    public boolean allRawList()                            { return allRawList; }
-    public void    setAllRawList(boolean v)                { allRawList = v; }
-    public boolean allRefilterRaw()                        { return allRefilterRaw; }
-    public void    setAllRefilterRaw(boolean v)            { allRefilterRaw = v; }
-    public boolean allSearchRaw()                          { return allSearchRaw; }
-    public void    setAllSearchRaw(boolean v)              { allSearchRaw = v; }
-
     // ── Pings ──────────────────────────────────────────────────────────────────
-    public boolean pingEnabled()                           { return pingEnabled; }
-    public void    setPingEnabled(boolean v)               { pingEnabled = v; }
-    public String  pingSound()                             { return pingSound; }
-    public void    setPingSound(String v)                  { pingSound = v != null ? v : ""; }
-    public float   pingVolume()                            { return pingVolume; }
-    public void    setPingVolume(float v)                  { pingVolume = v; }
-    public float   pingPitch()                             { return pingPitch; }
-    public void    setPingPitch(float v)                   { pingPitch = v; }
-    public boolean pingUseGlobalConditions()               { return pingUseGlobalConditions; }
-    public void    setPingUseGlobalConditions(boolean v)   { pingUseGlobalConditions = v; }
-    public boolean pingCondAlways()                        { return pingCondAlways; }
-    public void    setPingCondAlways(boolean v)            { pingCondAlways = v; }
-    public boolean pingCondActiveTab()                     { return pingCondActiveTab; }
-    public void    setPingCondActiveTab(boolean v)         { pingCondActiveTab = v; }
-    public boolean pingCondUnfocusedTab()                  { return pingCondUnfocusedTab; }
-    public void    setPingCondUnfocusedTab(boolean v)      { pingCondUnfocusedTab = v; }
-    public boolean pingCondGameUnfocused()                 { return pingCondGameUnfocused; }
-    public void    setPingCondGameUnfocused(boolean v)     { pingCondGameUnfocused = v; }
-    public boolean pingCondAfk()                           { return pingCondAfk; }
-    public void    setPingCondAfk(boolean v)               { pingCondAfk = v; }
-    public boolean pingCondRequireSilence()                { return pingCondRequireSilence; }
-    public void    setPingCondRequireSilence(boolean v)    { pingCondRequireSilence = v; }
-    public int     pingCooldownSec()                       { return pingCooldownSec; }
-    public void    setPingCooldownSec(int v)               { pingCooldownSec = v; }
-    public int     pingSilenceThresholdSec()               { return pingSilenceThresholdSec; }
-    public void    setPingSilenceThresholdSec(int v)       { pingSilenceThresholdSec = v; }
-    public int     pingAfkThresholdSec()                   { return pingAfkThresholdSec; }
-    public void    setPingAfkThresholdSec(int v)           { pingAfkThresholdSec = v; }
+    public boolean pingEnabled()                         { return pingEnabled; }
+    public void    setPingEnabled(boolean v)             { pingEnabled = v; }
+    public String  pingSound()                           { return pingSound; }
+    public void    setPingSound(String v)                { pingSound = v != null ? v : ""; }
+    public float   pingVolume()                          { return pingVolume; }
+    public void    setPingVolume(float v)                { pingVolume = v; }
+    public float   pingPitch()                           { return pingPitch; }
+    public void    setPingPitch(float v)                 { pingPitch = v; }
+    public boolean pingUseGlobalConditions()             { return pingUseGlobalConditions; }
+    public void    setPingUseGlobalConditions(boolean v) { pingUseGlobalConditions = v; }
+    public boolean pingCondAlways()                      { return pingCondAlways; }
+    public void    setPingCondAlways(boolean v)          { pingCondAlways = v; }
+    public boolean pingCondActiveTab()                   { return pingCondActiveTab; }
+    public void    setPingCondActiveTab(boolean v)       { pingCondActiveTab = v; }
+    public boolean pingCondUnfocusedTab()                { return pingCondUnfocusedTab; }
+    public void    setPingCondUnfocusedTab(boolean v)    { pingCondUnfocusedTab = v; }
+    public boolean pingCondGameUnfocused()               { return pingCondGameUnfocused; }
+    public void    setPingCondGameUnfocused(boolean v)   { pingCondGameUnfocused = v; }
+    public boolean pingCondAfk()                         { return pingCondAfk; }
+    public void    setPingCondAfk(boolean v)             { pingCondAfk = v; }
+    public boolean pingCondRequireSilence()              { return pingCondRequireSilence; }
+    public void    setPingCondRequireSilence(boolean v)  { pingCondRequireSilence = v; }
+    public int     pingCooldownSec()                     { return pingCooldownSec; }
+    public void    setPingCooldownSec(int v)             { pingCooldownSec = v; }
+    public int     pingSilenceThresholdSec()             { return pingSilenceThresholdSec; }
+    public void    setPingSilenceThresholdSec(int v)     { pingSilenceThresholdSec = v; }
+    public int     pingAfkThresholdSec()                 { return pingAfkThresholdSec; }
+    public void    setPingAfkThresholdSec(int v)         { pingAfkThresholdSec = v; }
 }

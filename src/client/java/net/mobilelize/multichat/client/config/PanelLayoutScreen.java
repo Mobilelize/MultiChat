@@ -12,6 +12,7 @@ import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.HashMap;
@@ -53,7 +54,7 @@ public class PanelLayoutScreen extends LzScreen {
     @Override
     protected void init() {
         if (originals.isEmpty()) {
-            for (ChatPanel p : ChatRenderer.PANELS)
+            for (ChatPanel p : ChatManager.getAllPanels())
                 originals.put(p, new Object[] { p.anchor(), p.customX(), p.customY(), p.customWidth(), p.customHeightLines(), p.customUnfocusedHeightLines() });
         }
 
@@ -161,8 +162,8 @@ public class PanelLayoutScreen extends LzScreen {
                 LzDraw.fill(ctx, 0, gy, width, gy + 1, 0x0DFFFFFF);
         }
 
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (!panel.enabled()) continue;
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (!panel.isEnabled()) continue;
             int[] b  = bounds(panel);
             int   x1 = b[0], y1 = b[1], x2 = b[2], y2 = b[3];
             int   cx = (x1 + x2) / 2;
@@ -241,8 +242,8 @@ public class PanelLayoutScreen extends LzScreen {
         if (button != 0) return false;
 
         // Resize handles take priority over drag
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (panel.primary() || !panel.enabled()) continue;
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (panel.primary() || !panel.isEnabled()) continue;
             int[] b = bounds(panel);
             int x1 = b[0], y1 = b[1], x2 = b[2], y2 = b[3];
 
@@ -264,8 +265,8 @@ public class PanelLayoutScreen extends LzScreen {
         }
 
         // Unfocused height line drag
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (panel.primary() || !panel.enabled() || panel.lockUnfocusedToFocused()) continue;
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (panel.primary() || !panel.isEnabled() || panel.lockUnfocusedToFocused()) continue;
             int[] b = bounds(panel);
             int lineY = unfocusedLineScreenY(panel);
             if (mouseX >= b[0] - OUTER_PAD && mouseX <= b[2] + OUTER_PAD_R
@@ -277,8 +278,8 @@ public class PanelLayoutScreen extends LzScreen {
 
         // Drag
         ChatPanel hit = null;
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            if (panel.primary() || !panel.enabled()) continue;
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (panel.primary() || !panel.isEnabled()) continue;
             int[] b = bounds(panel);
             if (mouseX >= b[0] && mouseX < b[2] && mouseY >= b[1] && mouseY < b[3]) hit = panel;
         }

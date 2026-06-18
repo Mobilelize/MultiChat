@@ -34,6 +34,14 @@ public class ConfigMenu {
                 .build());
 
         appearance.addEntry(eb.startBooleanToggle(
+                LzText.literal("Cursor Changing").mc(),
+                MultichatClient.CONFIG.cursorChangingEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Change the mouse cursor when hovering over chat: hand for tabs and clickable links, I-beam for selectable text, hand for context menus.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.cursorChangingEnabled = v)
+                .build());
+
+        appearance.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Context Display").mc(),
                 MultichatClient.CONFIG.showContextDisplay)
                 .setDefaultValue(true)
@@ -178,13 +186,6 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.earlyMessageCapture = v)
                 .build());
 
-        advanced.addEntry(eb.startBooleanToggle(
-                LzText.literal("Apply Settings on Refilter").mc(),
-                MultichatClient.CONFIG.applySettingsOnRefilter)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("When ON, refiltering a tab also applies its timestamps and collapse settings to rebuilt messages.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.applySettingsOnRefilter = v)
-                .build());
 
         advanced.addEntry(eb.startBooleanToggle(
                 LzText.literal("Log API Messages").mc(),

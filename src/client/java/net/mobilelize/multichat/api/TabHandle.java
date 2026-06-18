@@ -2,19 +2,14 @@ package net.mobilelize.multichat.api;
 
 import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.client.LzChat;
-import net.mobilelize.fabriclib.client.LzChatLine;
-import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.text.LzText;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatSelection;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.filter.MessageRouter;
-import net.mobilelize.multichat.client.render.ChatRenderer;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 public class TabHandle {
@@ -40,22 +35,12 @@ public class TabHandle {
     public boolean sendMessage(LzText message, boolean addToAll) {
         if (!isReady()) return false;
 
-        float scale     = (float) LzChat.chatScale();
-        int   chatWidth = LzMath.ceil((float) LzChat.chatWidth() / scale);
-        var   lines     = LzChat.breakLines(message, chatWidth);
-        int   tick      = LzChat.ticks();
-
-        List<LzChatLine> created = new ArrayList<>(lines.size());
-        for (int j = 0; j < lines.size(); j++) {
-            LzChatLine cl = LzChatLine.create(tick, lines.get(j), null, j == lines.size() - 1);
-            tab.addFirst(cl);
-            created.add(cl);
-        }
-        adjustAfterAdd(tab, created.size());
+        int tick = LzChat.ticks();
+        LzChatEntry entry = new LzChatEntry(tick, message, null);
+        ChatTab.MessageEntry me = new ChatTab.MessageEntry(message, message, entry);
+        ChatManager.addNewMessage(tab, me);
 
         if (addToAll) {
-            // Route through vanilla pipeline — hits All, Vanilla, and any matching Filtered/API tabs.
-            // Skip this.tab in the router to prevent double-add if its filter rules match.
             MessageRouter.skipTabOnRoute = tab;
             try {
                 LzChat.chatHud().addMessage(message.mc(), null, null);
@@ -225,8 +210,8 @@ public class TabHandle {
     // Context
     // ------------------------------------------------------------------
 
-    public TabHandle setAsContext()   { ChatRenderer.contextTab = tab; return this; }
-    public TabHandle clearContext()   { if (ChatRenderer.contextTab == tab) ChatRenderer.contextTab = null; return this; }
+    public TabHandle setAsContext()   { ChatManager.contextTab = tab; return this; }
+    public TabHandle clearContext()   { if (ChatManager.contextTab == tab) ChatManager.contextTab = null; return this; }
 
     public TabHandle setContextPrefix(String prefix) {
         tab.setContextPrefix(prefix);
@@ -249,44 +234,7 @@ public class TabHandle {
 
     /** True if the client is ready to accept messages and this tab is still registered. */
     public boolean isReady() {
-        return LzChat.chatHud() != null && ChatRenderer.TABS.contains(tab);
+        return LzChat.chatHud() != null && ChatManager.getTabs().contains(tab);
     }
 
-    // ------------------------------------------------------------------
-    // Internal helpers
-    // ------------------------------------------------------------------
-
-    private static void adjustAfterAdd(ChatTab tab, int linesAdded) {
-        tab.clearWidthCaches();
-
-        // API messages are created without a LzChatEntry, so buildForWidth copies the primary-width
-        // lines directly instead of re-wrapping at the secondary panel's width. All panels therefore
-        // show exactly linesAdded lines for this message.
-        ChatPanel selP = ChatSelection.getPanel();
-        for (ChatPanel panel : ChatRenderer.PANELS) {
-            int scrolled = panel.getScrolledLines(tab);
-            if (scrolled <= 0) continue;
-            panel.setScrolledLines(tab, scrolled + linesAdded);
-        }
-        ChatSelection.shiftLines(tab, linesAdded);
-
-        if (tab.messageCap() > 0) {
-            int before = tab.messageCount();
-            while (tab.messageCount() > tab.messageCap()) tab.removeLast();
-            int removed = before - tab.messageCount();
-            if (removed > 0) {
-                tab.clearWidthCaches();
-                for (ChatPanel panel : ChatRenderer.PANELS) {
-                    int scrolled = panel.getScrolledLines(tab);
-                    if (scrolled <= 0) continue;
-                    panel.setScrolledLines(tab, Math.max(0, scrolled - removed));
-                }
-                ChatSelection.clampOrClear(tab);
-            }
-        }
-
-        if (!ChatRenderer.isActiveInAnyPanel(tab)) tab.incrementUnread();
-        if (tab.hasMessages())
-            MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.getFirstMessage());
-    }
 }

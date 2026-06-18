@@ -15,7 +15,7 @@ import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,7 +41,7 @@ public class TabListScreen extends ConfigScreen {
         super("Tabs", parent);
     }
 
-    private List<ChatTab> allTabs() { return ChatRenderer.TABS; }
+    private List<ChatTab> allTabs() { return ChatManager.getTabs(); }
     private int listBottom()        { return height - 80; }
     private int maxScroll()         { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
@@ -76,15 +76,15 @@ public class TabListScreen extends ConfigScreen {
         String name;
         if (raw.isEmpty()) {
             java.util.Set<String> existing = new java.util.HashSet<>();
-            for (ChatTab t : ChatRenderer.TABS) existing.add(t.name().toLowerCase());
+            for (ChatTab t : ChatManager.getTabs()) existing.add(t.name().toLowerCase());
             int n = 1;
             while (existing.contains("tab " + n)) n++;
             name = "Tab " + n;
         } else {
-            if (ChatRenderer.TABS.stream().anyMatch(t -> t.type() == TabType.FILTERED && t.name().equalsIgnoreCase(raw))) return;
+            if (ChatManager.getTabs().stream().anyMatch(t -> t.type() == TabType.FILTERED && t.name().equalsIgnoreCase(raw))) return;
             name = raw;
         }
-        ChatRenderer.TABS.add(new ChatTab(name, TabType.FILTERED, java.util.List.of(0, 1)));
+        ChatManager.getTabs().add(new ChatTab(name, TabType.FILTERED, java.util.List.of(0, 1)));
         MultichatClient.saveTabsToConfig();
         clearAndInit();
     }
@@ -94,17 +94,17 @@ public class TabListScreen extends ConfigScreen {
         String name;
         if (raw.isEmpty()) {
             java.util.Set<String> existing = new java.util.HashSet<>();
-            for (ChatTab t : ChatRenderer.TABS) existing.add(t.name().toLowerCase());
+            for (ChatTab t : ChatManager.getTabs()) existing.add(t.name().toLowerCase());
             int n = 1;
             while (existing.contains("notes " + n)) n++;
             name = "Notes " + n;
         } else {
-            if (ChatRenderer.TABS.stream().anyMatch(t -> t.type() == TabType.NOTES && t.name().equalsIgnoreCase(raw))) return;
+            if (ChatManager.getTabs().stream().anyMatch(t -> t.type() == TabType.NOTES && t.name().equalsIgnoreCase(raw))) return;
             name = raw;
         }
         NoteTab nt = new NoteTab(name, java.util.List.of(0, 1));
-        ChatRenderer.TABS.add(nt);
-        if (ChatRenderer.activeNoteTab == null) ChatRenderer.activeNoteTab = nt;
+        ChatManager.getTabs().add(nt);
+        if (ChatManager.activeNoteTab == null) ChatManager.activeNoteTab = nt;
         MultichatClient.saveTabsToConfig();
         clearAndInit();
     }
@@ -299,7 +299,7 @@ public class TabListScreen extends ConfigScreen {
             }
 
             boolean isNotes   = tab.type() == TabType.NOTES;
-            boolean isActive  = isNotes && tab == ChatRenderer.activeNoteTab;
+            boolean isActive  = isNotes && tab == ChatManager.activeNoteTab;
             boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API
                              || tab.type() == TabType.ALL || isNotes;
             boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || isNotes;
@@ -423,7 +423,7 @@ public class TabListScreen extends ConfigScreen {
 
         // Set Active button (NOTES only)
         if (tab.type() == TabType.NOTES && mx >= lx + 282 && mx < lx + 318) {
-            ChatRenderer.activeNoteTab = (NoteTab) tab;
+            ChatManager.activeNoteTab = (NoteTab) tab;
             MultichatClient.saveTabsToConfig();
             return true;
         }
@@ -503,10 +503,10 @@ public class TabListScreen extends ConfigScreen {
         if (idx == selectedIdx) selectedIdx = -1;
         else if (idx < selectedIdx) selectedIdx--;
         swapPending = false;
-        ChatRenderer.TABS.remove(tab);
+        ChatManager.getTabs().remove(tab);
         if (tab.type() == TabType.NOTES) {
-            if (ChatRenderer.activeNoteTab == tab) {
-                ChatRenderer.activeNoteTab = (NoteTab) ChatRenderer.TABS.stream()
+            if (ChatManager.activeNoteTab == tab) {
+                ChatManager.activeNoteTab = (NoteTab) ChatManager.getTabs().stream()
                     .filter(t -> t.type() == TabType.NOTES).findFirst().orElse(null);
             }
             MultichatClient.saveTabsToConfig();

@@ -13,7 +13,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -44,14 +44,14 @@ public class PanelTabsScreen extends LzScreen {
         this.panel  = panel;
     }
 
-    private List<ChatTab> tabs()  { return ChatRenderer.TABS; }
+    private List<ChatTab> tabs()  { return ChatManager.getTabs(); }
     private int listBottom()      { return height - 36; }
     private int maxScroll()       { return Math.max(0, tabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
     @Override
     protected void init() {
         if (originals.isEmpty()) {
-            for (ChatTab t : ChatRenderer.TABS)
+            for (ChatTab t : ChatManager.getTabs())
                 originals.put(t, new LinkedHashSet<>(t.visibleOnPanels()));
             originalPanelContextTab = panel.panelContextTab();
         }
@@ -60,13 +60,13 @@ public class PanelTabsScreen extends LzScreen {
 
         int btnGroupX = width / 2 - 74;
         addDrawableChild(LzButton.of("Add All", btnGroupX, LIST_TOP - 22, 72, 18, b -> {
-            for (ChatTab t : ChatRenderer.TABS) {
+            for (ChatTab t : ChatManager.getTabs()) {
                 if (t.type() == TabType.VANILLA && !panel.primary()) continue;
                 t.visibleOnPanels().add(panel.id());
             }
         }));
         addDrawableChild(LzButton.of("Remove All", btnGroupX + 76, LIST_TOP - 22, 72, 18, b -> {
-            for (ChatTab t : ChatRenderer.TABS) t.visibleOnPanels().remove(panel.id());
+            for (ChatTab t : ChatManager.getTabs()) t.visibleOnPanels().remove(panel.id());
         }));
         addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
         addDrawableChild(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> attemptClose()));

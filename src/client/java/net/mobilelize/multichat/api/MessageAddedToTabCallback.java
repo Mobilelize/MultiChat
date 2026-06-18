@@ -8,7 +8,7 @@ import net.mobilelize.multichat.client.ChatTab;
 @FunctionalInterface
 public interface MessageAddedToTabCallback {
 
-    void onMessageAdded(ChatTab tab, LzChatLine message);
+    void onMessageAdded(ChatTab tab, ChatTab.MessageEntry message);
 
     Event<MessageAddedToTabCallback> EVENT = EventFactory.createArrayBacked(
         MessageAddedToTabCallback.class,

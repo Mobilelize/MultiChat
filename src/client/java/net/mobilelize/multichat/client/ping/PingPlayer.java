@@ -3,9 +3,9 @@ package net.mobilelize.multichat.client.ping;
 import net.mobilelize.fabriclib.client.LzAfk;
 import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.registry.LzRegistry;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.Map;
 import java.util.Set;
@@ -58,7 +58,7 @@ public class PingPlayer {
         boolean condAfk       = useGlobal ? MultichatClient.CONFIG.pingCondAfk            : tab.pingCondAfk();
         boolean condSilence   = useGlobal ? MultichatClient.CONFIG.pingCondRequireSilence : tab.pingCondRequireSilence();
 
-        boolean tabVisible = ChatRenderer.isActiveInAnyPanel(tab);
+        boolean tabVisible = ChatManager.isTabActiveInAnyPanel(tab);
         boolean winFocused = LzSound.isWindowFocused();
 
         // OR between all enabled conditions

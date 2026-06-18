@@ -1,14 +1,10 @@
 package net.mobilelize.multichat.client;
 
-import net.mobilelize.fabriclib.client.LzChat;
-import net.mobilelize.fabriclib.client.LzClient;
-import net.mobilelize.fabriclib.client.LzOptions;
+import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
-import net.mobilelize.multichat.client.render.ChatRenderer;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import net.mobilelize.fabriclib.text.LzOrderedText;
+import net.mobilelize.fabriclib.text.LzText;
+import java.util.*;
 
 public class ChatPanel {
 
@@ -18,17 +14,20 @@ public class ChatPanel {
     private boolean primary            = false;
     private int     id                 = 0;
     private String  name               = "";
+
+    private transient Map<UUID, List<LzChatLine>> tabMessages;
+
     private int     margin             = 0;
-    private int     activeTab          = 0;
-    private ChatTab activeTabRef       = null;
+    private int activeTabId = 0;
+    private transient ChatTab activeTab = null;
     private boolean enabled            = false;
     private boolean showOnlyWhenFocused = false;
     private boolean showBadges         = true;
     private boolean showTabs           = true;
     private boolean tabsAtTop          = false;
-    private int     tabScrollOffset    = 0;
-    private int     tabLastRendered    = -1;
-    private int     tabFlashTick       = -1000;
+    private transient int tabScrollOffset  = 0;
+    private transient int tabLastRendered  = -1;
+    private transient int tabFlashTick     = -1000;
 
     private float  customX                    = 0f;
     private float  customY                    = 0f;
@@ -43,10 +42,11 @@ public class ChatPanel {
     private double tabBgOpacity       = -1;
     private double tabFgOpacity       = -1;
 
-    private ChatTab panelContextTab    = null;
+    private transient ChatTab panelContextTab = null;
+    private UUID    panelContextTabId  = null;
     private boolean useActiveTabContext = false;
 
-    private final Map<ChatTab, Integer> scrollPositions = new HashMap<>();
+    private transient Map<ChatTab, Integer> scrollPositions;
 
     public ChatPanel() {}
 
@@ -62,9 +62,51 @@ public class ChatPanel {
     public int     margin()             { return margin; }
     public void    setMargin(int v)     { margin = v; }
 
+    private Map<UUID, List<LzChatLine>> tabMessages() {
+        if (tabMessages == null) tabMessages = new HashMap<>();
+        return tabMessages;
+    }
+
+    private Map<ChatTab, Integer> scrollPositions() {
+        if (scrollPositions == null) scrollPositions = new HashMap<>();
+        return scrollPositions;
+    }
+
+    private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
+        int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
+        List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(entry.rendered().mc()), width);
+        for (int i = 0; i < lines.size(); i++) {
+            boolean endOfEntry = i == lines.size() - 1;
+            panelLines.addFirst(LzChatLine.create(entry.entry().creationTick, lines.get(i), entry.entry().indicator, endOfEntry, entry.entry()));
+        }
+    }
+
+    public void addTabMessage(ChatTab tab, ChatTab.MessageEntry entry) {
+        wrapEntryInto(tabMessages().computeIfAbsent(tab.id(), k -> new ArrayList<>()), entry);
+    }
+
+    public void removeTabEntry(ChatTab tab, ChatTab.MessageEntry entry) {
+        List<LzChatLine> panelLines = tabMessages().get(tab.id());
+        if (panelLines != null) panelLines.removeIf(line -> line.entry() == entry.entry());
+    }
+
+    public void clearTabLines(ChatTab tab) {
+        tabMessages().remove(tab.id());
+    }
+
+    public void rebuildTabLines(ChatTab tab) {
+        List<LzChatLine> panelLines = new ArrayList<>();
+        tabMessages().put(tab.id(), panelLines);
+        List<ChatTab.MessageEntry> entries = tab.messages();
+        for (int i = entries.size() - 1; i >= 0; i--) wrapEntryInto(panelLines, entries.get(i));
+    }
+
+
     // ── State ──────────────────────────────────────────────────────────────────
-    public boolean enabled()                    { return enabled; }
+    public boolean isEnabled()                    { return enabled; }
     public void    setEnabled(boolean v)        { enabled = v; }
+
+
     public boolean showOnlyWhenFocused()        { return showOnlyWhenFocused; }
     public void    setShowOnlyWhenFocused(boolean v) { showOnlyWhenFocused = v; }
     public boolean showBadges()                 { return showBadges; }
@@ -111,7 +153,8 @@ public class ChatPanel {
 
     // ── Context ────────────────────────────────────────────────────────────────
     public ChatTab panelContextTab()               { return panelContextTab; }
-    public void    setPanelContextTab(ChatTab v)   { panelContextTab = v; }
+    public void    setPanelContextTab(ChatTab v)   { panelContextTab = v; panelContextTabId = v != null ? v.id() : null; }
+    public UUID    panelContextTabId()             { return panelContextTabId; }
     public boolean useActiveTabContext()            { return useActiveTabContext; }
     public void    setUseActiveTabContext(boolean v) { useActiveTabContext = v; }
 
@@ -176,45 +219,65 @@ public class ChatPanel {
     // ── Tab helpers ────────────────────────────────────────────────────────────
 
     public List<ChatTab> getVisibleTabs() {
-        return ChatRenderer.TABS.stream()
+        return ChatManager.getTabs().stream()
             .filter(t -> t.visibleOnPanels().contains(this.id))
             .toList();
     }
 
     public ChatTab getActiveTab() {
         List<ChatTab> visible = getVisibleTabs();
-        if (visible.isEmpty()) { activeTabRef = null; return null; }
-        if (activeTabRef != null) {
-            int idx = visible.indexOf(activeTabRef);
-            if (idx >= 0) { activeTab = idx; return activeTabRef; }
+        if (visible.isEmpty()) { activeTab = null; return null; }
+        if (activeTab != null) {
+            int idx = visible.indexOf(activeTab);
+            if (idx >= 0) { activeTabId = idx; return activeTab; }
         }
-        if (activeTab >= visible.size()) activeTab = 0;
-        activeTabRef = visible.get(activeTab);
-        return activeTabRef;
+        if (activeTabId >= visible.size()) activeTabId = 0;
+        activeTab = visible.get(activeTabId);
+        return activeTab;
     }
 
     /** Returns the raw active-tab index (for serialization). */
-    public int activeTabIndex() { return activeTab; }
+    public int activeTabIndex() { return activeTabId; }
 
-    public void setActiveTab(int index) {
+    public void setActiveTabId(int index) {
         List<ChatTab> visible = getVisibleTabs();
-        if (visible.isEmpty()) { activeTab = 0; activeTabRef = null; return; }
-        activeTab = Math.max(0, Math.min(index, visible.size() - 1));
-        activeTabRef = visible.get(activeTab);
+        if (visible.isEmpty()) { activeTabId = 0; activeTab = null; return; }
+        activeTabId = Math.max(0, Math.min(index, visible.size() - 1));
+        activeTab = visible.get(activeTabId);
     }
 
     /** Scroll position in visual line index (0 = no scroll, newest at bottom — mirrors vanilla). */
-    public int  getScrolledLines(ChatTab tab)               { return scrollPositions.getOrDefault(tab, 0); }
-    public void setScrolledLines(ChatTab tab, int lines)    { scrollPositions.put(tab, lines); }
-    public void resetScrollPositions()                      { scrollPositions.clear(); }
-    public void resetScrollPositionsExcept(TabType keep)    { scrollPositions.keySet().removeIf(t -> t.type() != keep); }
+    public int  getScrolledLines(ChatTab tab)               { return scrollPositions().getOrDefault(tab, 0); }
+    public void setScrolledLines(ChatTab tab, int lines)    { scrollPositions().put(tab, lines); }
+    public void resetScrollPositions()                      { scrollPositions().clear(); }
+    public void resetScrollPositionsExcept(TabType keep)    { scrollPositions().keySet().removeIf(t -> t.type() != keep); }
+
+    public List<LzChatLine> getTabLines(ChatTab tab) {
+        return tabMessages().get(tab.id());
+    }
+
+    public int tabLineCount(ChatTab tab) {
+        List<LzChatLine> lines = tabMessages().get(tab.id());
+        return lines == null ? 0 : lines.size();
+    }
+
+    public void shiftScrollForAdd(ChatTab tab, int delta) {
+        if (delta == 0) return;
+        boolean freeze = MultichatClient.CONFIG.selectionFreezeChat
+            && ChatSelection.isSelecting()
+            && ChatSelection.getPanel() == this
+            && getActiveTab() == tab;
+        int scrolled = getScrolledLines(tab);
+        if (scrolled > 0 || freeze)
+            setScrolledLines(tab, Math.max(0, scrolled + delta));
+    }
 
     public void scrollActiveTabIntoView() {
-        if (activeTab < tabScrollOffset) {
-            tabScrollOffset = activeTab;
-        } else if (tabLastRendered >= 0 && activeTab > tabLastRendered) {
+        if (activeTabId < tabScrollOffset) {
+            tabScrollOffset = activeTabId;
+        } else if (tabLastRendered >= 0 && activeTabId > tabLastRendered) {
             int max = Math.max(0, getVisibleTabs().size() - 1);
-            tabScrollOffset = Math.min(activeTab, max);
+            tabScrollOffset = Math.min(activeTabId, max);
         }
     }
 
@@ -223,7 +286,7 @@ public class ChatPanel {
             return LzMath.floor((float)(windowHeight - 40) / resolveScale());
         return (int)(customY * windowHeight / resolveScale()
                    + resolveLines() * resolveLineHeight() / 2f
-                   - ChatRenderer.TAB_HEIGHT / 2f);
+                   - 10 / 2f); // TAB_HEIGHT = 10
     }
 
     public int computeXOffset(int scaledWindowWidth) {

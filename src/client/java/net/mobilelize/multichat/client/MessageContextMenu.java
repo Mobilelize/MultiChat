@@ -6,9 +6,8 @@ import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDraw;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
@@ -38,6 +37,12 @@ public class MessageContextMenu {
 
     public static void close()        { open = false; }
     public static boolean isOpen()    { return open; }
+    public static boolean containsMouse(int mx, int my) {
+        if (!open || items == null) return false;
+        int menuW = menuWidth();
+        int menuH = items.size() * ITEM_H + PADDING;
+        return mx >= drawnX && mx <= drawnX + menuW && my >= drawnY && my <= drawnY + menuH;
+    }
 
     private static List<String> buildItems(ChatPanel panel) {
         List<String> list = new ArrayList<>();
@@ -46,7 +51,7 @@ public class MessageContextMenu {
         if (ChatSelection.hasSelection()) list.add("Copy Selected");
         list.add("Search for this");
         if (ChatSelection.hasSelection()) list.add("Quick Actions...");
-        if (ChatRenderer.activeNoteTab != null) list.add("Add to Notes");
+        if (ChatManager.activeNoteTab != null) list.add("Add to Notes");
         ChatTab active = panel.getActiveTab();
         if (active != null && active.type() != TabType.ALL && active.type() != TabType.NOTES) list.add("Jump to All");
         if (active != null && active.type() != TabType.ALL && active.type() != TabType.NOTES) list.add("Delete message");
@@ -107,7 +112,7 @@ public class MessageContextMenu {
             }
             case "Copy with Timestamp" -> {
                 String text = extractFullMessage(line, sourcePanel);
-                String ts   = ChatRenderer.getPlainTimestamp(line.addedTime());
+                String ts   = ChatManager.getPlainTimestamp(line.addedTime());
                 LzClient.setClipboard(ts.isEmpty() ? text : ts + " " + text);
                 flashGreen(line, sourcePanel);
             }
@@ -138,11 +143,12 @@ public class MessageContextMenu {
     // ------------------------------------------------------------------
 
     private static void jumpToAll() {
-        ChatTab allTab = ChatRenderer.TABS.stream()
+        ChatTab allTab = ChatManager.getTabs().stream()
             .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (allTab == null) return;
 
-        List<LzChatLine> allMsgs = allTab.messages();
+        List<LzChatLine> allMsgs = sourcePanel.getTabLines(allTab);
+        if (allMsgs == null) return;
         int allIdx = allMsgs.indexOf(line);
 
         // Entry-reference search: shared entry means we find the exact message even when
@@ -157,25 +163,19 @@ public class MessageContextMenu {
             }
         }
 
-        // Fallback: tick + text (for messages from before shared-entry was applied)
+        // Fallback: tick + text
         if (allIdx < 0) {
             String text = extractText(line);
             int tick = line.addedTime();
             for (int i = 0; i < allMsgs.size(); i++) {
                 LzChatLine v = allMsgs.get(i);
-                if (v.addedTime() == tick && extractText(v).equals(text)) {
-                    allIdx = i;
-                    break;
-                }
+                if (v.addedTime() == tick && extractText(v).equals(text)) { allIdx = i; break; }
             }
         }
         if (allIdx < 0) {
             int tick = line.addedTime();
             for (int i = 0; i < allMsgs.size(); i++) {
-                if (allMsgs.get(i).addedTime() == tick && allMsgs.get(i).endOfEntry()) {
-                    allIdx = i;
-                    break;
-                }
+                if (allMsgs.get(i).addedTime() == tick && allMsgs.get(i).endOfEntry()) { allIdx = i; break; }
             }
         }
         if (allIdx < 0) return;
@@ -184,12 +184,11 @@ public class MessageContextMenu {
         int allPanelIdx = panelTabs.indexOf(allTab);
         if (allPanelIdx < 0) return;
 
-        sourcePanel.setActiveTab(allPanelIdx);
+        sourcePanel.setActiveTabId(allPanelIdx);
         allTab.clearUnread();
-        int maxScroll = Math.max(0, allTab.messageCount() - sourcePanel.resolveLines());
+        int maxScroll = Math.max(0, allMsgs.size() - sourcePanel.resolveLines());
         sourcePanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));
 
-        // Highlight via entry so all panels (any width) light up the same message
         LzChatEntry targetEntry = allMsgs.get(allIdx).entry();
         if (targetEntry != null) {
             ChatRenderer.highlightEntries   = java.util.Collections.singleton(targetEntry);
@@ -204,60 +203,39 @@ public class MessageContextMenu {
     private static void deleteMessage(ChatPanel panel) {
         ChatTab active = panel.getActiveTab();
         if (active == null || active.type() == TabType.ALL) return;
-        List<LzChatLine> msgs = active.messages(); // always delete from primary list
         LzChatEntry targetEntry = line.entry();
+        List<ChatTab.MessageEntry> messages = active.messages();
         int idx = -1;
-        if (targetEntry != null) {
-            for (int i = 0; i < msgs.size(); i++) {
-                if (msgs.get(i).endOfEntry() && msgs.get(i).entry() == targetEntry) { idx = i; break; }
-            }
+        for (int i = 0; i < messages.size(); i++) {
+            if (messages.get(i).entry() == targetEntry) { idx = i; break; }
         }
-        if (idx < 0) idx = msgs.indexOf(line);
         if (idx < 0) return;
-        int groupStart = idx;
-        while (groupStart > 0 && !msgs.get(groupStart).endOfEntry()) groupStart--;
-        int groupEnd = groupStart + 1;
-        while (groupEnd < msgs.size() && !msgs.get(groupEnd).endOfEntry()) groupEnd++;
-        groupEnd--;
-        if (groupEnd >= groupStart) {
-            java.util.Map<ChatPanel, Integer> preSizes = new java.util.HashMap<>();
-            for (ChatPanel p : ChatRenderer.PANELS) {
-                if (p.getScrolledLines(active) > 0)
-                    preSizes.put(p, ChatRenderer.getMessages(p, active).size());
-            }
-            int primaryRemoved = groupEnd - groupStart + 1;
-            msgs.subList(groupStart, groupEnd + 1).clear();
-            active.clearWidthCaches();
-            for (ChatPanel p : ChatRenderer.PANELS) {
-                int scrolled = p.getScrolledLines(active);
-                if (scrolled <= groupStart) continue;
-                if (p.primary()) {
-                    p.setScrolledLines(active, Math.max(0, scrolled - primaryRemoved));
-                } else if (preSizes.containsKey(p)) {
-                    int removed = preSizes.get(p) - ChatRenderer.getMessages(p, active).size();
-                    if (removed > 0) p.setScrolledLines(active, Math.max(0, scrolled - removed));
-                }
-            }
-            ChatSelection.clampOrClear(active);
+
+        java.util.Map<ChatPanel, Integer> preSizes = new java.util.HashMap<>();
+        for (ChatPanel p : ChatManager.getAllPanels()) {
+            if (p.getScrolledLines(active) > 0)
+                { List<LzChatLine> _l = p.getTabLines(active); preSizes.put(p, _l != null ? _l.size() : 0); }
         }
+        messages.remove(idx);
+        for (ChatPanel p : ChatManager.getAllActivePanels()) p.rebuildTabLines(active);
+        for (ChatPanel p : ChatManager.getAllPanels()) {
+            int scrolled = p.getScrolledLines(active);
+            if (scrolled <= 0 || !preSizes.containsKey(p)) continue;
+            List<LzChatLine> _l = p.getTabLines(active);
+            int removed = preSizes.get(p) - (_l != null ? _l.size() : 0);
+            if (removed > 0) p.setScrolledLines(active, Math.max(0, scrolled - removed));
+        }
+        ChatSelection.clampOrClear(active);
     }
 
     private static void addToNotes() {
-        NoteTab noteTab = ChatRenderer.activeNoteTab;
+        NoteTab noteTab = ChatManager.activeNoteTab;
         if (noteTab == null) return;
         LzChatEntry entry = line.entry();
         net.mobilelize.fabriclib.text.LzText text = (entry != null && entry.originalContent != null)
             ? entry.originalContent
             : net.mobilelize.fabriclib.text.LzText.literal(extractText(line));
-        int before = noteTab.messageCount();
-        noteTab.addNote(text, line.addedTime());
-        int linesAdded = noteTab.messageCount() - before;
-        if (linesAdded > 0) {
-            for (ChatPanel panel : ChatRenderer.PANELS) {
-                int scrolled = panel.getScrolledLines(noteTab);
-                if (scrolled > 0) panel.setScrolledLines(noteTab, scrolled + linesAdded);
-            }
-        }
+        noteTab.addNote(text, line.addedTime()); // addNote → ChatManager.addNewMessage handles scroll
         MultichatClient.saveTabsToConfig();
         flashGreen(line, sourcePanel);
     }
@@ -280,7 +258,8 @@ public class MessageContextMenu {
         ChatTab active = panel.getActiveTab();
         if (active == null) return extractText(clicked);
 
-        List<LzChatLine> msgs = ChatRenderer.getMessages(panel, active);
+        List<LzChatLine> msgs = panel.getTabLines(active);
+        if (msgs == null) return extractText(clicked);
         int clickedIdx = msgs.indexOf(clicked);
         if (clickedIdx < 0) return extractText(clicked);
 

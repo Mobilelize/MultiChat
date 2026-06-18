@@ -2,7 +2,6 @@ package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
-import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
@@ -14,20 +13,31 @@ import java.util.List;
 public class NoteTab extends ChatTab {
 
     public static class NoteEntry {
-        private LzText content;
-        private String rawFormat;
-        private int    tick;
+        private String contentJson = "";
+        private String rawFormat   = "";
+        private int    tick        = 0;
+        private transient LzText content;
+
+        public NoteEntry() {}
 
         public NoteEntry(LzText content, int tick) {
-            this.content = content;
-            this.tick    = tick;
+            this.content     = content;
+            this.contentJson = MultichatClient.textToJson(content);
+            this.tick        = tick;
         }
 
-        public LzText content()    { return content; }
-        public int    tick()       { return tick; }
-        public String rawFormat()  { return rawFormat; }
-        public void   setContent(LzText v)   { content = v; }
-        public void   setRawFormat(String v) { rawFormat = v; }
+        public LzText  content()            { return content; }
+        public int     tick()               { return tick; }
+        public String  rawFormat()          { return rawFormat; }
+        public String  contentJson()        { return contentJson; }
+
+        public void setContent(LzText v)    { content = v; contentJson = MultichatClient.textToJson(v); }
+        public void setRawFormat(String v)  { rawFormat = v; }
+
+        public void restoreContent() {
+            if (content == null && !contentJson.isEmpty())
+                content = MultichatClient.textFromJson(contentJson);
+        }
     }
 
     private final List<NoteEntry> noteEntries = new ArrayList<>();
@@ -39,12 +49,11 @@ public class NoteTab extends ChatTab {
     public List<NoteEntry> noteEntries() { return noteEntries; }
 
     public void addNote(LzText text, int tick) {
-        noteEntries.addFirst(new NoteEntry(text, tick));
-        LzChatEntry entry = new LzChatEntry(tick, text, null);
-        List<LzOrderedText> lines = breakNote(text);
-        for (int j = 0; j < lines.size(); j++)
-            addFirst(LzChatLine.create(tick, lines.get(j), null, j == lines.size() - 1, entry));
-        clearWidthCaches();
+        NoteEntry entry = new NoteEntry(text, tick);
+        noteEntries.addFirst(entry);
+        LzChatEntry chatEntry = new LzChatEntry(tick, text, null);
+        ChatTab.MessageEntry me = new ChatTab.MessageEntry(text, text, chatEntry);
+        ChatManager.addNewMessage(this, me);
     }
 
     public void removeNote(int index) {
@@ -55,28 +64,18 @@ public class NoteTab extends ChatTab {
 
     public void rebuildMessages() {
         clearMessages();
-        int width = noteWidth();
+        for (ChatPanel panel : ChatManager.getAllActivePanels())
+            panel.clearTabLines(this);
+
         for (int i = noteEntries.size() - 1; i >= 0; i--) {
             NoteEntry note = noteEntries.get(i);
-            LzChatEntry entry = new LzChatEntry(note.tick(), note.content(), null);
-            List<LzOrderedText> lines = LzChat.breakLines(note.content(), width);
-            if (lines.isEmpty()) lines = List.of(note.content().ordered());
-            for (int j = 0; j < lines.size(); j++)
-                addFirst(LzChatLine.create(note.tick(), lines.get(j), null, j == lines.size() - 1, entry));
+            if (note.content() == null) note.restoreContent();
+            if (note.content() == null) continue;
+            LzChatEntry chatEntry = new LzChatEntry(note.tick(), note.content(), null);
+            ChatTab.MessageEntry me = new ChatTab.MessageEntry(note.content(), note.content(), chatEntry);
+            addFirst(me);
+            for (ChatPanel panel : ChatManager.getAllActivePanels())
+                panel.addTabMessage(this, me);
         }
-        clearWidthCaches();
-    }
-
-    private static List<LzOrderedText> breakNote(LzText text) {
-        int width = noteWidth();
-        List<LzOrderedText> lines = LzChat.breakLines(text, width);
-        if (lines.isEmpty()) lines = List.of(text.ordered());
-        return lines;
-    }
-
-    // Same formula as ChatHudMixin.routeGlobally — float cast matches the mixin's width calculation.
-    private static int noteWidth() {
-        float scale = (float) LzChat.chatScale();
-        return LzMath.floor((double) LzChat.chatWidth() / scale);
     }
 }

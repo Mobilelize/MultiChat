@@ -7,7 +7,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 
 public class PanelEditScreen {
 
@@ -27,7 +27,7 @@ public class PanelEditScreen {
             .setTooltip(LzText.literal("Display name for this panel.").mc())
             .setSaveConsumer(v -> {
                 String trimmed = v.trim().isEmpty() ? String.valueOf(panel.id()) : v.trim();
-                java.util.Set<String> others = ChatRenderer.PANELS.stream()
+                java.util.Set<String> others = ChatManager.getAllPanels().stream()
                     .filter(p -> p != panel).map(ChatPanel::name).collect(java.util.stream.Collectors.toSet());
                 String unique = trimmed;
                 int n = 2;
@@ -37,7 +37,7 @@ public class PanelEditScreen {
             .build());
 
         if (!panel.primary()) {
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Enabled").mc(), panel.enabled())
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Enabled").mc(), panel.isEnabled())
                 .setDefaultValue(true)
                 .setTooltip(LzText.literal("Show this panel.").mc())
                 .setSaveConsumer(panel::setEnabled)

@@ -14,7 +14,7 @@ import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.ChatManager;
 
 import java.util.List;
 import java.util.Set;
@@ -35,7 +35,7 @@ public class PanelListScreen extends ConfigScreen {
         super("Panels", parent);
     }
 
-    private List<ChatPanel> panels() { return ChatRenderer.PANELS; }
+    private List<ChatPanel> panels() { return ChatManager.getAllPanels(); }
     private int listBottom()         { return height - 80; }
     private int maxScroll()          { return Math.max(0, panels().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
 
@@ -54,15 +54,15 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     private void addPanel() {
-        Set<Integer> ids = ChatRenderer.PANELS.stream().map(ChatPanel::id).collect(Collectors.toSet());
+        Set<Integer> ids = ChatManager.getAllPanels().stream().map(ChatPanel::id).collect(Collectors.toSet());
         int id = 0;
         while (ids.contains(id)) id++;
 
         ChatPanel panel = new ChatPanel();
         panel.setId(id);
         String fieldText = panelNameField != null ? panelNameField.getText().trim() : "";
-        String baseName = fieldText.isEmpty() ? "Panel " + (ChatRenderer.PANELS.size() + 1) : fieldText;
-        Set<String> usedNames = ChatRenderer.PANELS.stream().map(ChatPanel::name).collect(Collectors.toSet());
+        String baseName = fieldText.isEmpty() ? "Panel " + (ChatManager.getAllPanels().size() + 1) : fieldText;
+        Set<String> usedNames = ChatManager.getAllPanels().stream().map(ChatPanel::name).collect(Collectors.toSet());
         String uniqueName = baseName;
         int suffix = 2;
         while (usedNames.contains(uniqueName)) uniqueName = baseName + " (" + suffix++ + ")";
@@ -73,12 +73,12 @@ public class PanelListScreen extends ConfigScreen {
         panel.setCustomY(0.5f);
 
         // Add all tabs to the new panel (skip VANILLA — primary only)
-        for (ChatTab t : ChatRenderer.TABS) {
+        for (ChatTab t : ChatManager.getTabs()) {
             if (t.type() == net.mobilelize.multichat.client.TabType.VANILLA) continue;
             t.visibleOnPanels().add(id);
         }
 
-        ChatRenderer.PANELS.add(panel);
+        ChatManager.getAllPanels().add(panel);
         MultichatClient.saveTabsToConfig();
         clearAndInit();
     }
@@ -121,7 +121,7 @@ public class PanelListScreen extends ConfigScreen {
             // Name + tab count + anchor (anchor color = enabled status)
             String anchorTag = "[" + panel.anchor().name().toLowerCase() + "]";
             String displayName = panel.name().isEmpty() ? String.valueOf(panel.id()) : panel.name();
-            long tabCount = ChatRenderer.TABS.stream().filter(t -> t.visibleOnPanels().contains(panel.id())).count();
+            long tabCount = ChatManager.getTabs().stream().filter(t -> t.visibleOnPanels().contains(panel.id())).count();
             String nameStr  = displayName + " ";
             String countStr = "(" + tabCount + ") ";
             int nameX = lx + 6;
@@ -129,7 +129,7 @@ public class PanelListScreen extends ConfigScreen {
             int afterNameStr = nameX + LzDraw.textWidth(nameStr);
             LzDraw.drawText(ctx, countStr, afterNameStr, textY, 0xFF888888);
             int afterName = afterNameStr + LzDraw.textWidth(countStr);
-            LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.enabled() ? 0xFF55FF55 : 0xFFFF5555);
+            LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.isEnabled() ? 0xFF55FF55 : 0xFFFF5555);
 
             // Tabs button — always
             boolean hoverTabs = mouseX >= lx + 282 && mouseX < lx + 318 && mouseY >= y && mouseY < y + ROW_HEIGHT;
@@ -276,8 +276,8 @@ public class PanelListScreen extends ConfigScreen {
 
     private void doRemovePanel(ChatPanel panel) {
         int id = panel.id();
-        ChatRenderer.TABS.forEach(t -> t.visibleOnPanels().remove(id));
-        ChatRenderer.PANELS.remove(panel);
+        ChatManager.getTabs().forEach(t -> t.visibleOnPanels().remove(id));
+        ChatManager.getAllPanels().remove(panel);
         MultichatClient.saveTabsToConfig();
         clearAndInit();
     }
