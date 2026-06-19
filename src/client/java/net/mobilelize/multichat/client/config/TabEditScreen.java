@@ -313,6 +313,12 @@ public class TabEditScreen {
                 .setSaveConsumer(tab::setDifferenceException)
                 .build());
 
+            diffCat.addEntry(eb.startBooleanToggle(LzText.literal("Difference Inclusion").mc(), tab.differenceInclusion())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("When enabled, this tab blocks the difference pipeline even when it is not the active tab — as long as it is assigned to any enabled panel.").mc())
+                .setSaveConsumer(tab::setDifferenceInclusion)
+                .build());
+
             diffCat.addEntry(eb.startTextDescription(LzText.format(
                             """
                                     &eExample&r: &aGuild&r layer &e2&r, &aTrade&r layer &e2&r, &6Other&r layer &e0

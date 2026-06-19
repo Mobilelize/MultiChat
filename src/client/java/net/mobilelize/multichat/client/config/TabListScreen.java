@@ -277,6 +277,7 @@ public class TabListScreen extends ConfigScreen {
                     if (tab.differenceLayerIndex() != 0) flags.append(tab.differenceLayerIndex());
                 }
                 if (tab.differenceException())      { if (!flags.isEmpty()) flags.append(' '); flags.append('E'); }
+                if (tab.differenceInclusion())      { if (!flags.isEmpty()) flags.append(' '); flags.append('I'); }
                 if (!tab.showBadge())               { if (!flags.isEmpty()) flags.append(' '); flags.append('B'); }
                 if (!tab.contextPrefix().isEmpty()) { if (!flags.isEmpty()) flags.append(' '); flags.append('P'); }
                 if (tab.pingEnabled())              { if (!flags.isEmpty()) flags.append(' '); flags.append('S'); }

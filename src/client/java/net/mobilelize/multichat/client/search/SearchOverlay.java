@@ -107,10 +107,11 @@ public class SearchOverlay extends LzScreen {
 
     private SearchMode cycleMode() {
         return switch (searchMode) {
-            case CONTAINS -> SearchMode.WORD;
-            case WORD     -> SearchMode.FUZZY;
-            case FUZZY    -> SearchMode.REGEX;
-            case REGEX    -> SearchMode.CONTAINS;
+            case CONTAINS    -> SearchMode.STARTS_WITH;
+            case STARTS_WITH -> SearchMode.WORD;
+            case WORD        -> SearchMode.FUZZY;
+            case FUZZY       -> SearchMode.REGEX;
+            case REGEX       -> SearchMode.CONTAINS;
         };
     }
 

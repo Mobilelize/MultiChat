@@ -76,6 +76,15 @@ public class MessageRouter {
                 activeNonDiffMatched = true; break;
             }
         }
+        if (!activeNonDiffMatched) {
+            for (ChatTab tab : ChatManager.getTabs()) {
+                if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
+                        && tab.differenceInclusion() && ChatManager.isTabInAnyEnabledPanel(tab)
+                        && tab.filterRules().matches(fullText, indicator)) {
+                    activeNonDiffMatched = true; break;
+                }
+            }
+        }
 
         if (!activeNonDiffMatched) {
             for (List<ChatTab> layerTabs : diffByLayer.values()) {

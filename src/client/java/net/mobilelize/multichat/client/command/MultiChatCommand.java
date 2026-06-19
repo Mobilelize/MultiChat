@@ -14,6 +14,7 @@ import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.TabType;
 import net.mobilelize.multichat.client.config.ConfigMenu;
+import net.mobilelize.multichat.client.config.HelpScreen;
 import net.mobilelize.multichat.client.config.NoteEditorScreen;
 import net.mobilelize.multichat.client.config.PanelEditScreen;
 import net.mobilelize.multichat.client.config.PanelLayoutScreen;
@@ -38,7 +39,7 @@ public class MultiChatCommand {
                     return 1;
                 })
                 .then(literal("edit")
-                    .then(argument("tab", StringArgumentType.word())
+                    .then(argument("tab", StringArgumentType.greedyString())
                         .suggests(editSuggestions())
                         .executes(MultiChatCommand::editTab)))
                 .then(literal("panels")
@@ -89,9 +90,12 @@ public class MultiChatCommand {
                     .then(literal("add")
                         .then(argument("text", StringArgumentType.greedyString())
                             .executes(MultiChatCommand::noteAdd)))
-                    .then(argument("name", StringArgumentType.greedyString())
-                        .suggests(noteSuggestions())
-                        .executes(MultiChatCommand::noteOpen)))));
+                    .then(literal("open")
+                        .then(argument("name", StringArgumentType.greedyString())
+                            .suggests(noteSuggestions())
+                            .executes(MultiChatCommand::noteOpen))))
+                .then(literal("help")
+                    .executes(MultiChatCommand::printHelp))));
     }
 
     private static int noteAdd(CommandContext<FabricClientCommandSource> ctx) {
@@ -139,6 +143,11 @@ public class MultiChatCommand {
         MultichatClient.saveTabsToConfig();
         String prefix = tab.contextPrefix().isEmpty() ? "(none)" : tab.contextPrefix();
         feedback(ctx, "Context → [" + tab.name() + "] prefix: " + prefix);
+        return 1;
+    }
+
+    private static int printHelp(CommandContext<FabricClientCommandSource> ctx) {
+        LzClient.send(() -> LzClient.mc().setScreen(HelpScreen.create(null)));
         return 1;
     }
 

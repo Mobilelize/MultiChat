@@ -339,6 +339,13 @@ public class ChatManager {
         return false;
     }
 
+    public static boolean isTabInAnyEnabledPanel(ChatTab tab) {
+        for (ChatPanel panel : getAllActivePanels()) {
+            if (tab.visibleOnPanels().contains(panel.id())) return true;
+        }
+        return false;
+    }
+
     public static List<ChatTab> getAllActivePanelsTabs() {
         final List<ChatTab> list = new ArrayList<>();
         for (ChatPanel panel : getAllActivePanels()) {

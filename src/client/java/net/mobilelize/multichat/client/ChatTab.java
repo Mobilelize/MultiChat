@@ -48,6 +48,7 @@ public class ChatTab {
     private boolean          differenceMode          = false;
     private int              differenceLayerIndex    = 0;
     private boolean          differenceException     = false;
+    private boolean          differenceInclusion     = false;
     private boolean          showBadge               = true;
     private boolean          showTimestamps          = false;
     private int              tabColor                = 0;
@@ -114,6 +115,8 @@ public class ChatTab {
     public void    setDifferenceLayerIndex(int v)        { differenceLayerIndex = v; }
     public boolean differenceException()                 { return differenceException; }
     public void    setDifferenceException(boolean v)     { differenceException = v; }
+    public boolean differenceInclusion()                 { return differenceInclusion; }
+    public void    setDifferenceInclusion(boolean v)     { differenceInclusion = v; }
     public boolean showBadge()                           { return showBadge; }
     public void    setShowBadge(boolean v)               { showBadge = v; }
     public boolean showTimestamps()                      { return showTimestamps; }
