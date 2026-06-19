@@ -516,6 +516,11 @@ public abstract class ChatScreenMixin {
             }
         }
 
+        if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
+            MouseClient.setIBeamCursor();
+            return;
+        }
+
         MouseClient.resetCursor();
     }
 

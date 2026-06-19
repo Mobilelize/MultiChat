@@ -100,8 +100,6 @@ public class ChatRenderer {
 
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
-            updateCursor(context, panel, hoveredIndex);
-
             int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panel.bgColor()) & 0xFFFFFF;
             boolean effectiveFocused = focused || (activeTab instanceof NoteTab nt && nt.renderOutOfFocus());
             renderAt(context, currentTick, effectiveFocused,
@@ -444,9 +442,6 @@ public class ChatRenderer {
         return IndicatorResult.NOT_IN_PANEL;
     }
 
-    public static void updateCursor(LzDrawContext context, ChatPanel panel, int hoveredIndex) {
-        // TODO MC upgrade: StandardCursors.POINTING_HAND when hoveredIndex >= 0
-    }
 
     private static double getOpacityMultiplier(int age) {
         double d = (double) age / 200.0;

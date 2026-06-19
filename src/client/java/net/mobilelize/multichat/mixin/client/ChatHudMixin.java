@@ -205,7 +205,6 @@ public class ChatHudMixin {
     // Logic lives in ChatRenderer.resolveStyleAt — only the hook changes.
     // If removed: find the replacement (likely Interactable.text() Consumer<Style> callback)
     // and wire ChatRenderer.resolveStyleAt into that instead.
-    // For cursor changes: implement ChatRenderer.updateCursor (currently a no-op).
 
     @Inject(method = "getTextStyleAt", at = @At("HEAD"), cancellable = true)
     private void suppressTextStyleWhenMenuOpen(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
