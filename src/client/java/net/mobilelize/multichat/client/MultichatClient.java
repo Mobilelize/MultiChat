@@ -3,9 +3,12 @@ package net.mobilelize.multichat.client;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.mobilelize.fabriclib.client.LzAfk;
+import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.api.MessageAddedToTabCallback;
 import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
@@ -21,6 +24,7 @@ public class MultichatClient implements ClientModInitializer {
     public static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("multichat");
     public static MultiChatConfig CONFIG;
     public static String pendingChatText = null;
+    private static boolean firstTime = true;
 
     @Override
     public void onInitializeClient() {
@@ -30,12 +34,20 @@ public class MultichatClient implements ClientModInitializer {
         MultiChatCommand.register();
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             MouseClient.init();
-            for (ChatTab tab : ChatManager.getTabs())
-                if (tab instanceof NoteTab nt) nt.rebuildMessages();
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             saveTabsToConfig();
             MouseClient.cleanup();
+        });
+
+        ClientTickEvents.END_CLIENT_TICK.register(minecraftClient -> {
+            if (LzWorld.isLoaded() && firstTime) {
+                firstTime = false;
+                for (ChatTab tab : ChatManager.getTabs()) {
+                    if (tab instanceof NoteTab nt) nt.rebuildMessages();
+                    if (tab instanceof InfoTab it) it.rebuildMessages();
+                }
+            }
         });
 
         MessageAddedToTabCallback.EVENT.register((tab, message) -> PingPlayer.playForTab(tab));
@@ -48,7 +60,7 @@ public class MultichatClient implements ClientModInitializer {
     public static void saveTabsToConfig() {
         CONFIG.panels   = new ArrayList<>(ChatManager.getAllPanels());
         CONFIG.tabs     = ChatManager.getTabs().stream()
-            .filter(t -> !(t instanceof NoteTab) && t.type() != TabType.SEARCH)
+            .filter(t -> !(t instanceof NoteTab) && t.type() != TabType.SEARCH && t.type() != TabType.INFO)
             .collect(Collectors.toList());
         CONFIG.noteTabs = ChatManager.getTabs().stream()
             .filter(t -> t instanceof NoteTab)
@@ -108,6 +120,7 @@ public class MultichatClient implements ClientModInitializer {
 
         boolean hasAll     = tabs.stream().anyMatch(t -> t.type() == TabType.ALL);
         boolean hasVanilla = tabs.stream().anyMatch(t -> t.type() == TabType.VANILLA);
+        boolean hasInfo    = tabs.stream().anyMatch(t -> t.type() == TabType.INFO);
 
         if (!hasVanilla) {
             ChatTab vanilla = new ChatTab("Vanilla", TabType.VANILLA, List.of(0));
@@ -116,6 +129,9 @@ public class MultichatClient implements ClientModInitializer {
         }
         if (!hasAll) {
             tabs.addFirst(new ChatTab("All", TabType.ALL, List.of(0, 1)));
+        }
+        if (!hasInfo) {
+            tabs.add(2, new InfoTab(List.of(1)));
         }
     }
 
@@ -140,7 +156,7 @@ public class MultichatClient implements ClientModInitializer {
             p.setId(1);
             p.setEnabled(true);
             p.setAnchor(ChatPanel.Anchor.RIGHT);
-            p.setName("Right");
+            p.setName("Second");
             panels.add(1, p);
         }
     }

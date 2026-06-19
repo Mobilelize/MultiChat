@@ -5,12 +5,16 @@ import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.TabMode;
 import net.mobilelize.multichat.client.TabVisibility;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public class TabHandle {
 
@@ -205,6 +209,36 @@ public class TabHandle {
     public int     getPingSilenceThresholdSec()  { return tab.pingSilenceThresholdSec(); }
     public int     getPingAfkThresholdSec()      { return tab.pingAfkThresholdSec(); }
     public boolean getPingUseGlobalConditions()  { return tab.pingUseGlobalConditions(); }
+
+    // ------------------------------------------------------------------
+    // Custom content
+    // ------------------------------------------------------------------
+
+    /** Switch to CUSTOM mode and set displayed lines. Scroll is preserved unless resetScroll is true. */
+    public TabHandle setContent(List<LzText> lines) {
+        return setContent(lines, false);
+    }
+
+    public TabHandle setContent(List<LzText> lines, boolean resetScroll) {
+        tab.setCustomRawLines(lines);
+        tab.setContentMode(TabMode.CUSTOM_CONTENT);
+        for (ChatPanel panel : ChatManager.getAllActivePanels())
+            panel.setCustomTabLines(tab, lines, resetScroll);
+        return this;
+    }
+
+    /** Switch display mode. ROUTED_MESSAGES shows routed history; CUSTOM_CONTENT shows content set via setContent. */
+    public TabHandle setMode(TabMode mode) {
+        tab.setContentMode(mode);
+        return this;
+    }
+
+    public TabMode getMode() { return tab.contentMode(); }
+
+    /** Generate a new UUID string to use as a click-event action id. Pass it to /multichat execute. */
+    public String newActionId() {
+        return UUID.randomUUID().toString();
+    }
 
     // ------------------------------------------------------------------
     // Context

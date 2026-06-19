@@ -77,6 +77,8 @@ public class ChatTab {
     private transient List<MessageEntry> messages;
     private transient CollapseState      collapse;
     private transient int                unreadCount = 0;
+    private transient TabMode            contentMode = TabMode.ROUTED_MESSAGES;
+    private transient List<LzText>       customRawLines;
 
     public ChatTab(String name, TabType type, Collection<Integer> visibleOnPanels) {
         this.name = name;
@@ -93,7 +95,7 @@ public class ChatTab {
     public void    setApiId(String v) { apiId = v; }
 
     public boolean isSystemTab() {
-        return type == TabType.ALL || type == TabType.VANILLA;
+        return type == TabType.ALL || type == TabType.VANILLA || type == TabType.INFO;
     }
 
     // ── Visibility ─────────────────────────────────────────────────────────────
@@ -163,6 +165,16 @@ public class ChatTab {
     public boolean hasUnread()       { return unreadCount > 0; }
     public void    incrementUnread() { unreadCount++; }
     public void    clearUnread()     { unreadCount = 0; }
+
+    // ── Custom content mode ────────────────────────────────────────────────────
+    public TabMode contentMode()              { return contentMode != null ? contentMode : TabMode.ROUTED_MESSAGES; }
+    public void    setContentMode(TabMode v)  { contentMode = v != null ? v : TabMode.ROUTED_MESSAGES; }
+
+    public List<LzText> customRawLines() {
+        if (customRawLines == null) customRawLines = new ArrayList<>();
+        return customRawLines;
+    }
+    public void setCustomRawLines(List<LzText> v) { customRawLines = v != null ? new ArrayList<>(v) : new ArrayList<>(); }
 
     // ── Pings ──────────────────────────────────────────────────────────────────
     public boolean pingEnabled()                         { return pingEnabled; }

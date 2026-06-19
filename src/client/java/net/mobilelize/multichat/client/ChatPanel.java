@@ -16,6 +16,7 @@ public class ChatPanel {
     private String  name               = "";
 
     private transient Map<UUID, List<LzChatLine>> tabMessages;
+    private transient Map<UUID, List<LzChatLine>> customTabLines;
 
     private int     margin             = 0;
     private int activeTabId = 0;
@@ -67,6 +68,11 @@ public class ChatPanel {
         return tabMessages;
     }
 
+    private Map<UUID, List<LzChatLine>> customTabLines() {
+        if (customTabLines == null) customTabLines = new HashMap<>();
+        return customTabLines;
+    }
+
     private Map<ChatTab, Integer> scrollPositions() {
         if (scrollPositions == null) scrollPositions = new HashMap<>();
         return scrollPositions;
@@ -99,6 +105,32 @@ public class ChatPanel {
         tabMessages().put(tab.id(), panelLines);
         List<ChatTab.MessageEntry> entries = tab.messages();
         for (int i = entries.size() - 1; i >= 0; i--) wrapEntryInto(panelLines, entries.get(i));
+
+        List<LzText> raw = tab.customRawLines();
+        if (!raw.isEmpty()) {
+            List<LzChatLine> customLines = new ArrayList<>();
+            customTabLines().put(tab.id(), customLines);
+            for (int i = raw.size() - 1; i >= 0; i--) {
+                LzText text = raw.get(i);
+                LzChatEntry synth = new LzChatEntry(0, text, null);
+                wrapEntryInto(customLines, new ChatTab.MessageEntry(text, text, synth));
+            }
+        }
+    }
+
+    public void setCustomTabLines(ChatTab tab, List<LzText> rawLines, boolean resetScroll) {
+        List<LzChatLine> customLines = new ArrayList<>();
+        customTabLines().put(tab.id(), customLines);
+        for (int i = rawLines.size() - 1; i >= 0; i--) {
+            LzText text = rawLines.get(i);
+            LzChatEntry synth = new LzChatEntry(0, text, null);
+            wrapEntryInto(customLines, new ChatTab.MessageEntry(text, text, synth));
+        }
+        if (resetScroll) setScrolledLines(tab, 0);
+    }
+
+    public void rebuildAllTabLines() {
+        for (ChatTab tab : ChatManager.getTabs()) rebuildTabLines(tab);
     }
 
 
@@ -131,7 +163,7 @@ public class ChatPanel {
     public float  customY()                   { return customY; }
     public void   setCustomY(float v)         { customY = v; }
     public int    customWidth()               { return customWidth; }
-    public void   setCustomWidth(int v)       { customWidth = v; }
+    public void   setCustomWidth(int v)       { customWidth = v; rebuildAllTabLines(); }
     public int    customHeightLines()                      { return customHeightLines; }
     public void   setCustomHeightLines(int v)              { customHeightLines = v; }
     public int    customUnfocusedHeightLines()             { return customUnfocusedHeightLines; }
@@ -253,6 +285,7 @@ public class ChatPanel {
     public void resetScrollPositionsExcept(TabType keep)    { scrollPositions().keySet().removeIf(t -> t.type() != keep); }
 
     public List<LzChatLine> getTabLines(ChatTab tab) {
+        if (tab.contentMode() == TabMode.CUSTOM_CONTENT) return customTabLines().get(tab.id());
         return tabMessages().get(tab.id());
     }
 
@@ -262,7 +295,7 @@ public class ChatPanel {
     }
 
     public void shiftScrollForAdd(ChatTab tab, int delta) {
-        if (delta == 0) return;
+        if (delta == 0 || tab.contentMode() == TabMode.CUSTOM_CONTENT) return;
         boolean freeze = MultichatClient.CONFIG.selectionFreezeChat
             && ChatSelection.isSelecting()
             && ChatSelection.getPanel() == this

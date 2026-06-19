@@ -22,6 +22,7 @@ public final class Colors {
     public static final int BORDER_DIM          = 0x88666666;
 
     // === TEXT ===
+    public static final int TEXT_LINK           = 0x55FFFF;   // RGB only — for Style.withColor(), not drawing
     public static final int TEXT_WHITE          = 0xFFFFFFFF;
     public static final int TEXT_LIGHT          = 0xFFEEEEEE;
     public static final int TEXT_STATUS         = 0xFFDEDEDE;

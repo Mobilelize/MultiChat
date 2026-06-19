@@ -39,7 +39,7 @@ public class MessageRouter {
 
         for (ChatTab tab : ChatManager.getTabs()) {
             switch (tab.type()) {
-                case NOTES   -> { /* notes only receive user-added entries */ }
+                case NOTES, INFO -> { /* never receive routed messages */ }
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
                 case ALL     -> ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
                 case FILTERED -> {

@@ -63,6 +63,7 @@ public class PanelTabsScreen extends LzScreen {
         addDrawableChild(LzButton.of("Add All", btnGroupX, LIST_TOP - 22, 72, 18, b -> {
             for (ChatTab t : ChatManager.getTabs()) {
                 if (t.type() == TabType.VANILLA && !panel.primary()) continue;
+                if (t.type() == TabType.INFO   &&  panel.primary()) continue;
                 t.visibleOnPanels().add(panel.id());
             }
         }));
@@ -92,7 +93,8 @@ public class PanelTabsScreen extends LzScreen {
             int rowY1 = y + 1, rowY2 = y + ROW_HEIGHT - 1;
             int textY = y + (ROW_HEIGHT - 8) / 2;
 
-            boolean locked = tab.type() == TabType.VANILLA && !panel.primary();
+            boolean locked = (tab.type() == TabType.VANILLA && !panel.primary())
+                          || (tab.type() == TabType.INFO   &&  panel.primary());
             boolean on  = tab.visibleOnPanels().contains(panel.id());
             boolean hov = !locked && mouseX >= lx && mouseX < lx + 260 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
@@ -104,6 +106,7 @@ public class PanelTabsScreen extends LzScreen {
             int nameCol = locked ? Colors.PANEL_TAB_LOCKED_LABEL : switch (tab.type()) {
                 case ALL     -> Colors.TAB_ALL_TEXT;
                 case VANILLA -> Colors.TAB_ALL_TEXT;
+                case INFO    -> Colors.TAB_ALL_TEXT;
                 case SEARCH  -> Colors.TAB_SEARCH_TEXT;
                 case API     -> Colors.TAB_API_TEXT;
                 default      -> Colors.TEXT_WHITE;
@@ -114,6 +117,7 @@ public class PanelTabsScreen extends LzScreen {
             String typeTag = switch (tab.type()) {
                 case ALL     -> "[all]";
                 case VANILLA -> locked ? "[main only]" : "[vanilla]";
+                case INFO    -> locked ? "[panel 2 only]" : "[info]";
                 case SEARCH  -> "[search]";
                 case API     -> "[api]";
                 default      -> "";
@@ -192,7 +196,8 @@ public class PanelTabsScreen extends LzScreen {
         if (idx < 0 || idx >= tabList.size()) return false;
 
         ChatTab tab = tabList.get(idx);
-        if (tab.type() == TabType.VANILLA && !panel.primary()) return false; // locked to main panel
+        if (tab.type() == TabType.VANILLA && !panel.primary()) return false;
+        if (tab.type() == TabType.INFO   &&  panel.primary()) return false;
 
         // CTX button
         if (mx >= lx + 194 && mx < lx + 258

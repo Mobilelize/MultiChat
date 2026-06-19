@@ -67,6 +67,10 @@ public final class MultiChatApi {
     public static final net.fabricmc.fabric.api.event.Event<MessageSentCallback> MESSAGE_SENT =
         MessageSentCallback.EVENT;
 
+    /** Fires when /multichat execute {@literal <uuid>} is run. Use with TabHandle.newActionId() for click events. */
+    public static final net.fabricmc.fabric.api.event.Event<TabActionCallback> TAB_ACTION =
+        TabActionCallback.EVENT;
+
     // ------------------------------------------------------------------
     // Read-only access
     // ------------------------------------------------------------------

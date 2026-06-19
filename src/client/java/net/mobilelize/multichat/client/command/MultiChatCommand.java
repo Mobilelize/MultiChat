@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.InfoTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.TabType;
@@ -24,6 +25,7 @@ import net.mobilelize.multichat.client.config.TabListScreen;
 import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.api.TabActionCallback;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
@@ -94,6 +96,12 @@ public class MultiChatCommand {
                         .then(argument("name", StringArgumentType.greedyString())
                             .suggests(noteSuggestions())
                             .executes(MultiChatCommand::noteOpen))))
+                .then(literal("info")
+                    .then(literal("hide")
+                        .executes(MultiChatCommand::infoHide)))
+                .then(literal("execute")
+                    .then(argument("id", StringArgumentType.word())
+                        .executes(MultiChatCommand::executeAction)))
                 .then(literal("help")
                     .executes(MultiChatCommand::printHelp))));
     }
@@ -143,6 +151,22 @@ public class MultiChatCommand {
         MultichatClient.saveTabsToConfig();
         String prefix = tab.contextPrefix().isEmpty() ? "(none)" : tab.contextPrefix();
         feedback(ctx, "Context → [" + tab.name() + "] prefix: " + prefix);
+        return 1;
+    }
+
+    private static int executeAction(CommandContext<FabricClientCommandSource> ctx) {
+        String id = StringArgumentType.getString(ctx, "id");
+        TabActionCallback.EVENT.invoker().onAction(id);
+        return 1;
+    }
+
+    private static int infoHide(CommandContext<FabricClientCommandSource> ctx) {
+        InfoTab it = (InfoTab) ChatManager.getTabs().stream()
+            .filter(t -> t instanceof InfoTab).findFirst().orElse(null);
+        if (it == null) { feedback(ctx, "Info tab not found."); return 0; }
+        it.visibleOnPanels().remove(1);
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Info tab hidden from Panel 2.");
         return 1;
     }
 
