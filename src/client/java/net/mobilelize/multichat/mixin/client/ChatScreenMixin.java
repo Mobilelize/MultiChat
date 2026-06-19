@@ -23,6 +23,7 @@ import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.mouse.MouseClient;
 import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
 import java.util.List;
@@ -92,7 +93,7 @@ public abstract class ChatScreenMixin {
                 && MultichatClient.CONFIG.showContextDisplay) {
             String status = ctxTab.name() + " ▶ " + (ctxTab.contextCommandMode() ? "/" : "") + ctxTab.contextPrefix() + " <message>";
             int screenH = LzDraw.scaledHeight(lzCtx);
-            LzDraw.drawText(lzCtx, status, 4, screenH - 26, 0xDEDEDE);
+            LzDraw.drawText(lzCtx, status, 4, screenH - 26, Colors.TEXT_STATUS);
         }
 
         ContextMenu.render(lzCtx);
@@ -384,6 +385,7 @@ public abstract class ChatScreenMixin {
                         boolean wasSameTab  = (i == panel.activeTabIndex());
                         boolean wasFocused  = (ChatManager.focusedPanel == panel);
                         panel.setActiveTabId(i);
+                        panel.scrollActiveTabIntoView();
                         tab.clearUnread();
                         if (MultichatClient.CONFIG.switchFocusedPanelOnTabClick)
                             ChatManager.focusedPanel = panel;
@@ -442,17 +444,42 @@ public abstract class ChatScreenMixin {
             int   topY         = panel.resolveTopY(windowHeight);
             int   xOff         = panel.computeXOffset(windowWidth);
 
-            // Tab bar → hand
+            // Tab bar → hand only when over an actual tab or arrow button
             if (panel.showTabs()) {
-                int    tabY          = ChatRenderer.getTabBarY(panel, topY, visibleLines, lineH);
-                double tabBarTop     = tabY * (double) scale;
-                double tabBarBot     = (tabY + ChatRenderer.TAB_HEIGHT) * (double) scale;
-                double panelLeftScr  = xOff * (double) scale;
-                double panelRightScr = (chatWidth + 8 + xOff) * (double) scale;
+                int    tabY      = ChatRenderer.getTabBarY(panel, topY, visibleLines, lineH);
+                double tabBarTop = tabY * (double) scale;
+                double tabBarBot = (tabY + ChatRenderer.TAB_HEIGHT) * (double) scale;
                 if (mouseY >= tabBarTop && mouseY <= tabBarBot
-                        && mouseX >= panelLeftScr && mouseX < panelRightScr) {
-                    MouseClient.setHandCursor();
-                    return;
+                        && mouseX >= xOff * (double) scale
+                        && mouseX < (chatWidth + 8 + xOff) * (double) scale) {
+                    List<ChatTab> visibleTabs = panel.getVisibleTabs();
+                    boolean hasLeft  = panel.tabScrollOffset() > 0;
+                    boolean hasRight = panel.tabLastRendered() >= 0
+                                    && panel.tabLastRendered() < visibleTabs.size() - 1;
+                    boolean overTab  = false;
+                    if (hasLeft && mouseX < (ChatRenderer.ARROW_W + xOff) * (double) scale) {
+                        overTab = true;
+                    } else if (hasRight && mouseX >= (chatWidth + 4 - ChatRenderer.ARROW_W + 4 + xOff) * (double) scale) {
+                        overTab = true;
+                    } else {
+                        int renderX    = hasLeft ? ChatRenderer.ARROW_W - 4 : -4;
+                        int tabAreaEnd = chatWidth + 4 - (hasRight ? ChatRenderer.ARROW_W : 0);
+                        for (int i = panel.tabScrollOffset(); i < visibleTabs.size(); i++) {
+                            ChatTab tab = visibleTabs.get(i);
+                            String label = ChatRenderer.getTabLabel(panel, tab);
+                            int tabWidth = LzDraw.textWidth(label) + 8;
+                            boolean fits = renderX + tabWidth <= tabAreaEnd;
+                            double screenStart = (renderX + 4 + xOff) * (double) scale;
+                            double screenEnd   = fits
+                                ? (renderX + tabWidth + 4 + xOff) * (double) scale
+                                : (tabAreaEnd + 4 + xOff) * (double) scale;
+                            if (!fits && (!hasRight || i != panel.tabLastRendered() + 1)) break;
+                            if (mouseX >= screenStart && mouseX < screenEnd) { overTab = true; break; }
+                            if (!fits) break;
+                            renderX += tabWidth + 1;
+                        }
+                    }
+                    if (overTab) { MouseClient.setHandCursor(); return; }
                 }
             }
 

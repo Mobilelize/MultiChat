@@ -175,15 +175,15 @@ public class ContextMenu {
         LzDraw.pushMatrix(context);
         LzDraw.translate(context, 0, 0, 400);
 
-        LzDraw.fill(context, mx, my, mx + menuW, my + menuH, 0xDD111111);
-        LzDraw.drawBorder(context, mx, my, mx + menuW, my + menuH, 0xFF666666);
+        LzDraw.fill(context, mx, my, mx + menuW, my + menuH, Colors.MENU_BG);
+        LzDraw.drawBorder(context, mx, my, mx + menuW, my + menuH, Colors.BORDER);
 
         for (int i = 0; i < items.size(); i++) {
             int iy = my + PADDING / 2 + i * ITEM_H;
             boolean hovered = mouseX >= mx && mouseX < mx + menuW
                            && mouseY >= iy && mouseY < iy + ITEM_H;
-            if (hovered) LzDraw.fill(context, mx + 1, iy, mx + menuW - 1, iy + ITEM_H, 0x44FFFFFF);
-            LzDraw.drawText(context, items.get(i), mx + PADDING, iy + 1, 0xFFEEEEEE);
+            if (hovered) LzDraw.fill(context, mx + 1, iy, mx + menuW - 1, iy + ITEM_H, Colors.ROW_HOVER_STRONG);
+            LzDraw.drawText(context, items.get(i), mx + PADDING, iy + 1, Colors.TEXT_LIGHT);
         }
 
         LzDraw.popMatrix(context);
@@ -278,7 +278,20 @@ public class ContextMenu {
                     MultichatClient.saveTabsToConfig();
                 }
             }
-            case "Close Search" -> ChatManager.getTabs().remove(tab);
+            case "Close Search" -> {
+                if (tab instanceof SearchTab st) {
+                    for (ChatPanel p : ChatManager.getAllPanels()) {
+                        if (!p.isEnabled()) continue;
+                        if (p.getActiveTab() != tab) continue;
+                        ChatTab prev = st.previousTab(p.id());
+                        if (prev != null && p.getVisibleTabs().contains(prev)) {
+                            p.setActiveTabId(p.getVisibleTabs().indexOf(prev));
+                            p.scrollActiveTabIntoView();
+                        }
+                    }
+                }
+                ChatManager.getTabs().remove(tab);
+            }
         }
         return true;
     }

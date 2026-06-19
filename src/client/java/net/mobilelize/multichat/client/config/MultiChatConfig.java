@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public class MultiChatConfig extends LzConfig {
 
@@ -17,9 +18,10 @@ public class MultiChatConfig extends LzConfig {
     public String directory() { return "config/multichat"; }
 
     // ── Panels / Tabs ─────────────────────────────────────────────────────────
-    public List<ChatPanel> panels   = new ArrayList<>();
-    public List<ChatTab>   tabs     = new ArrayList<>(); // FILTERED, API, ALL, VANILLA
-    public List<NoteTab>   noteTabs = new ArrayList<>(); // NOTES — separate for Gson subtype
+    public List<ChatPanel> panels          = new ArrayList<>();
+    public List<ChatTab>   tabs            = new ArrayList<>(); // FILTERED, API, ALL, VANILLA
+    public List<NoteTab>   noteTabs        = new ArrayList<>(); // NOTES — separate for Gson subtype
+    public UUID            activeNoteTabId = null;
 
     // ── Tab appearance globals (per-panel override when >= 0) ─────────────────
     public double tabBgOpacity = -1;
@@ -45,7 +47,6 @@ public class MultiChatConfig extends LzConfig {
     public boolean earlyMessageCapture          = true;
     public boolean panelContextEnabled          = true;
     public boolean logApiMessages               = true;
-    public boolean notesAlwaysOpen              = false;
 
     // ── Quick Actions ─────────────────────────────────────────────────────────
     public boolean quickActionPasteToChat        = false;

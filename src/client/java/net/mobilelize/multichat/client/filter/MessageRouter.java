@@ -10,28 +10,22 @@ import java.util.*;
 
 public class MessageRouter {
 
-    // Queue of raw (pre-mod-modification) LzText captured via Fabric server network message events.
-    // Populated by MultichatClient when earlyMessageCapture is enabled.
-    private static final ArrayDeque<LzText> rawQueue = new ArrayDeque<>();
+    // Raw text captured at HEAD of ChatHud.addMessage before any mod modifies it.
+    // Set by ChatHudMixin.captureRaw (priority 2000 = first), consumed by routeOnReturn.
+    public static LzText pendingRaw = null;
 
     // Set before routing an API-injected message to prevent double-adding to the source tab.
     public static ChatTab skipTabOnRoute = null;
 
-    // Set during ChatHud.refresh() so MC's re-add of stored messages doesn't double-populate tabs.
-    public static boolean suppressRouting = false;
-
-    public static void onMessageEvent(LzText raw) {
-        rawQueue.addLast(raw);
-    }
-
     public static void routeMessages(ChatHudLine message) {
-        if (suppressRouting) return;
         final LzText content  = LzText.wrapMc(message.content());
         final int    tick     = message.creationTick();
         final LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(message.indicator());
 
-        LzText rawLzText = rawQueue.pollFirst();
-        if (rawLzText == null) return;
+        LzText rawLzText = pendingRaw;
+        pendingRaw = null;
+        if (rawLzText == null) rawLzText = content;
+
 
         final String fullText = rawLzText.mc().getString();
 

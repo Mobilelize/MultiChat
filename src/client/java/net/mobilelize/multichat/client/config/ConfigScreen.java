@@ -9,6 +9,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
+import net.mobilelize.multichat.client.Colors;
 
 public abstract class ConfigScreen extends LzScreen {
 
@@ -26,7 +27,7 @@ public abstract class ConfigScreen extends LzScreen {
 
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
     }
 

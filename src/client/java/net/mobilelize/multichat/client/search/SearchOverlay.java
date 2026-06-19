@@ -12,6 +12,7 @@ import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
@@ -137,7 +138,13 @@ public class SearchOverlay extends LzScreen {
         for (ChatPanel panel : ChatManager.getAllPanels()) {
             if (!panel.isEnabled()) continue;
             int idx = panel.getVisibleTabs().indexOf(tab);
-            if (idx >= 0) { panel.setActiveTabId(idx); panel.scrollActiveTabIntoView(); break; }
+            if (idx >= 0) {
+                ChatTab prev = panel.getActiveTab();
+                if (prev != null) tab.storePreviousTab(panel.id(), prev);
+                panel.setActiveTabId(idx);
+                panel.scrollActiveTabIntoView();
+                break;
+            }
         }
 
         close();
@@ -145,7 +152,7 @@ public class SearchOverlay extends LzScreen {
 
     @Override
     public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        LzDraw.fill(ctx, 0, 0, width, height, 0x88000000);
+        LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY_DARK);
 
         int H    = h();
         int cx   = width / 2;
@@ -156,21 +163,21 @@ public class SearchOverlay extends LzScreen {
         int fx   = cx - fw / 2;
         int half = (fw - 6) / 2;
 
-        LzDraw.fill(ctx, bx, by, bx + W, by + H, 0x55000000);
-        LzDraw.drawBorder(ctx, bx, by, bx + W, by + H, 0xFF666666);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), cx, by + 7, 0xFFFFFF);
+        LzDraw.fill(ctx, bx, by, bx + W, by + H, Colors.OVERLAY);
+        LzDraw.drawBorder(ctx, bx, by, bx + W, by + H, Colors.BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), cx, by + 7, Colors.TEXT_WHITE);
 
         if (sourceTab != null) {
             LzDraw.drawCenteredText(ctx,
                 LzText.empty()
                     .append(LzText.literal("Scope: ").withStyle(LzStyle.ofFormatting(LzFormatting.GRAY)))
                     .append(LzText.literal(sourceTab.name()).withStyle(LzStyle.ofFormatting(LzFormatting.YELLOW))),
-                cx, by + 16, 0xFFFFFF);
+                cx, by + 16, Colors.TEXT_WHITE);
         }
 
-        LzDraw.drawText(ctx, "Query", fx, top - 9, 0xAAAAAA);
-        LzDraw.drawText(ctx, "msgs older than", fx, top + 21, 0xAAAAAA);
-        LzDraw.drawText(ctx, "msgs newer than", fx + half + 6, top + 21, 0xAAAAAA);
+        LzDraw.drawText(ctx, "Query", fx, top - 9, Colors.TEXT_DIMMED);
+        LzDraw.drawText(ctx, "msgs older than", fx, top + 21, Colors.TEXT_DIMMED);
+        LzDraw.drawText(ctx, "msgs newer than", fx + half + 6, top + 21, Colors.TEXT_DIMMED);
     }
 
     @Override

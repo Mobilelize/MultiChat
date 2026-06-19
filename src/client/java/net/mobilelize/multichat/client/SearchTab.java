@@ -19,7 +19,8 @@ public class SearchTab extends ChatTab {
     private final ChatTab    sourceTab;
     private boolean          liveUpdate;
     private boolean          collapseIdentical;
-    private final Map<LzChatEntry, Integer> collapseCounts = new HashMap<>();
+    private final Map<LzChatEntry, Integer> collapseCounts  = new HashMap<>();
+    private final Map<Integer, ChatTab>     previousTabByPanel = new HashMap<>();
 
     public SearchTab(String name, String query, SearchMode searchMode, boolean caseSensitive,
                      int timeFromTicks, int timeToTicks, ChatTab sourceTab, boolean liveUpdate,
@@ -49,6 +50,9 @@ public class SearchTab extends ChatTab {
 
     public Map<LzChatEntry, Integer> collapseCounts()     { return collapseCounts; }
     public void                      clearCollapseCounts() { collapseCounts.clear(); }
+
+    public void     storePreviousTab(int panelId, ChatTab tab) { previousTabByPanel.put(panelId, tab); }
+    public ChatTab  previousTab(int panelId)                   { return previousTabByPanel.get(panelId); }
 
     public boolean matchesText(String text) {
         if (query.isEmpty()) return true;

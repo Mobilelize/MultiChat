@@ -9,6 +9,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
@@ -66,6 +67,16 @@ public class NoteEditorScreen extends LzScreen {
             LzClient.mc().setScreen(new NoteEditScreen(this, noteTab, -1));
         }));
         addDrawableChild(LzButton.of("Done", width / 2 + 2, height - 26, 50, 18, b -> close()));
+        addDrawableChild(LzButton.of(
+            noteTab.renderOutOfFocus() ? "Render Out of Focus: ON" : "Render Out of Focus: OFF",
+            4, height - 26, 150, 18,
+            b -> {
+                noteTab.setRenderOutOfFocus(!noteTab.renderOutOfFocus());
+                MultichatClient.saveTabsToConfig();
+                clearChildren();
+                init();
+            }
+        ));
     }
 
     private void move(int idx, boolean up) {
@@ -90,18 +101,18 @@ public class NoteEditorScreen extends LzScreen {
 
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
 
-        LzDraw.drawCenteredText(ctx, LzText.literal("Notes — " + noteTab.name()), width / 2, 10, 0xFFFFCC44);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Notes — " + noteTab.name()), width / 2, 10, Colors.GOLD);
         if (swapPending)
-            LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target row  ·  &fEsc &7to cancel"), width / 2, 23, 0xFFFFFFFF);
+            LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target row  ·  &fEsc &7to cancel"), width / 2, 23, Colors.TEXT_WHITE);
         else
-            LzDraw.drawCenteredText(ctx, LzText.format("&7Click row to select  ·  &f↑↓ &7to move  ·  Swap &7to reorder"), width / 2, 23, 0xFFFFFFFF);
+            LzDraw.drawCenteredText(ctx, LzText.format("&7Click row to select  ·  &f↑↓ &7to move  ·  Swap &7to reorder"), width / 2, 23, Colors.TEXT_WHITE);
 
         int lx1 = lx1(), lx2 = lx2();
-        LzDraw.fill(ctx, lx1, LIST_TOP, lx2, listBottom(), 0x44000000);
-        LzDraw.drawBorder(ctx, lx1, LIST_TOP, lx2, listBottom(), 0xFF444444);
+        LzDraw.fill(ctx, lx1, LIST_TOP, lx2, listBottom(), Colors.OVERLAY_LIGHT);
+        LzDraw.drawBorder(ctx, lx1, LIST_TOP, lx2, listBottom(), Colors.BORDER_DARK);
 
         // Scrollbar
         int max = maxScroll();
@@ -111,10 +122,10 @@ public class NoteEditorScreen extends LzScreen {
             int totalPx = notes().size() * ROW_H;
             int thumbH = Math.max(10, trackH * trackH / totalPx);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
-            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
-            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x88666666);
+            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), Colors.SCROLLBAR_TRACK);
+            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), Colors.BTN_BORDER);
             LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
-                scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
+                scrollDragging ? Colors.SCROLLBAR_THUMB_DRAG : Colors.SCROLLBAR_THUMB);
         }
 
         // Sidebar ↑↓ Swap
@@ -127,18 +138,18 @@ public class NoteEditorScreen extends LzScreen {
         boolean hDn = mouseX >= cx1 && mouseX < cx2 && mouseY >= cbDnY1() && mouseY < cbDnY2();
         boolean hSw = mouseX >= cx1 && mouseX < cx2 && mouseY >= cbSwY1() && mouseY < cbSwY2();
 
-        LzDraw.fill(ctx, cx1, cbUpY1(), cx2, cbUpY2(), canUp   ? (hUp ? 0xAA888888 : 0x66555555) : 0x33333333);
-        LzDraw.drawBorder(ctx, cx1, cbUpY1(), cx2, cbUpY2(), 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("↑"), cxM, cbUpY1() + (BTN_H - 8) / 2, canUp ? 0xFFFFFF : 0x555555);
+        LzDraw.fill(ctx, cx1, cbUpY1(), cx2, cbUpY2(), canUp   ? (hUp ? Colors.BTN_HOVER : Colors.BTN_NORMAL) : Colors.BTN_DISABLED);
+        LzDraw.drawBorder(ctx, cx1, cbUpY1(), cx2, cbUpY2(), Colors.BTN_BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↑"), cxM, cbUpY1() + (BTN_H - 8) / 2, canUp ? Colors.TEXT_WHITE : Colors.TEXT_DISABLED);
 
-        LzDraw.fill(ctx, cx1, cbDnY1(), cx2, cbDnY2(), canDown ? (hDn ? 0xAA888888 : 0x66555555) : 0x33333333);
-        LzDraw.drawBorder(ctx, cx1, cbDnY1(), cx2, cbDnY2(), 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxM, cbDnY1() + (BTN_H - 8) / 2, canDown ? 0xFFFFFF : 0x555555);
+        LzDraw.fill(ctx, cx1, cbDnY1(), cx2, cbDnY2(), canDown ? (hDn ? Colors.BTN_HOVER : Colors.BTN_NORMAL) : Colors.BTN_DISABLED);
+        LzDraw.drawBorder(ctx, cx1, cbDnY1(), cx2, cbDnY2(), Colors.BTN_BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxM, cbDnY1() + (BTN_H - 8) / 2, canDown ? Colors.TEXT_WHITE : Colors.TEXT_DISABLED);
 
-        int swapBg = swapPending ? 0xAA4455FF : (hasSel ? (hSw ? 0xAA888888 : 0x66555555) : 0x33333333);
+        int swapBg = swapPending ? Colors.BTN_SWAP_PENDING : (hasSel ? (hSw ? Colors.BTN_HOVER : Colors.BTN_NORMAL) : Colors.BTN_DISABLED);
         LzDraw.fill(ctx, cx1, cbSwY1(), cx2, cbSwY2(), swapBg);
-        LzDraw.drawBorder(ctx, cx1, cbSwY1(), cx2, cbSwY2(), 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxM, cbSwY1() + (BTN_H - 8) / 2, hasSel ? 0xFFFFFF : 0x555555);
+        LzDraw.drawBorder(ctx, cx1, cbSwY1(), cx2, cbSwY2(), Colors.BTN_BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxM, cbSwY1() + (BTN_H - 8) / 2, hasSel ? Colors.TEXT_WHITE : Colors.TEXT_DISABLED);
 
         // Rows
         List<NoteTab.NoteEntry> list = notes();
@@ -151,8 +162,8 @@ public class NoteEditorScreen extends LzScreen {
             boolean sel = selectedIdx == i;
             boolean hov = !sel && mouseX >= lx1 && mouseX < lx2 && mouseY >= ry && mouseY < ry + ROW_H;
 
-            if (sel)      LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? 0x553366FF : 0x55FFFF44);
-            else if (hov) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? 0x3300FFAA : 0x22FFFFFF);
+            if (sel)      LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? Colors.ROW_SWAP_SEL : Colors.ROW_SELECTED);
+            else if (hov) LzDraw.fill(ctx, lx1, ry, lx2, ry + ROW_H, swapPending ? Colors.ROW_SWAP_HOVER : Colors.ROW_HOVER);
 
             // Text with ellipsis on overflow
             int textX     = lx1 + 4;
@@ -163,19 +174,19 @@ public class NoteEditorScreen extends LzScreen {
 
             LzDraw.disableScissor(ctx);
             LzDraw.enableScissor(ctx, lx1, LIST_TOP, overfl ? textClipX - ellW : textClipX, listBottom());
-            LzDraw.drawText(ctx, note.content(), textX, textY, 0xFFFFFFFF);
+            LzDraw.drawText(ctx, note.content(), textX, textY, Colors.TEXT_WHITE);
             LzDraw.disableScissor(ctx);
             LzDraw.enableScissor(ctx, lx1, LIST_TOP, lx2, listBottom());
             if (overfl)
-                LzDraw.drawText(ctx, LzText.literal("…"), textClipX - ellW + 2, textY, 0xFFAAAAAA);
+                LzDraw.drawText(ctx, LzText.literal("…"), textClipX - ellW + 2, textY, Colors.TEXT_DIMMED);
 
             // Del
             int dx    = lx2 - ACT_W - 2;
             boolean dInst = TabListScreen.quickDeleteMode || LzKeys.isCtrlDown();
             boolean dHov  = mouseX >= dx && mouseX < dx + ACT_W && mouseY >= ry + 2 && mouseY < ry + ROW_H - 2;
-            int dBg  = dInst ? (dHov ? 0xAAFF3333 : 0x44FF3333) : (dHov ? 0xAAFF8800 : 0x44884400);
-            int dBdr = dInst ? 0x88FF5555 : 0x88FFAA00;
-            int dTxt = dInst ? 0xFFFF8888 : 0xFFFFAA44;
+            int dBg  = dInst ? (dHov ? Colors.BTN_DELETE_INSTANT_HOVER : Colors.BTN_DELETE_INSTANT_BG) : (dHov ? Colors.BTN_DELETE_WARN_HOVER : Colors.BTN_DELETE_WARN_BG);
+            int dBdr = dInst ? Colors.BTN_DELETE_INSTANT_BORDER : Colors.BTN_DELETE_WARN_BORDER;
+            int dTxt = dInst ? Colors.BTN_DELETE_INSTANT_TEXT : Colors.BTN_DELETE_WARN_TEXT;
             LzDraw.fill(ctx, dx, ry + 2, dx + ACT_W, ry + ROW_H - 2, dBg);
             LzDraw.drawBorder(ctx, dx, ry + 2, dx + ACT_W, ry + ROW_H - 2, dBdr);
             LzDraw.drawCenteredText(ctx, LzText.literal("Del"), dx + ACT_W / 2, ry + (ROW_H - 8) / 2, dTxt);
@@ -183,15 +194,15 @@ public class NoteEditorScreen extends LzScreen {
             // Edit
             int ex   = dx - ACT_W - 4;
             boolean eHov = mouseX >= ex && mouseX < ex + ACT_W && mouseY >= ry + 2 && mouseY < ry + ROW_H - 2;
-            LzDraw.fill(ctx, ex, ry + 2, ex + ACT_W, ry + ROW_H - 2, eHov ? 0xAAFFCC44 : 0x44FFCC44);
-            LzDraw.drawBorder(ctx, ex, ry + 2, ex + ACT_W, ry + ROW_H - 2, 0x88FFCC44);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), ex + ACT_W / 2, ry + (ROW_H - 8) / 2, 0xFFFFCC44);
+            LzDraw.fill(ctx, ex, ry + 2, ex + ACT_W, ry + ROW_H - 2, eHov ? Colors.BTN_EDIT_HOVER : Colors.BTN_EDIT_BG);
+            LzDraw.drawBorder(ctx, ex, ry + 2, ex + ACT_W, ry + ROW_H - 2, Colors.BTN_EDIT_BORDER);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), ex + ACT_W / 2, ry + (ROW_H - 8) / 2, Colors.GOLD);
         }
         LzDraw.disableScissor(ctx);
 
         if (list.isEmpty())
             LzDraw.drawCenteredText(ctx, LzText.literal("No notes yet."),
-                width / 2, (LIST_TOP + listBottom()) / 2 - 4, 0xFF666666);
+                width / 2, (LIST_TOP + listBottom()) / 2 - 4, Colors.TEXT_DARK_GRAY);
     }
 
     @Override

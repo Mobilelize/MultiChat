@@ -11,6 +11,7 @@ import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
@@ -146,11 +147,11 @@ public class TabListScreen extends ConfigScreen {
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, 0xFFAADDFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, Colors.BLUE);
         if (swapPending)
-            LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target tab  ·  &fEsc &7to cancel"), width / 2, 21, 0xFFFFFFFF);
+            LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target tab  ·  &fEsc &7to cancel"), width / 2, 21, Colors.TEXT_WHITE);
         else
-            LzDraw.drawCenteredText(ctx, LzText.format("&7add, edit & reorder tabs  ·  WL/BL filter rules"), width / 2, 21, 0xFFFFFFFF);
+            LzDraw.drawCenteredText(ctx, LzText.format("&7add, edit & reorder tabs  ·  WL/BL filter rules"), width / 2, 21, Colors.TEXT_WHITE);
         nameField.render(ctx.mc(), mouseX, mouseY, delta);
 
         int lx = width / 2 - 200;
@@ -173,22 +174,22 @@ public class TabListScreen extends ConfigScreen {
         boolean hoverDown = mouseX >= cx1 && mouseX < cx2 && mouseY >= dy1 && mouseY < dy2;
         boolean hoverSwap = mouseX >= cx1 && mouseX < cx2 && mouseY >= sy1 && mouseY < sy2;
 
-        int upBg   = canUp   ? (hoverUp   ? 0xAA888888 : 0x66555555) : 0x33333333;
-        int dnBg   = canDown ? (hoverDown ? 0xAA888888 : 0x66555555) : 0x33333333;
-        int swapBg = swapPending ? 0xAA4455FF
-                   : (hasSelected ? (hoverSwap ? 0xAA888888 : 0x66555555) : 0x33333333);
+        int upBg   = canUp   ? (hoverUp   ? Colors.BTN_HOVER : Colors.BTN_NORMAL) : Colors.BTN_DISABLED;
+        int dnBg   = canDown ? (hoverDown ? Colors.BTN_HOVER : Colors.BTN_NORMAL) : Colors.BTN_DISABLED;
+        int swapBg = swapPending ? Colors.BTN_SWAP_PENDING
+                   : (hasSelected ? (hoverSwap ? Colors.BTN_HOVER : Colors.BTN_NORMAL) : Colors.BTN_DISABLED);
 
         LzDraw.fill(ctx, cx1, uy1, cx2, uy2, upBg);
-        LzDraw.drawBorder(ctx, cx1, uy1, cx2, uy2, 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("↑"), cxMid, uy1 + (BTN_H - 8) / 2, canUp ? 0xFFFFFFFF : 0xFF555555);
+        LzDraw.drawBorder(ctx, cx1, uy1, cx2, uy2, Colors.BTN_BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↑"), cxMid, uy1 + (BTN_H - 8) / 2, canUp ? Colors.TEXT_WHITE : Colors.TEXT_DISABLED);
 
         LzDraw.fill(ctx, cx1, dy1, cx2, dy2, dnBg);
-        LzDraw.drawBorder(ctx, cx1, dy1, cx2, dy2, 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxMid, dy1 + (BTN_H - 8) / 2, canDown ? 0xFFFFFFFF : 0xFF555555);
+        LzDraw.drawBorder(ctx, cx1, dy1, cx2, dy2, Colors.BTN_BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.literal("↓"), cxMid, dy1 + (BTN_H - 8) / 2, canDown ? Colors.TEXT_WHITE : Colors.TEXT_DISABLED);
 
         LzDraw.fill(ctx, cx1, sy1, cx2, sy2, swapBg);
-        LzDraw.drawBorder(ctx, cx1, sy1, cx2, sy2, 0x88666666);
-        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxMid, sy1 + (BTN_H - 8) / 2, hasSelected ? 0xFFFFFFFF : 0xFF555555);
+        LzDraw.drawBorder(ctx, cx1, sy1, cx2, sy2, Colors.BTN_BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.literal("Swap"), cxMid, sy1 + (BTN_H - 8) / 2, hasSelected ? Colors.TEXT_WHITE : Colors.TEXT_DISABLED);
 
         // --- Tab rows ---
         LzDraw.enableScissor(ctx, 0, LIST_TOP, width, listBottom());
@@ -203,18 +204,18 @@ public class TabListScreen extends ConfigScreen {
             int textY = y + (ROW_HEIGHT - 8) / 2;
 
             int rowBg = switch (tab.type()) {
-                case FILTERED -> 0x55FFFFFF;
-                case SEARCH   -> 0x4400FFAA;
-                case API      -> 0x44FF9900;
-                case NOTES    -> 0x44FFDD55;
-                default       -> 0x44AAAAFF;
+                case FILTERED -> Colors.TAB_FILTERED_BG;
+                case SEARCH   -> Colors.TAB_SEARCH_BG;
+                case API      -> Colors.TAB_API_BG;
+                case NOTES    -> Colors.TAB_NOTES_BG;
+                default       -> Colors.TAB_DEFAULT_BG;
             };
             int rowBdr = switch (tab.type()) {
-                case FILTERED -> 0x88AAAAAA;
-                case SEARCH   -> 0x8800CC88;
-                case API      -> 0x88CC6600;
-                case NOTES    -> 0x88DDAA00;
-                default       -> 0x886688CC;
+                case FILTERED -> Colors.TAB_FILTERED_BORDER;
+                case SEARCH   -> Colors.TAB_SEARCH_BORDER;
+                case API      -> Colors.TAB_API_BORDER;
+                case NOTES    -> Colors.TAB_NOTES_BORDER;
+                default       -> Colors.TAB_DEFAULT_BORDER;
             };
             LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, rowBg);
             LzDraw.drawBorder(ctx, lx, rowY1, lx + 400, rowY2, rowBdr);
@@ -222,25 +223,25 @@ public class TabListScreen extends ConfigScreen {
             // Selection / hover highlight
             boolean hoverRow = mouseX >= lx && mouseX < lx + 400 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             if (i == selectedIdx) {
-                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, swapPending ? 0x553366FF : 0x55FFFF44);
+                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, swapPending ? Colors.ROW_SWAP_SEL : Colors.ROW_SELECTED);
             } else if (swapPending && isMoveable(tab) && hoverRow) {
-                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, 0x3300FFAA);
+                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, Colors.ROW_SWAP_HOVER);
             } else if (hoverRow) {
                 int hoverTint = switch (tab.type()) {
-                    case FILTERED -> 0x44FFFFFF;
-                    case SEARCH   -> 0x4400FFAA;
-                    case API      -> 0x44FF9900;
-                    default       -> 0x4466AAFF;
+                    case FILTERED -> Colors.TAB_HOVER;
+                    case SEARCH   -> Colors.TAB_SEARCH_BG;
+                    case API      -> Colors.TAB_API_BG;
+                    default       -> Colors.TAB_DEFAULT_HOVER;
                 };
                 LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, hoverTint);
             }
 
             int nameColor = switch (tab.type()) {
-                case FILTERED -> 0xFFFFFFFF;
-                case SEARCH   -> 0xFFAAFFDD;
-                case API      -> 0xFFFFCC88;
-                case NOTES    -> 0xFFFFEE88;
-                default       -> 0xFFAADDFF;
+                case FILTERED -> Colors.TEXT_WHITE;
+                case SEARCH   -> Colors.TAB_SEARCH_TEXT;
+                case API      -> Colors.TAB_API_TEXT;
+                case NOTES    -> Colors.TAB_NOTES_TEXT;
+                default       -> Colors.TAB_ALL_TEXT;
             };
 
             // Name
@@ -261,9 +262,9 @@ public class TabListScreen extends ConfigScreen {
 
                 String wlStr = "WL:" + wlCount + " ";
                 String blStr = "BL:" + blCount;
-                LzDraw.drawText(ctx, wlStr, infoX, textY, wlCount > 0 ? 0xFF88FF88 : 0xFF666666);
+                LzDraw.drawText(ctx, wlStr, infoX, textY, wlCount > 0 ? Colors.WL_ACTIVE : Colors.TEXT_DARK_GRAY);
                 infoX += LzDraw.textWidth(wlStr);
-                LzDraw.drawText(ctx, blStr, infoX, textY, blCount > 0 ? 0xFFFF8888 : 0xFF666666);
+                LzDraw.drawText(ctx, blStr, infoX, textY, blCount > 0 ? Colors.BL_ACTIVE : Colors.TEXT_DARK_GRAY);
                 infoX += LzDraw.textWidth(blStr);
 
                 // Settings flags
@@ -280,7 +281,7 @@ public class TabListScreen extends ConfigScreen {
                 if (!tab.contextPrefix().isEmpty()) { if (!flags.isEmpty()) flags.append(' '); flags.append('P'); }
                 if (tab.pingEnabled())              { if (!flags.isEmpty()) flags.append(' '); flags.append('S'); }
                 if (!flags.isEmpty())
-                    LzDraw.drawText(ctx, "  " + flags, infoX, textY, 0xFF9999CC);
+                    LzDraw.drawText(ctx, "  " + flags, infoX, textY, Colors.FLAGS_COLOR);
             } else {
                 String typeTag = switch (tab.type()) {
                     case ALL     -> "[all]";
@@ -290,11 +291,11 @@ public class TabListScreen extends ConfigScreen {
                     default      -> "";
                 };
                 if (!typeTag.isEmpty())
-                    LzDraw.drawText(ctx, typeTag, infoX, textY, 0xFF666666);
+                    LzDraw.drawText(ctx, typeTag, infoX, textY, Colors.TEXT_DARK_GRAY);
                 if (tab.type() == TabType.NOTES) {
                     int noteCount = ((NoteTab) tab).noteEntries().size();
                     LzDraw.drawText(ctx, "  " + noteCount + " note" + (noteCount == 1 ? "" : "s"),
-                        infoX + LzDraw.textWidth(typeTag), textY, 0xFF888888);
+                        infoX + LzDraw.textWidth(typeTag), textY, Colors.TEXT_GRAY);
                 }
             }
 
@@ -309,24 +310,24 @@ public class TabListScreen extends ConfigScreen {
             boolean hoverRemove = canRemove && mouseX >= lx + 362 && mouseX < lx + 398 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
             if (isNotes) {
-                int activeBg  = isActive ? 0x88FFDD00 : (hoverActive ? 0x66FFDD44 : 0x33AA8800);
-                int activeBdr = isActive ? 0xFFFFDD00 : 0x66DDAA00;
-                int activeCol = isActive ? 0xFFFFEE00 : 0xFFBBAA44;
+                int activeBg  = isActive ? Colors.TAB_ACTIVE_BG : (hoverActive ? Colors.TAB_ACTIVE_BG_HOVER : Colors.TAB_ACTIVE_BG_DIM);
+                int activeBdr = isActive ? Colors.TAB_ACTIVE_BORDER : Colors.TAB_ACTIVE_BORDER_DIM;
+                int activeCol = isActive ? Colors.TAB_ACTIVE_TEXT : Colors.TAB_ACTIVE_TEXT_DIM;
                 LzDraw.fill(ctx, lx + 282, btnY1, lx + 318, btnY2, activeBg);
                 LzDraw.drawBorder(ctx, lx + 282, btnY1, lx + 318, btnY2, activeBdr);
                 LzDraw.drawCenteredText(ctx, LzText.literal(isActive ? "★ Set" : "☆ Set"), lx + 300, textY, activeCol);
             }
 
-            LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? (hoverEdit ? 0xAAFFCC44 : 0x44FFCC44) : 0x33333333);
-            LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? 0x88FFCC44 : 0x44444444);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, canEdit ? 0xFFFFCC44 : 0xFF555555);
+            LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? (hoverEdit ? Colors.BTN_EDIT_HOVER : Colors.BTN_EDIT_BG) : Colors.BTN_DISABLED);
+            LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, canEdit ? Colors.BTN_EDIT_BORDER : Colors.BORDER_DARK);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, canEdit ? Colors.GOLD : Colors.TEXT_DISABLED);
 
             if (canRemove) {
                 boolean instantDelete = quickDeleteMode || LzKeys.isCtrlDown();
-                int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
-                                         : (hoverRemove ? 0xAAFF8800 : 0x66552200);
-                int xBdr = instantDelete ? 0x88FF5555 : 0x88FFAA00;
-                int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
+                int xBg  = instantDelete ? (hoverRemove ? Colors.BTN_REMOVE_INSTANT_HOVER : Colors.BTN_REMOVE_INSTANT_BG)
+                                         : (hoverRemove ? Colors.BTN_DELETE_WARN_HOVER    : Colors.BTN_REMOVE_WARN_BG);
+                int xBdr = instantDelete ? Colors.BTN_DELETE_INSTANT_BORDER : Colors.BTN_DELETE_WARN_BORDER;
+                int xCol = instantDelete ? Colors.BTN_DELETE_INSTANT_TEXT   : Colors.BTN_DELETE_WARN_TEXT;
                 LzDraw.fill(ctx, lx + 362, btnY1, lx + 398, btnY2, xBg);
                 LzDraw.drawBorder(ctx, lx + 362, btnY1, lx + 398, btnY2, xBdr);
                 LzDraw.drawCenteredText(ctx, LzText.literal("Del"), lx + 380, textY, xCol);
@@ -344,10 +345,10 @@ public class TabListScreen extends ConfigScreen {
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
 
-            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
-            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x88666666);
+            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), Colors.SCROLLBAR_TRACK);
+            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), Colors.BTN_BORDER);
             LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
-                scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
+                scrollDragging ? Colors.SCROLLBAR_THUMB_DRAG : Colors.SCROLLBAR_THUMB);
         }
     }
 

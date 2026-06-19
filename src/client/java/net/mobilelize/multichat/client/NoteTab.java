@@ -41,12 +41,15 @@ public class NoteTab extends ChatTab {
     }
 
     private final List<NoteEntry> noteEntries = new ArrayList<>();
+    private boolean renderOutOfFocus = true;
 
     public NoteTab(String name, Collection<Integer> visibleOnPanels) {
         super(name, TabType.NOTES, visibleOnPanels);
     }
 
-    public List<NoteEntry> noteEntries() { return noteEntries; }
+    public List<NoteEntry> noteEntries()          { return noteEntries; }
+    public boolean renderOutOfFocus()             { return renderOutOfFocus; }
+    public void setRenderOutOfFocus(boolean v)    { renderOutOfFocus = v; }
 
     public void addNote(LzText text, int tick) {
         NoteEntry entry = new NoteEntry(text, tick);

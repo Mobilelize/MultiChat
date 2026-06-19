@@ -4,9 +4,12 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
+import net.minecraft.network.message.MessageSignatureData;
 import net.minecraft.text.Style;
+import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
@@ -18,10 +21,11 @@ import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.filter.MessageRouter;
-import net.mobilelize.multichat.client.ping.PingPlayer;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -36,8 +40,12 @@ import java.util.List;
 // All rendering and hit-test logic has been moved to ChatRenderer so only the
 // hook descriptors and thin glue need updating here.
 // =============================================================================
-@Mixin(ChatHud.class)
+@Mixin(value = ChatHud.class, priority = 2000)
 public class ChatHudMixin {
+
+    @Final
+    @Shadow
+    private List<ChatHudLine> messages;
 
     // ── Render ────────────────────────────────────────────────────────────────
     // MC-VERSION-SENSITIVE: descriptor "render(Lnet/minecraft/client/gui/DrawContext;IIIZ)V"
@@ -131,29 +139,28 @@ public class ChatHudMixin {
 
     @Inject(method = "refresh", at = @At("HEAD"))
     private void onRefresh(CallbackInfo ci) {
-        MessageRouter.suppressRouting = true;
         ChatManager.resetForRefresh();
     }
 
-    @Inject(method = "refresh", at = @At("RETURN"))
-    private void onRefreshDone(CallbackInfo ci) {
-        MessageRouter.suppressRouting = false;
-        PingPlayer.suppressPingsUntil = 0L;
+    // ── Route incoming messages ───────────────────────────────────────────────
+    // MC-VERSION-SENSITIVE: addMessage descriptor. Hooks the public 3-arg overload only —
+    // refresh() calls addVisibleMessage directly and never triggers these.
+
+    @Inject(
+        method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V",
+        at = @At("HEAD")
+    )
+    private void captureRaw(Text message, @Nullable MessageSignatureData sig, @Nullable MessageIndicator indicator, CallbackInfo ci) {
+        MessageRouter.pendingRaw = LzText.wrapMc(message);
     }
 
-    // ── Route incoming messages ───────────────────────────────────────────────
-
-    @Inject(method = "addVisibleMessage", at = @At("HEAD"))
-    private void routeGlobally(ChatHudLine message, CallbackInfo ci) {
-        //if (MultichatClient.CONFIG.modDisabled) return;
-
-        //float scale   = (float) LzChat.chatScale();
-        //int baseWidth = LzMath.floor((double) LzChat.chatWidth() / scale);
-        //int width     = baseWidth - getIndicatorWidth(LzMessageIndicator.wrapNullable(message.indicator()));
-
-        //List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(message.content()), width);
-
-        MessageRouter.routeMessages(message);
+    @Inject(
+        method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V",
+        at = @At("RETURN")
+    )
+    private void routeOnReturn(Text message, @Nullable MessageSignatureData sig, @Nullable MessageIndicator indicator, CallbackInfo ci) {
+        if (messages.isEmpty()) return;
+        MessageRouter.routeMessages(messages.getFirst());
     }
 
     // ── Indicator hit-test ────────────────────────────────────────────────────

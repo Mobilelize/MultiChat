@@ -12,6 +12,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
@@ -29,12 +30,7 @@ public class NoteEditScreen extends LzScreen {
     private static final int LINE_H  = 10;
     private static final int PREV_SB = 6;
 
-    private static final int[] SWATCH_COLORS = {
-        0x000000, 0x0000AA, 0x00AA00, 0x00AAAA,
-        0xAA0000, 0xAA00AA, 0xFFAA00, 0xAAAAAA,
-        0x555555, 0x5555FF, 0x55FF55, 0x55FFFF,
-        0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF,
-    };
+    private static final int[] SWATCH_COLORS = Colors.SWATCH_COLORS;
     private static final char[] SWATCH_CHARS = {
         '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
     };
@@ -99,30 +95,30 @@ public class NoteEditScreen extends LzScreen {
 
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
 
         int px1 = px1(), px2 = px2(), cx = width / 2, cy = cy();
 
-        LzDraw.fill(ctx, px1 - 6, cy - 72, px2 + 6, cy + 110, 0xAA111111);
-        LzDraw.drawBorder(ctx, px1 - 6, cy - 72, px2 + 6, cy + 110, 0xFF555555);
-        LzDraw.drawCenteredText(ctx, LzText.literal(noteIdx < 0 ? "New Note" : "Edit Note"), cx, cy - 65, 0xFFFFCC44);
+        LzDraw.fill(ctx, px1 - 6, cy - 72, px2 + 6, cy + 110, Colors.NOTE_EDIT_BG);
+        LzDraw.drawBorder(ctx, px1 - 6, cy - 72, px2 + 6, cy + 110, Colors.BORDER);
+        LzDraw.drawCenteredText(ctx, LzText.literal(noteIdx < 0 ? "New Note" : "Edit Note"), cx, cy - 65, Colors.GOLD);
 
         // Toolbar
         int swX0 = px1 + 36, swY = cy - 53;
-        LzDraw.drawText(ctx, LzText.literal("Color:"), px1, swY + 2, 0xFF777777);
+        LzDraw.drawText(ctx, LzText.literal("Color:"), px1, swY + 2, Colors.TEXT_MID_GRAY);
         for (int i = 0; i < 16; i++) {
             int sx  = swX0 + i * (SW_W + SW_G);
             boolean hov = mouseX >= sx && mouseX < sx + SW_W && mouseY >= swY && mouseY < swY + SW_H;
-            LzDraw.fill(ctx, sx, swY, sx + SW_W, swY + SW_H, 0xFF000000 | SWATCH_COLORS[i]);
-            LzDraw.drawBorder(ctx, sx, swY, sx + SW_W, swY + SW_H, hov ? 0xFFFFFFFF : 0xFF333333);
+            LzDraw.fill(ctx, sx, swY, sx + SW_W, swY + SW_H, SWATCH_COLORS[i]);
+            LzDraw.drawBorder(ctx, sx, swY, sx + SW_W, swY + SW_H, hov ? Colors.TEXT_WHITE : Colors.BORDER_DARKEST);
         }
         int fx = fmtX();
-        drawFmtBtn(ctx, mouseX, mouseY, fx,                  swY, "R", 0xFFAAAAAA);
-        drawFmtBtn(ctx, mouseX, mouseY, fx + FMT_W + 2,      swY, "B", 0xFFFFFFFF);
-        drawFmtBtn(ctx, mouseX, mouseY, fx + (FMT_W + 2) * 2, swY, "I", 0xFFCCCCFF);
+        drawFmtBtn(ctx, mouseX, mouseY, fx,                  swY, "R", Colors.FMT_BTN_R);
+        drawFmtBtn(ctx, mouseX, mouseY, fx + FMT_W + 2,      swY, "B", Colors.FMT_BTN_B);
+        drawFmtBtn(ctx, mouseX, mouseY, fx + (FMT_W + 2) * 2, swY, "I", Colors.FMT_BTN_I);
 
-        LzDraw.drawText(ctx, LzText.literal("Use &X codes or click swatches"), px1, cy - 36, 0xFF555555);
+        LzDraw.drawText(ctx, LzText.literal("Use &X codes or click swatches"), px1, cy - 36, Colors.TEXT_DISABLED);
 
         field.render(ctx.mc(), mouseX, mouseY, delta);
 
@@ -133,15 +129,15 @@ public class NoteEditScreen extends LzScreen {
 
         int py1 = prevY1(), py2 = prevY2(), pxA = prevX1(), pxB = prevX2();
 
-        LzDraw.fill(ctx, pxA, py1, pxB, py2, 0x44000000);
-        LzDraw.drawBorder(ctx, pxA, py1, pxB, py2, 0xFF333333);
-        LzDraw.drawText(ctx, LzText.format("&8Preview"), pxA + 3, py1 - 9, 0xFFFFFFFF);
+        LzDraw.fill(ctx, pxA, py1, pxB, py2, Colors.OVERLAY_LIGHT);
+        LzDraw.drawBorder(ctx, pxA, py1, pxB, py2, Colors.BORDER_DARKEST);
+        LzDraw.drawText(ctx, LzText.format("&8Preview"), pxA + 3, py1 - 9, Colors.TEXT_WHITE);
 
         LzDraw.enableScissor(ctx, pxA + 2, py1 + 2, pxB - PREV_SB - 2, py2 - 2);
         for (int i = 0; i < lines.size(); i++) {
             int lineY = py1 + 3 + i * LINE_H - prevScroll;
             if (lineY + LINE_H < py1 || lineY > py2) continue;
-            LzDraw.drawText(ctx, lines.get(i), pxA + 4, lineY, 0xFFFFFFFF);
+            LzDraw.drawText(ctx, lines.get(i), pxA + 4, lineY, Colors.TEXT_WHITE);
         }
         LzDraw.disableScissor(ctx);
 
@@ -152,16 +148,16 @@ public class NoteEditScreen extends LzScreen {
             int totalH = lines.size() * LINE_H + 4;
             int thumbH = Math.max(8, trackH * trackH / totalH);
             int thumbY = py1 + 2 + (int)((long) prevScroll * (trackH - thumbH) / maxScroll);
-            LzDraw.fill(ctx, sbX, py1 + 2, sbX + PREV_SB, py2 - 2, 0x33FFFFFF);
+            LzDraw.fill(ctx, sbX, py1 + 2, sbX + PREV_SB, py2 - 2, Colors.SCROLLBAR_TRACK_DIM);
             LzDraw.fill(ctx, sbX + 1, thumbY, sbX + PREV_SB - 1, thumbY + thumbH,
-                prevDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
+                prevDragging ? Colors.SCROLLBAR_THUMB_DRAG : Colors.SCROLLBAR_THUMB);
         }
     }
 
     private void drawFmtBtn(LzDrawContext ctx, int mx, int my, int x, int y, String label, int col) {
         boolean hov = mx >= x && mx < x + FMT_W && my >= y && my < y + SW_H;
-        LzDraw.fill(ctx, x, y, x + FMT_W, y + SW_H, hov ? 0xAA555555 : 0x44333333);
-        LzDraw.drawBorder(ctx, x, y, x + FMT_W, y + SW_H, 0xFF444444);
+        LzDraw.fill(ctx, x, y, x + FMT_W, y + SW_H, hov ? Colors.FMT_BTN_HOVER : Colors.FMT_BTN_BG);
+        LzDraw.drawBorder(ctx, x, y, x + FMT_W, y + SW_H, Colors.FMT_BTN_BORDER);
         LzDraw.drawCenteredText(ctx, LzText.literal(label), x + FMT_W / 2, y + 2, col);
     }
 

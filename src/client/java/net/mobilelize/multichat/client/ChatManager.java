@@ -253,7 +253,6 @@ public class ChatManager {
     // ------------------------------------------------------------------
 
     public static void resetForRefresh() {
-        PingPlayer.suppressPingsUntil = System.currentTimeMillis() + 10_000L;
         // Rebuild per-panel wrapped lines at new width; preserve message history and unread counts
         for (ChatPanel panel : getAllActivePanels()) {
             panel.resetScrollPositionsExcept(TabType.NOTES);

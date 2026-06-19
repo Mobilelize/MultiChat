@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.ChatPanel;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.ChatManager;
@@ -152,14 +153,14 @@ public class PanelLayoutScreen extends LzScreen {
 
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
 
         if (snapEnabled) {
             for (int gx = 0; gx < width;  gx += GRID_SIZE)
-                LzDraw.fill(ctx, gx, 0, gx + 1, height, 0x0DFFFFFF);
+                LzDraw.fill(ctx, gx, 0, gx + 1, height, Colors.GRID_LINE);
             for (int gy = 0; gy < height; gy += GRID_SIZE)
-                LzDraw.fill(ctx, 0, gy, width, gy + 1, 0x0DFFFFFF);
+                LzDraw.fill(ctx, 0, gy, width, gy + 1, Colors.GRID_LINE);
         }
 
         for (ChatPanel panel : ChatManager.getAllPanels()) {
@@ -171,20 +172,20 @@ public class PanelLayoutScreen extends LzScreen {
             boolean hov = mouseX >= x1 && mouseX < x2 && mouseY >= y1 && mouseY < y2;
 
             // Outer border extends left/right to show true rendered panel extent
-            int outerCol = panel.primary() ? 0x55446699 : 0x55FF8800;
+            int outerCol = panel.primary() ? Colors.PANEL_PRIMARY_TINT : Colors.PANEL_SECONDARY_TINT;
             LzDraw.drawBorder(ctx, x1 - OUTER_PAD, y1, x2 + OUTER_PAD_R, y2, outerCol);
 
             if (panel.primary()) {
-                LzDraw.fill(ctx, x1, y1, x2, y2, 0x1A4488FF);
-                LzDraw.drawBorder(ctx, x1, y1, x2, y2, 0xFF4488FF);
-                LzDraw.drawCenteredText(ctx, LzText.literal(panel.name() + " (locked)"), cx, cy - 4, 0xFF88AAFF);
-                LzDraw.drawCenteredText(ctx, LzText.literal("primary panel"),            cx, cy + 5, 0x884488FF);
+                LzDraw.fill(ctx, x1, y1, x2, y2, Colors.PANEL_LOCKED_FILL);
+                LzDraw.drawBorder(ctx, x1, y1, x2, y2, Colors.PANEL_LOCKED_BORDER);
+                LzDraw.drawCenteredText(ctx, LzText.literal(panel.name() + " (locked)"), cx, cy - 4, Colors.PANEL_LOCKED_TEXT);
+                LzDraw.drawCenteredText(ctx, LzText.literal("primary panel"),            cx, cy + 5, Colors.PANEL_LOCKED_SUBTITLE);
             } else {
                 boolean drag  = dragging == panel;
                 boolean resiz = resizing == panel;
-                int fillCol   = (drag || resiz) ? 0x33FFAA00 : (hov ? 0x22FFFFFF : 0x11FFFFFF);
-                int borderCol = (drag || resiz) ? 0xFFFFAA00 : (hov ? 0xFFFFFFFF : 0xFF888888);
-                int labelCol  = (drag || resiz) ? 0xFFFFCC44 : (hov ? 0xFFFFFFFF : 0xFFCCCCCC);
+                int fillCol   = (drag || resiz) ? Colors.PANEL_DRAG_FILL   : (hov ? Colors.ROW_HOVER   : Colors.PANEL_FILL_FAINT);
+                int borderCol = (drag || resiz) ? Colors.PANEL_DRAG_BORDER : (hov ? Colors.TEXT_WHITE   : Colors.TEXT_GRAY);
+                int labelCol  = (drag || resiz) ? Colors.GOLD              : (hov ? Colors.TEXT_WHITE   : Colors.PANEL_NORMAL_LABEL);
 
                 LzDraw.fill(ctx, x1, y1, x2, y2, fillCol);
                 LzDraw.drawBorder(ctx, x1, y1, x2, y2, borderCol);
@@ -195,24 +196,24 @@ public class PanelLayoutScreen extends LzScreen {
                     : panel.anchor().name().toLowerCase() + (panel.margin() != 0 ? " +" + panel.margin() : "");
 
                 LzDraw.drawCenteredText(ctx, LzText.literal(name),   cx, cy - 4, labelCol);
-                LzDraw.drawCenteredText(ctx, LzText.literal(anchor), cx, cy + 5, 0x88FFFFFF);
+                LzDraw.drawCenteredText(ctx, LzText.literal(anchor), cx, cy + 5, Colors.PANEL_ANCHOR_TEXT);
 
-                LzDraw.fill(ctx, x1 + 1, y1 + 1, x2 - 1, y1 + 10, drag ? 0x66FFAA00 : 0x44FFFFFF);
-                LzDraw.drawCenteredText(ctx, LzText.literal("drag"), cx, y1 + 2, drag ? 0xFFFFCC44 : 0x88FFFFFF);
+                LzDraw.fill(ctx, x1 + 1, y1 + 1, x2 - 1, y1 + 10, drag ? Colors.PANEL_DRAG_HEADER : Colors.ROW_HOVER_STRONG);
+                LzDraw.drawCenteredText(ctx, LzText.literal("drag"), cx, y1 + 2, drag ? Colors.GOLD : Colors.PANEL_ANCHOR_TEXT);
 
                 boolean hovRight = !drag && mouseX >= x2 - EDGE_GRAB && mouseX <= x2 + EDGE_GRAB
                     && mouseY >= y1 && mouseY < y2;
-                int rightCol = (resiz && resizeDir == ResizeDir.WIDTH) ? 0xCCFFAA00 : hovRight ? 0xAAFFFFFF : 0x44FFFFFF;
+                int rightCol = (resiz && resizeDir == ResizeDir.WIDTH) ? Colors.PANEL_RESIZE_ACTIVE : hovRight ? Colors.PANEL_RESIZE_HOVER : Colors.ROW_HOVER_STRONG;
                 LzDraw.fill(ctx, x2 - 3, y1 + 12, x2 + 3, y2 - 4, rightCol);
 
                 boolean hovBot = !drag && mouseX >= x1 && mouseX < x2
                     && mouseY >= y2 - EDGE_GRAB && mouseY <= y2 + EDGE_GRAB;
-                int botCol = (resiz && resizeDir == ResizeDir.HEIGHT) ? 0xCCFFAA00 : hovBot ? 0xAAFFFFFF : 0x44FFFFFF;
+                int botCol = (resiz && resizeDir == ResizeDir.HEIGHT) ? Colors.PANEL_RESIZE_ACTIVE : hovBot ? Colors.PANEL_RESIZE_HOVER : Colors.ROW_HOVER_STRONG;
                 LzDraw.fill(ctx, x1 + 12, y2 - 3, x2 - 12, y2 + 3, botCol);
 
                 if (resiz) {
                     String sizeInfo = "w:" + panel.resolveWidth() + "  h:" + focusedLines(panel) + " lines";
-                    LzDraw.drawCenteredText(ctx, LzText.literal(sizeInfo), cx, y1 - 10, 0xFFFFCC44);
+                    LzDraw.drawCenteredText(ctx, LzText.literal(sizeInfo), cx, y1 - 10, Colors.GOLD);
                 }
 
                 if (!panel.lockUnfocusedToFocused()) {
@@ -221,18 +222,18 @@ public class PanelLayoutScreen extends LzScreen {
                         || (dragging == null && resizing == null && unfocusedLineDragging == null
                             && mouseX >= x1 - OUTER_PAD && mouseX <= x2 + OUTER_PAD_R
                             && Math.abs(mouseY - lineY) <= EDGE_GRAB);
-                    int lineCol = hovLine ? 0xFF44FF88 : 0x8844FF88;
+                    int lineCol = hovLine ? Colors.PANEL_UNFOCUSED_LINE : Colors.PANEL_UNFOCUSED_LINE_DIM;
                     LzDraw.fill(ctx, x1 - OUTER_PAD, lineY - 1, x2 + OUTER_PAD_R, lineY + 1, lineCol);
                     int ufLines = Math.min(
                         panel.customUnfocusedHeightLines() > 0 ? panel.customUnfocusedHeightLines() : unfocusedMcLines(panel),
                         focusedLines(panel));
-                    LzDraw.drawText(ctx, LzText.literal("unfocused: " + ufLines + " lines"), x1, lineY + 3, hovLine ? 0xFF44FF88 : 0x8844FF88);
+                    LzDraw.drawText(ctx, LzText.literal("unfocused: " + ufLines + " lines"), x1, lineY + 3, hovLine ? Colors.PANEL_UNFOCUSED_LINE : Colors.PANEL_UNFOCUSED_LINE_DIM);
                 }
             }
         }
 
         LzDraw.drawCenteredText(ctx,
-            LzText.literal("Drag panels  |  Drag edges to resize  |  Green line = unfocused height  |  Esc / Cancel = revert"), width / 2, 6, 0xFFAAAAAA);
+            LzText.literal("Drag panels  |  Drag edges to resize  |  Green line = unfocused height  |  Esc / Cancel = revert"), width / 2, 6, Colors.TEXT_DIMMED);
 
     }
 

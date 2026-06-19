@@ -46,7 +46,15 @@ public class TabEditScreen {
 
         ConfigEntryBuilder eb = builder.entryBuilder();
 
-        if (tab.type() == TabType.ALL) return builder.build();
+        if (tab.type() == TabType.ALL) {
+            ConfigCategory settings = builder.getOrCreateCategory(LzText.literal("Settings").mc());
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Badge").mc(), tab.showBadge())
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Show unread count badge on this tab.").mc())
+                .setSaveConsumer(tab::setShowBadge)
+                .build());
+            return builder.build();
+        }
 
         // ── Settings ──────────────────────────────────────────────────────
         ConfigCategory settings = builder.getOrCreateCategory(LzText.literal("Settings").mc());

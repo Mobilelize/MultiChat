@@ -3,7 +3,6 @@ package net.mobilelize.multichat.client;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.mobilelize.fabriclib.client.LzAfk;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.fabriclib.text.LzText;
@@ -40,17 +39,6 @@ public class MultichatClient implements ClientModInitializer {
         });
 
         MessageAddedToTabCallback.EVENT.register((tab, message) -> PingPlayer.playForTab(tab));
-
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            if (overlay
-                    //|| CONFIG.modDisabled || !CONFIG.earlyMessageCapture
-            ) return;
-            MessageRouter.onMessageEvent(LzText.wrapMc(message));
-        });
-        ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, timestamp) -> {
-            //if (CONFIG.modDisabled || !CONFIG.earlyMessageCapture) return;
-            MessageRouter.onMessageEvent(LzText.wrapMc(message));
-        });
     }
 
     // ------------------------------------------------------------------
@@ -66,6 +54,7 @@ public class MultichatClient implements ClientModInitializer {
             .filter(t -> t instanceof NoteTab)
             .map(t -> (NoteTab) t)
             .collect(Collectors.toList());
+        CONFIG.activeNoteTabId = ChatManager.activeNoteTab != null ? ChatManager.activeNoteTab.id() : null;
         CONFIG.save();
     }
 
@@ -90,10 +79,21 @@ public class MultichatClient implements ClientModInitializer {
         Map<UUID, ChatTab> tabById = new HashMap<>();
         for (ChatTab t : ChatManager.getTabs()) tabById.put(t.id(), t);
 
+        ChatManager.activeNoteTab = null;
+        if (CONFIG.activeNoteTabId != null) {
+            ChatTab found = tabById.get(CONFIG.activeNoteTabId);
+            if (found instanceof NoteTab nt) ChatManager.activeNoteTab = nt;
+        }
+        if (ChatManager.activeNoteTab == null) {
+            ChatManager.activeNoteTab = (NoteTab) ChatManager.getTabs().stream()
+                .filter(t -> t instanceof NoteTab).findFirst().orElse(null);
+        }
+
         for (ChatPanel panel : ChatManager.getAllPanels()) {
             if (panel.panelContextTabId() != null)
                 panel.setPanelContextTab(tabById.get(panel.panelContextTabId()));
             panel.setActiveTabId(panel.activeTabIndex());
+            panel.setTabScrollOffset(panel.activeTabIndex());
         }
 
         //for (NoteTab nt : CONFIG.noteTabs) nt.rebuildMessages();

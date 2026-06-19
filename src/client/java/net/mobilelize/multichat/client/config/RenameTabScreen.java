@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
@@ -44,9 +45,9 @@ public class RenameTabScreen extends LzScreen {
 
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, height / 2 - 26, 0xFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, height / 2 - 26, Colors.TEXT_WHITE);
         field.render(ctx.mc(), mouseX, mouseY, delta);
     }
 

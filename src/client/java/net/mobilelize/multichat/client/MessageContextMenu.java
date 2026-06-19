@@ -75,14 +75,14 @@ public class MessageContextMenu {
 
         LzDraw.pushMatrix(ctx);
         LzDraw.translate(ctx, 0, 0, 400);
-        LzDraw.fill(ctx, mx, my, mx + menuW, my + menuH, 0xDD111111);
-        LzDraw.drawBorder(ctx, mx, my, mx + menuW, my + menuH, 0xFF666666);
+        LzDraw.fill(ctx, mx, my, mx + menuW, my + menuH, Colors.MENU_BG);
+        LzDraw.drawBorder(ctx, mx, my, mx + menuW, my + menuH, Colors.BORDER);
         for (int i = 0; i < items.size(); i++) {
             int iy = my + PADDING / 2 + i * ITEM_H;
             boolean hovered = mouseX >= mx && mouseX < mx + menuW
                            && mouseY >= iy && mouseY < iy + ITEM_H;
-            if (hovered) LzDraw.fill(ctx, mx + 1, iy, mx + menuW - 1, iy + ITEM_H, 0x44FFFFFF);
-            LzDraw.drawText(ctx, items.get(i), mx + PADDING, iy + 1, 0xFFEEEEEE);
+            if (hovered) LzDraw.fill(ctx, mx + 1, iy, mx + menuW - 1, iy + ITEM_H, Colors.ROW_HOVER_STRONG);
+            LzDraw.drawText(ctx, items.get(i), mx + PADDING, iy + 1, Colors.TEXT_LIGHT);
         }
         LzDraw.popMatrix(ctx);
     }
@@ -185,6 +185,7 @@ public class MessageContextMenu {
         if (allPanelIdx < 0) return;
 
         sourcePanel.setActiveTabId(allPanelIdx);
+        sourcePanel.scrollActiveTabIntoView();
         allTab.clearUnread();
         int maxScroll = Math.max(0, allMsgs.size() - sourcePanel.resolveLines());
         sourcePanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));

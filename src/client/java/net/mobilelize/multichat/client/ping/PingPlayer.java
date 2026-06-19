@@ -16,16 +16,11 @@ public class PingPlayer {
     private static final Map<ChatTab, Long> lastPlayed      = new WeakHashMap<>();
     private static final Map<ChatTab, Long> lastMessageTime = new WeakHashMap<>();
 
-    /** Epoch-ms deadline until which pings are suppressed during chat refresh. 0 = not suppressed.
-     *  Using a deadline instead of a boolean so a thrown exception can't leave it stuck forever. */
-    public static long suppressPingsUntil = 0L;
-
     public static void playForTab(ChatTab tab) {
         // Track message time regardless of enabled state — silence clock must run always
         long now     = System.currentTimeMillis();
         Long lastMsg = lastMessageTime.get(tab);
         lastMessageTime.put(tab, now);
-        if (now < suppressPingsUntil) return;
 
         if (!MultichatClient.CONFIG.pingEnabled) return;
         if (!tab.pingEnabled()) return;
@@ -71,14 +66,11 @@ public class PingPlayer {
 
         if (!anyCondition) return;
 
-        // Silence AND gate: gap between previous message and THIS message must be >= threshold
-        // Any message resets the clock — pure inter-message silence, not inter-ping silence
         if (condSilence) {
             boolean silenceMet = lastMsg == null || (now - lastMsg) >= (silenceThresholdSec * 1000L);
             if (!silenceMet) return;
         }
 
-        // Cooldown rate limiter: gap since last ping must be >= cooldown
         Long lastPinged = lastPlayed.get(tab);
         if (cooldownSec > 0 && lastPinged != null && (now - lastPinged) < (cooldownSec * 1000L)) return;
 

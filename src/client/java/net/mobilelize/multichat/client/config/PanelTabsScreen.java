@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
@@ -74,9 +75,9 @@ public class PanelTabsScreen extends LzScreen {
 
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, 0xFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 12, Colors.TEXT_WHITE);
 
         int lx = width / 2 - 130;
         List<ChatTab> tabList = tabs();
@@ -96,16 +97,16 @@ public class PanelTabsScreen extends LzScreen {
             boolean hov = !locked && mouseX >= lx && mouseX < lx + 260 && mouseY >= y && mouseY < y + ROW_HEIGHT;
 
             LzDraw.fill(ctx, lx, rowY1, lx + 260, rowY2,
-                locked ? 0x11FFFFFF : (on ? 0x4455FF88 : 0x22FFFFFF));
+                locked ? Colors.PANEL_TAB_LOCKED_FILL : (on ? Colors.PANEL_TAB_ENABLED_FILL : Colors.PANEL_TAB_DISABLED_FILL));
             LzDraw.drawBorder(ctx, lx, rowY1, lx + 260, rowY2,
-                locked ? 0x22666666 : (on ? 0x8833BB66 : 0x44888888));
+                locked ? Colors.PANEL_TAB_LOCKED_BORDER : (on ? Colors.PANEL_TAB_ENABLED_BORDER : Colors.PANEL_TAB_DISABLED_BORDER));
 
-            int nameCol = locked ? 0x55AAAAAA : switch (tab.type()) {
-                case ALL     -> 0xAADDFF;
-                case VANILLA -> 0xAADDFF;
-                case SEARCH  -> 0xAAFFDD;
-                case API     -> 0xFFCC88;
-                default      -> 0xFFFFFF;
+            int nameCol = locked ? Colors.PANEL_TAB_LOCKED_LABEL : switch (tab.type()) {
+                case ALL     -> Colors.TAB_ALL_TEXT;
+                case VANILLA -> Colors.TAB_ALL_TEXT;
+                case SEARCH  -> Colors.TAB_SEARCH_TEXT;
+                case API     -> Colors.TAB_API_TEXT;
+                default      -> Colors.TEXT_WHITE;
             };
             LzDraw.drawText(ctx, tab.name(), lx + 6, textY, nameCol);
 
@@ -119,26 +120,26 @@ public class PanelTabsScreen extends LzScreen {
             };
             if (!typeTag.isEmpty())
                 LzDraw.drawText(ctx, typeTag, lx + 6 + LzDraw.textWidth(tab.name() + " "), textY,
-                    locked ? 0xFF884444 : 0xFF666666);
+                    locked ? Colors.PANEL_TAB_LOCK_ICON : Colors.TEXT_DARK_GRAY);
 
             // Toggle button
             boolean hovBtn = hov && mouseX >= lx + 156 && mouseX < lx + 192;
             LzDraw.fill(ctx, lx + 156, rowY1 + 2, lx + 192, rowY2 - 2,
-                locked ? 0x22333333
-                       : on ? (hovBtn ? 0xCC55AA55 : 0xAA337733) : (hovBtn ? 0xCC555555 : 0x44333333));
+                locked ? Colors.PANEL_TAB_LOCKED_FILL
+                       : on ? (hovBtn ? Colors.TOGGLE_ON_HOVER : Colors.TOGGLE_ON_BG) : (hovBtn ? Colors.TOGGLE_OFF_HOVER : Colors.FMT_BTN_BG));
             LzDraw.drawCenteredText(ctx, LzText.literal(locked ? "--" : on ? "ON" : "OFF"), lx + 174, textY,
-                locked ? 0x44888888 : (on ? 0xAAFFAA : 0x888888));
+                locked ? Colors.PANEL_TAB_DISABLED_BORDER : (on ? Colors.PANEL_TAB_ON_TOGGLE_TEXT : Colors.TEXT_GRAY));
 
             // Panel Context button — FILTERED and API tabs only
             boolean canCtx = !locked && (tab.type() == TabType.FILTERED || tab.type() == TabType.API);
             if (canCtx) {
                 boolean isCtx   = panel.panelContextTab() == tab;
                 boolean hovCtx  = mouseX >= lx + 194 && mouseX < lx + 258 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-                int ctxBg = isCtx ? (hovCtx ? 0xCCFFAA00 : 0xAABB7700)
-                                  : (hovCtx ? 0xAA556677 : 0x66334455);
+                int ctxBg = isCtx ? (hovCtx ? Colors.CTX_ACTIVE_BG_HOVER : Colors.CTX_ACTIVE_BG)
+                                  : (hovCtx ? Colors.CTX_INACTIVE_BG_HOVER : Colors.CTX_INACTIVE_BG);
                 LzDraw.fill(ctx, lx + 194, rowY1 + 2, lx + 258, rowY2 - 2, ctxBg);
                 LzDraw.drawCenteredText(ctx, LzText.literal(isCtx ? "● CTX" : "Set CTX"), lx + 226, textY,
-                    isCtx ? 0xFFFFCC00 : 0xFF999999);
+                    isCtx ? Colors.CTX_ACTIVE_TEXT : Colors.TEXT_INACTIVE);
             }
         }
 
@@ -152,9 +153,9 @@ public class PanelTabsScreen extends LzScreen {
             int totalH = tabList.size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
-            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
+            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), Colors.SCROLLBAR_TRACK);
             LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
-                scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
+                scrollDragging ? Colors.SCROLLBAR_THUMB_DRAG : Colors.SCROLLBAR_THUMB);
         }
     }
 

@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
@@ -105,7 +106,7 @@ public class QuickActionsOverlay extends LzScreen {
 
     @Override
     public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        LzDraw.fill(ctx, 0, 0, width, height, 0x55000000);
+        LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
     }
 
     @Override
@@ -115,14 +116,14 @@ public class QuickActionsOverlay extends LzScreen {
         int x = overlayX(), y = overlayY(), h = totalH();
         ox = x; oy = y; oh = h;
 
-        LzDraw.fill(ctx, x, y, x + W, y + h, 0x88111111);
-        LzDraw.drawBorder(ctx, x, y, x + W, y + h, 0xFF666666);
+        LzDraw.fill(ctx, x, y, x + W, y + h, Colors.PANEL_BG);
+        LzDraw.drawBorder(ctx, x, y, x + W, y + h, Colors.BORDER);
 
-        LzDraw.drawText(ctx, LzText.literal("Quick Actions"), x + PAD, y + PAD, 0xFFFFCC44);
-        LzDraw.drawText(ctx, LzText.format("&7Selected text &8(editable)&7:"), x + PAD, y + PAD + 12, 0xFFFFFFFF);
+        LzDraw.drawText(ctx, LzText.literal("Quick Actions"), x + PAD, y + PAD, Colors.GOLD);
+        LzDraw.drawText(ctx, LzText.format("&7Selected text &8(editable)&7:"), x + PAD, y + PAD + 12, Colors.TEXT_WHITE);
         selectionField.render(ctx.mc(), mouseX, mouseY, delta);
 
-        LzDraw.fill(ctx, x + 1, y + HEADER_H - 1, x + W - 1, y + HEADER_H, 0x88111111);
+        LzDraw.fill(ctx, x + 1, y + HEADER_H - 1, x + W - 1, y + HEADER_H, Colors.PANEL_BG);
 
         List<MultiChatConfig.QuickActionConfig> list = actions();
         int listStart = listStartY();
@@ -131,7 +132,7 @@ public class QuickActionsOverlay extends LzScreen {
         LzDraw.enableScissor(ctx, x, listStart, x + W, listClipEnd);
         if (list.isEmpty()) {
             LzDraw.drawText(ctx, LzText.format("&7No actions. Add some in Settings → Quick Actions."),
-                x + PAD, listStart + 3, 0xFFFFFFFF);
+                x + PAD, listStart + 3, Colors.TEXT_WHITE);
         } else {
             for (int i = scrollOffset; i < list.size() && i < scrollOffset + visibleRows() + 1; i++) {
                 var a  = list.get(i);
@@ -140,13 +141,13 @@ public class QuickActionsOverlay extends LzScreen {
                 boolean hov = !sel && mouseX >= x && mouseX < x + W - SB_W - 1
                     && mouseY >= ry && mouseY < ry + ROW_H;
 
-                if (sel)      LzDraw.fill(ctx, x + 1, ry, x + W - SB_W - 2, ry + ROW_H, 0x66FFCC44);
-                else if (hov) LzDraw.fill(ctx, x + 1, ry, x + W - SB_W - 2, ry + ROW_H, 0x44FFFFFF);
+                if (sel)      LzDraw.fill(ctx, x + 1, ry, x + W - SB_W - 2, ry + ROW_H, Colors.ROW_SELECTED_GOLD);
+                else if (hov) LzDraw.fill(ctx, x + 1, ry, x + W - SB_W - 2, ry + ROW_H, Colors.ROW_HOVER_STRONG);
 
                 LzDraw.drawText(ctx, LzText.literal(a.name), x + PAD, ry + 3,
-                    sel ? 0xFFFFCC44 : (hov ? 0xFFFFFFFF : 0xFFDDDDDD));
+                    sel ? Colors.GOLD : (hov ? Colors.TEXT_WHITE : Colors.TEXT_SCROLLBAR_DRAG));
                 String tpl = a.template.length() > 30 ? a.template.substring(0, 28) + "..." : a.template;
-                LzDraw.drawText(ctx, LzText.literal(tpl), x + W / 2, ry + 3, sel ? 0xFFAA8822 : 0xFF888888);
+                LzDraw.drawText(ctx, LzText.literal(tpl), x + W / 2, ry + 3, sel ? Colors.TEXT_GOLD_DIM : Colors.TEXT_GRAY);
             }
         }
         LzDraw.disableScissor(ctx);
@@ -158,18 +159,18 @@ public class QuickActionsOverlay extends LzScreen {
             int trackH = cappedListH();
             int thumbH = Math.max(8, trackH * visibleRows() / list.size());
             int thumbY = listStart + scrollOffset * (trackH - thumbH) / max;
-            LzDraw.fill(ctx, sbX, listStart, sbX + SB_W, listStart + trackH, 0x33FFFFFF);
-            LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH, 0xBBAAAAAA);
+            LzDraw.fill(ctx, sbX, listStart, sbX + SB_W, listStart + trackH, Colors.SCROLLBAR_TRACK_DIM);
+            LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH, Colors.SCROLLBAR_THUMB);
         }
 
         // Command section
         if (selectedIdx >= 0 && commandField != null) {
             int divY = listEndY() - 1;
-            LzDraw.fill(ctx, x + 1, divY, x + W - 1, divY + 1, 0xFF444444);
-            LzDraw.drawText(ctx, LzText.format("&7Command &8(editable)&7:"), x + PAD, listEndY() + 3, 0xFFFFFFFF);
+            LzDraw.fill(ctx, x + 1, divY, x + W - 1, divY + 1, Colors.BORDER_DARK);
+            LzDraw.drawText(ctx, LzText.format("&7Command &8(editable)&7:"), x + PAD, listEndY() + 3, Colors.TEXT_WHITE);
             commandField.render(ctx.mc(), mouseX, mouseY, delta);
             LzDraw.drawCenteredText(ctx, LzText.format("&7Enter to run  ·  Esc to cancel"),
-                x + W / 2, cmdFieldY() + 22, 0xFFFFFFFF);
+                x + W / 2, cmdFieldY() + 22, Colors.TEXT_WHITE);
         }
     }
 

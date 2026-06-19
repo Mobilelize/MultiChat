@@ -12,6 +12,7 @@ import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.ChatManager;
@@ -86,8 +87,8 @@ public class PanelListScreen extends ConfigScreen {
     @Override
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
-        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, 0xAAFFCC);
-        LzDraw.drawCenteredText(ctx, LzText.format("&7layout panels  ·  click Tabs to assign"), width / 2, 21, 0xFFFFFF);
+        LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, Colors.TEAL);
+        LzDraw.drawCenteredText(ctx, LzText.format("&7layout panels  ·  click Tabs to assign"), width / 2, 21, Colors.TEXT_WHITE);
         if (panelNameField != null) panelNameField.render(ctx.mc(), mouseX, mouseY, delta);
 
         int lx = width / 2 - 200;
@@ -105,8 +106,8 @@ public class PanelListScreen extends ConfigScreen {
             int btnY1 = y + 3, btnY2 = y + ROW_HEIGHT - 3;
             int textY = y + (ROW_HEIGHT - 8) / 2;
 
-            int rowBg  = i == 0 ? 0x44AAAAFF : i == 1 ? 0x44BB88FF : 0x4488FFAA;
-            int rowBdr = i == 0 ? 0x886688CC : i == 1 ? 0x88886699 : 0x8855AA77;
+            int rowBg  = i == 0 ? Colors.PANEL_ROW_0_BG  : i == 1 ? Colors.PANEL_ROW_1_BG  : Colors.PANEL_ROW_2_BG;
+            int rowBdr = i == 0 ? Colors.PANEL_ROW_0_BORDER : i == 1 ? Colors.PANEL_ROW_1_BORDER : Colors.PANEL_ROW_2_BORDER;
 
             LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, rowBg);
             LzDraw.drawBorder(ctx, lx, rowY1, lx + 400, rowY2, rowBdr);
@@ -114,7 +115,7 @@ public class PanelListScreen extends ConfigScreen {
             // Hover highlight
             boolean hoverRow = mouseX >= lx && mouseX < lx + 400 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             if (hoverRow) {
-                int hoverTint = i == 0 ? 0x44AAAAFF : i == 1 ? 0x44BB88FF : 0x4488FFAA;
+                int hoverTint = i == 0 ? Colors.PANEL_ROW_0_BG : i == 1 ? Colors.PANEL_ROW_1_BG : Colors.PANEL_ROW_2_BG;
                 LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, hoverTint);
             }
 
@@ -125,32 +126,32 @@ public class PanelListScreen extends ConfigScreen {
             String nameStr  = displayName + " ";
             String countStr = "(" + tabCount + ") ";
             int nameX = lx + 6;
-            LzDraw.drawText(ctx, nameStr, nameX, textY, 0xFFFFFF);
+            LzDraw.drawText(ctx, nameStr, nameX, textY, Colors.TEXT_WHITE);
             int afterNameStr = nameX + LzDraw.textWidth(nameStr);
-            LzDraw.drawText(ctx, countStr, afterNameStr, textY, 0xFF888888);
+            LzDraw.drawText(ctx, countStr, afterNameStr, textY, Colors.TEXT_GRAY);
             int afterName = afterNameStr + LzDraw.textWidth(countStr);
-            LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.isEnabled() ? 0xFF55FF55 : 0xFFFF5555);
+            LzDraw.drawText(ctx, anchorTag, afterName, textY, panel.isEnabled() ? Colors.STATUS_ENABLED : Colors.STATUS_DISABLED);
 
             // Tabs button — always
             boolean hoverTabs = mouseX >= lx + 282 && mouseX < lx + 318 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            LzDraw.fill(ctx, lx + 282, btnY1, lx + 318, btnY2, hoverTabs ? 0xAA336688 : 0x66224466);
-            LzDraw.drawBorder(ctx, lx + 282, btnY1, lx + 318, btnY2, 0x88446688);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Tabs"), lx + 300, textY, 0xAADDFF);
+            LzDraw.fill(ctx, lx + 282, btnY1, lx + 318, btnY2, hoverTabs ? Colors.TABS_BTN_HOVER : Colors.TABS_BTN_BG);
+            LzDraw.drawBorder(ctx, lx + 282, btnY1, lx + 318, btnY2, Colors.TABS_BTN_BORDER);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Tabs"), lx + 300, textY, Colors.BLUE);
 
             // Edit button — always
             boolean hoverEdit = mouseX >= lx + 322 && mouseX < lx + 358 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, hoverEdit ? 0xAAFFCC44 : 0x44FFCC44);
-            LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, 0x88FFCC44);
-            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, 0xFFFFCC44);
+            LzDraw.fill(ctx, lx + 322, btnY1, lx + 358, btnY2, hoverEdit ? Colors.BTN_EDIT_HOVER : Colors.BTN_EDIT_BG);
+            LzDraw.drawBorder(ctx, lx + 322, btnY1, lx + 358, btnY2, Colors.BTN_EDIT_BORDER);
+            LzDraw.drawCenteredText(ctx, LzText.literal("Edit"), lx + 340, textY, Colors.GOLD);
 
             // Del button — only for extra panels (index >= 2)
             if (i >= 2) {
                 boolean hoverRemove   = mouseX >= lx + 362 && mouseX < lx + 398 && mouseY >= y && mouseY < y + ROW_HEIGHT;
                 boolean instantDelete = TabListScreen.quickDeleteMode || LzKeys.isCtrlDown();
-                int xBg  = instantDelete ? (hoverRemove ? 0xAAFF4444 : 0x66882222)
-                                         : (hoverRemove ? 0xAAFF8800 : 0x66552200);
-                int xBdr = instantDelete ? 0x88FF5555 : 0x88FFAA00;
-                int xCol = instantDelete ? 0xFFFF8888 : 0xFFFFAA44;
+                int xBg  = instantDelete ? (hoverRemove ? Colors.BTN_REMOVE_INSTANT_HOVER : Colors.BTN_REMOVE_INSTANT_BG)
+                                         : (hoverRemove ? Colors.BTN_DELETE_WARN_HOVER    : Colors.BTN_REMOVE_WARN_BG);
+                int xBdr = instantDelete ? Colors.BTN_DELETE_INSTANT_BORDER : Colors.BTN_DELETE_WARN_BORDER;
+                int xCol = instantDelete ? Colors.BTN_DELETE_INSTANT_TEXT   : Colors.BTN_DELETE_WARN_TEXT;
                 LzDraw.fill(ctx, lx + 362, btnY1, lx + 398, btnY2, xBg);
                 LzDraw.drawBorder(ctx, lx + 362, btnY1, lx + 398, btnY2, xBdr);
                 LzDraw.drawCenteredText(ctx, LzText.literal("Del"), lx + 380, textY, xCol);
@@ -167,10 +168,10 @@ public class PanelListScreen extends ConfigScreen {
             int totalH = panels.size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
-            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x44FFFFFF);
-            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), 0x88666666);
+            LzDraw.fill(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), Colors.SCROLLBAR_TRACK);
+            LzDraw.drawBorder(ctx, sbX, LIST_TOP, sbX + SB_W, listBottom(), Colors.BTN_BORDER);
             LzDraw.fill(ctx, sbX + 1, thumbY, sbX + SB_W - 1, thumbY + thumbH,
-                scrollDragging ? 0xFFDDDDDD : 0xBBAAAAAA);
+                scrollDragging ? Colors.SCROLLBAR_THUMB_DRAG : Colors.SCROLLBAR_THUMB);
         }
     }
 

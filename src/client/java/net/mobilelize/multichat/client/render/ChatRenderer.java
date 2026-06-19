@@ -19,6 +19,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 
 import net.minecraft.text.Style;
@@ -102,7 +103,7 @@ public class ChatRenderer {
             updateCursor(context, panel, hoveredIndex);
 
             int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panel.bgColor()) & 0xFFFFFF;
-            boolean effectiveFocused = focused || (activeTab instanceof NoteTab);
+            boolean effectiveFocused = focused || (activeTab instanceof NoteTab nt && nt.renderOutOfFocus());
             renderAt(context, currentTick, effectiveFocused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
@@ -137,8 +138,8 @@ public class ChatRenderer {
 
         int x = -4;
         if (hasLeft) {
-            LzDraw.fill(context, x, topY, x + ARROW_W, topY + TAB_HEIGHT, 0x88444444);
-            LzDraw.drawText(context, "<", x + 2, topY + 1, 0xFFCCCCCC);
+            LzDraw.fill(context, x, topY, x + ARROW_W, topY + TAB_HEIGHT, Colors.TAB_BAR_NO_COLOR_INACTIVE);
+            LzDraw.drawText(context, "<", x + 2, topY + 1, Colors.TAB_BAR_ARROW_TEXT);
             x += ARROW_W;
         }
 
@@ -179,8 +180,8 @@ public class ChatRenderer {
 
         if (hasRight) {
             int ax = tabAreaEnd;
-            LzDraw.fill(context, ax, topY, ax + ARROW_W, topY + TAB_HEIGHT, 0x88444444);
-            LzDraw.drawText(context, ">", ax + 2, topY + 1, 0xFFCCCCCC);
+            LzDraw.fill(context, ax, topY, ax + ARROW_W, topY + TAB_HEIGHT, Colors.TAB_BAR_NO_COLOR_INACTIVE);
+            LzDraw.drawText(context, ">", ax + 2, topY + 1, Colors.TAB_BAR_ARROW_TEXT);
         }
 
         LzDraw.popMatrix(context);
@@ -195,7 +196,7 @@ public class ChatRenderer {
 
     private static int tabBgColor(ChatTab tab, boolean active, ChatPanel panel) {
         int color = (tab.tabColor() == 0)
-            ? (active ? 0xBB888888 : 0x88444444)
+            ? (active ? Colors.TAB_BAR_NO_COLOR_ACTIVE : Colors.TAB_BAR_NO_COLOR_INACTIVE)
             : (active ? (0xCC000000 | (tab.tabColor() & 0xFFFFFF)) : (0x55000000 | (tab.tabColor() & 0xFFFFFF)));
         return applyTabOpacity(color, panel.tabBgOpacity(), MultichatClient.CONFIG.tabBgOpacity);
     }
@@ -203,9 +204,9 @@ public class ChatRenderer {
     private static int tabFgColor(ChatTab tab, boolean active, ChatPanel panel) {
         int color;
         if (tab.tabColor() == 0) {
-            color = active ? 0xFFFFFFFF : 0xFF999999;
+            color = active ? Colors.TEXT_WHITE : Colors.TEXT_INACTIVE;
         } else if (active) {
-            color = 0xFFFFFFFF;
+            color = Colors.TEXT_WHITE;
         } else {
             int rgb = tab.tabColor() & 0xFFFFFF;
             int r = ((rgb >> 16) & 0xFF) * 3 / 5;
@@ -258,14 +259,14 @@ public class ChatRenderer {
                     && visibleEntry != null && ChatRenderer.highlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x00FFAA00);
+                LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | Colors.HIGHLIGHT_SEARCH_RGB);
             }
             if (!ChatRenderer.copyHighlightEntries.isEmpty()
                     && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
                     && visibleEntry != null && ChatRenderer.copyHighlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | 0x0055CC55);
+                LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | Colors.HIGHLIGHT_NEW_RGB);
             }
 
             int flashAge = currentTick - panel.tabFlashTick();
@@ -273,13 +274,13 @@ public class ChatRenderer {
                 float t = (float) flashAge / FLASH_TICKS;
                 int flashAlpha = (int)(80 * (1f - t) * (1f - t));
                 if (flashAlpha > 0)
-                    LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (flashAlpha << 24) | 0x00CCCCCC);
+                    LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (flashAlpha << 24) | Colors.HIGHLIGHT_FLASH_RGB);
             }
 
             if (MultichatClient.CONFIG.selectionEnabled) {
                 int[] selRect = ChatSelection.lineHighlight(visible, s, panel);
                 if (selRect != null)
-                    LzDraw.fill(context, selRect[0], lineBot, selRect[1], lineTop, 0x7744AAFF);
+                    LzDraw.fill(context, selRect[0], lineBot, selRect[1], lineTop, Colors.SELECTION);
             }
 
             if (MultichatClient.CONFIG.showIndicators) {
