@@ -8,8 +8,8 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
-import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 import net.mobilelize.multichat.client.Colors;
+import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 
 public abstract class ConfigScreen extends LzScreen {
 

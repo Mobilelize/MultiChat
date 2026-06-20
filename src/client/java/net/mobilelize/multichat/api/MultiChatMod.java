@@ -1,17 +1,8 @@
 package net.mobilelize.multichat.api;
 
-import net.mobilelize.multichat.client.ChatManager;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.filter.WhitelistMode;
+import net.mobilelize.multichat.client.*;
 
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class MultiChatMod {
 

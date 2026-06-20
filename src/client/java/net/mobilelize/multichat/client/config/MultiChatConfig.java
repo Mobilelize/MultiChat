@@ -6,11 +6,7 @@ import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.search.SearchMode;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public class MultiChatConfig extends LzConfig {
 

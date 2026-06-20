@@ -1,9 +1,6 @@
 package net.mobilelize.multichat.client;
 
-import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
-import net.mobilelize.fabriclib.math.LzMath;
-import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 
 import java.util.ArrayList;

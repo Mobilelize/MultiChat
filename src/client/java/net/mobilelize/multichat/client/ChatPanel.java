@@ -4,6 +4,7 @@ import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
+
 import java.util.*;
 
 public class ChatPanel {

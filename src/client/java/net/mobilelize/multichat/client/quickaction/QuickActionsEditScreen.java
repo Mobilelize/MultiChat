@@ -13,7 +13,10 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.config.*;
+import net.mobilelize.multichat.client.config.ConfigScreen;
+import net.mobilelize.multichat.client.config.DeleteConfirmScreen;
+import net.mobilelize.multichat.client.config.MultiChatConfig;
+import net.mobilelize.multichat.client.config.TabListScreen;
 
 import java.util.Collections;
 import java.util.List;

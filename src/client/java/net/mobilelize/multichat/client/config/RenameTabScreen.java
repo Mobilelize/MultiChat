@@ -9,12 +9,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.Colors;
-import net.mobilelize.multichat.client.Keys;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.client.*;
 
 public class RenameTabScreen extends LzScreen {
 

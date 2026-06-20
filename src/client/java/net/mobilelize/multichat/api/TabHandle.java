@@ -4,12 +4,7 @@ import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.text.LzText;
-import net.mobilelize.multichat.client.ChatManager;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.TabMode;
-import net.mobilelize.multichat.client.TabVisibility;
+import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 
 import java.util.List;

@@ -2,18 +2,14 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
-import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.Colors;
-import net.mobilelize.multichat.client.Keys;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.HashMap;

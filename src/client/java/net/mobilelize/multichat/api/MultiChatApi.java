@@ -1,10 +1,6 @@
 package net.mobilelize.multichat.api;
 
-import net.mobilelize.multichat.client.ChatManager;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
 
 import java.util.Collections;

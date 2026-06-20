@@ -2,31 +2,21 @@ package net.mobilelize.multichat.mixin.client;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
-import net.mobilelize.fabriclib.client.LzChatLine;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.mobilelize.fabriclib.client.LzChat;
-import net.mobilelize.fabriclib.input.LzKeys;
+import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.multichat.api.MessageSentCallback;
 import net.mobilelize.multichat.api.TabChangedCallback;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatSelection;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.ContextMenu;
-import net.mobilelize.multichat.client.Keys;
-import net.mobilelize.multichat.client.MessageContextMenu;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
-import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.mouse.MouseClient;
+import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.render.ChatRenderer;
-import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.search.SearchOverlay;
-
-import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -34,6 +24,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.List;
 
 @Mixin(ChatScreen.class)
 public abstract class ChatScreenMixin {

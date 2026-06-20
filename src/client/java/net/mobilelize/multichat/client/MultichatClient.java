@@ -1,18 +1,15 @@
 package net.mobilelize.multichat.client;
 
-import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.mobilelize.fabriclib.client.LzAfk;
-import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.api.MessageAddedToTabCallback;
 import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
-import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.mouse.MouseClient;
 import net.mobilelize.multichat.client.ping.PingPlayer;
 

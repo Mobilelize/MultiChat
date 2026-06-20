@@ -2,11 +2,7 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.mobilelize.fabriclib.client.LzButton;
-import net.mobilelize.fabriclib.client.LzChat;
-import net.mobilelize.fabriclib.client.LzClient;
-import net.mobilelize.fabriclib.client.LzScreen;
-import net.mobilelize.fabriclib.client.LzTextField;
+import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzOrderedText;

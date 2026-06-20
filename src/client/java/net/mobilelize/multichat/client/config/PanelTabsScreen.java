@@ -2,25 +2,15 @@ package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
-import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.Colors;
-import net.mobilelize.multichat.client.Keys;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.client.*;
 
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class PanelTabsScreen extends LzScreen {
 

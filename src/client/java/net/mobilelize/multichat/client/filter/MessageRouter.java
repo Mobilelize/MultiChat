@@ -4,9 +4,15 @@ import net.minecraft.client.gui.hud.ChatHudLine;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.text.LzText;
-import net.mobilelize.multichat.client.*;
+import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.SearchTab;
+import net.mobilelize.multichat.client.TabType;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.TreeMap;
 
 public class MessageRouter {
 

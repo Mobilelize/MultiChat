@@ -9,7 +9,6 @@ import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.input.LzInputUtil;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.config.MultiChatConfig;
 import net.mobilelize.multichat.client.ping.PingPlayer;
 
 public class ConfigMenu {

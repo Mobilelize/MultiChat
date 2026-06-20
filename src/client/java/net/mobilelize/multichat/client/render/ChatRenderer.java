@@ -1,28 +1,14 @@
 package net.mobilelize.multichat.client.render;
 
-import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
-import net.mobilelize.fabriclib.client.LzChat;
-import net.mobilelize.fabriclib.client.LzChatEntry;
-import net.mobilelize.fabriclib.math.LzMath;
-import net.mobilelize.fabriclib.client.LzChatLine;
-import net.mobilelize.fabriclib.client.LzChatVisibility;
-import net.mobilelize.fabriclib.client.LzClient;
-import net.mobilelize.fabriclib.client.LzMessageIndicator;
-import net.mobilelize.fabriclib.client.LzOptions;
-import net.mobilelize.fabriclib.render.LzDraw;
-import net.mobilelize.fabriclib.text.LzText;
-import net.mobilelize.multichat.client.ChatManager;
-import net.mobilelize.multichat.client.ChatPanel;
-import net.mobilelize.multichat.client.ChatSelection;
-import net.mobilelize.multichat.client.ChatTab;
-import net.mobilelize.multichat.client.MultichatClient;
-import net.mobilelize.multichat.client.NoteTab;
-import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.Colors;
-import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
-
 import net.minecraft.text.Style;
+import net.mobilelize.fabriclib.client.*;
+import net.mobilelize.fabriclib.math.LzMath;
+import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.render.LzDrawContext;
+import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.*;
+import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;

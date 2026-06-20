@@ -10,9 +10,9 @@ import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatManager;
+import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.TabType;
-import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.filter.*;
 import net.mobilelize.multichat.client.ping.PingPlayer;
 

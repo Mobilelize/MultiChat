@@ -1,13 +1,12 @@
 package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.client.LzChatLine;
-import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.render.LzDraw;
+import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.multichat.client.config.NoteEditorScreen;
 import net.mobilelize.multichat.client.config.RenameTabScreen;
 import net.mobilelize.multichat.client.config.TabEditScreen;
-import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
 import java.util.ArrayList;
