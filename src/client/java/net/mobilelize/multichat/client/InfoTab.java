@@ -42,12 +42,18 @@ public class InfoTab extends ChatTab {
         lines.add(sectionHeader("►", "&c", "HIDE & DISABLE"));
         lines.add(blank());
         lines.add(LzText.empty()
-            .append(LzText.format("  &7Hide this tab: "))
-            .append(link("[ Hide Info Tab ]", "/multichat info hide",
-                "Remove this tab from Panel 2.")));
+            .append(LzText.format("  "))
+            .append(dangerLink("[ × Hide This Panel ]", "/multichat info panel hide",
+                "Disables Panel 2 entirely.")));
         lines.add(LzText.empty()
             .append(LzText.format("  &7Show it again: "))
-            .append(cmdLink("/multichat info show", "")));
+            .append(cmdLinkNoSpaces("/multichat info panel show", "")));
+        lines.add(LzText.empty()
+            .append(LzText.format("  &7Hide info tab only: "))
+            .append(link("[ Hide Info Tab ]", "/multichat info hide", "Remove this tab from Panel 2.")));
+        lines.add(LzText.empty()
+            .append(LzText.format("  &7Show info tab: "))
+            .append(cmdLinkNoSpaces("/multichat info show", "")));
         lines.add(LzText.format("  &7Disable mod:"));
         lines.add(LzText.empty()
             .append(LzText.format("    &81. "))
@@ -81,7 +87,9 @@ public class InfoTab extends ChatTab {
         lines.add(cmdLink("/multichat panels",     "Manage panels"));
         lines.add(cmdLink("/multichat layout",     "Move and resize panels in a GUI"));
         lines.add(cmdLink("/multichat help",       "Open full help guide"));
-        lines.add(cmdLink("/multichat info show",  "Show this tab on Panel 2"));
+        lines.add(cmdLink("/multichat info show",        "Show this tab on Panel 2"));
+        lines.add(cmdLink("/multichat info panel hide",  "Disable Panel 2"));
+        lines.add(cmdLink("/multichat info panel show",  "Enable Panel 2"));
         lines.add(blank());
         lines.add(cmdLink("/multichat tab",                "Open tab list"));
         lines.add(cmdLink("/multichat tab add",            "Add a new filtered tab"));
@@ -173,6 +181,8 @@ public class InfoTab extends ChatTab {
             .append(LzText.format("   "))
             .append(link("► Panels", "/multichat panels", "Configure panels."))
             .append(LzText.format("   "))
+            .append(link("► Layout", "/multichat layout", "Move and resize panels."))
+            .append(LzText.format("   "))
             .append(link("► Help", "/multichat help", "Open the full help guide.")));
         lines.add(blank());
         lines.add(rainbowTitle());
@@ -198,6 +208,16 @@ public class InfoTab extends ChatTab {
         cmdText.mc().styled(s -> s
             .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command))
             .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover.mc())));
+        return LzText.empty().append(cmdText).append(LzText.format("  &7" + desc));
+    }
+
+    private static LzText cmdLinkNoSpaces(String command, String desc) {
+        LzText hover = LzText.literal("Click to suggest command")
+                .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY));
+        LzMutableText cmdText = LzText.format("&3" + command);
+        cmdText.mc().styled(s -> s
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover.mc())));
         return LzText.empty().append(cmdText).append(LzText.format("  &7" + desc));
     }
 
@@ -230,6 +250,18 @@ public class InfoTab extends ChatTab {
             .append(LzText.format("&5&la&r"))
             .append(LzText.format("&d&lt&r"))
             .append(LzText.format("  &6&l✦&r"));
+    }
+
+    private static LzMutableText dangerLink(String label, String command, String tooltip) {
+        LzText hoverText = LzText.literal(tooltip)
+            .withStyle(LzStyle.ofFormatting(LzFormatting.RED));
+        LzMutableText t = LzText.literal(label);
+        t.mc().styled(s -> s
+            .withColor(0xFF5555)
+            .withBold(true)
+            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
+            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverText.mc())));
+        return t;
     }
 
     private static LzMutableText link(String label, String command, String tooltip) {

@@ -14,7 +14,7 @@ import java.util.Map;
  * Quick-start:
  * <pre>{@code
  * MultiChatMod api = MultiChatApi.register("mymod");
- * TabHandle tab = api.registerTab("alerts", "Alerts", TabVisibility.BOTH, 0xFF5500);
+ * TabHandle tab = api.registerTab("alerts", "Alerts", 0, 1);  // panel IDs: 0=left, 1=right
  * tab.sendMessage(Text.literal("Hello from mymod!"));
  *
  * MultiChatApi.MESSAGE_RECEIVED.register(msg -> false);  // observe all incoming chat
@@ -125,6 +125,18 @@ public final class MultiChatApi {
 
     /** The active context tab (prefix applied to outgoing messages), or {@code null} if none. */
     public static ChatTab getContextTab() { return ChatManager.contextTab; }
+
+    /**
+     * Called internally when an API tab is removed (by player or via unregisterTab).
+     * Cleans up the owning mod's handle map and fires any onRemoved callback.
+     */
+    public static void notifyTabRemoved(ChatTab tab) {
+        if (tab.apiId() == null) return;
+        int colon = tab.apiId().indexOf(':');
+        if (colon < 0) return;
+        MultiChatMod mod = MODS.get(tab.apiId().substring(0, colon));
+        if (mod != null) mod.notifyTabRemoved(tab);
+    }
 
     /** All tabs visible on the given panel (by panel ID). Includes all tab types. */
     public static List<ChatTab> getTabsOnPanel(int panelId) {

@@ -17,6 +17,8 @@ public class TabHandle {
     private final String fullId;
     private final ChatTab tab;
 
+    private Runnable onRemovedCallback;
+
     TabHandle(String fullId, ChatTab tab) {
         this.fullId = fullId;
         this.tab    = tab;
@@ -98,17 +100,10 @@ public class TabHandle {
         return this;
     }
 
-    /** Replace the full set of panels this tab is visible on by panel IDs (0 = left, 1 = right). */
+    /** Replace the full set of panels this tab is visible on by panel IDs. */
     public TabHandle setVisibleOnPanels(int... panelIds) {
         tab.visibleOnPanels().clear();
         for (int id : panelIds) tab.visibleOnPanels().add(id);
-        return this;
-    }
-
-    /** Convenience overload using {@link TabVisibility} enum. */
-    public TabHandle setVisibleOnPanels(TabVisibility visibility) {
-        tab.visibleOnPanels().clear();
-        tab.visibleOnPanels().addAll(TabVisibility.toPanelIds(visibility));
         return this;
     }
 
@@ -279,7 +274,7 @@ public class TabHandle {
     // Custom content
     // ------------------------------------------------------------------
 
-    /** Switch to CUSTOM mode and set displayed lines. Scroll is preserved unless resetScroll is true. */
+    /** Switch to custom content mode and set displayed lines. Scroll is preserved unless resetScroll is true. */
     public TabHandle setContent(List<LzText> lines) {
         return setContent(lines, false);
     }
@@ -292,13 +287,20 @@ public class TabHandle {
         return this;
     }
 
-    /** Switch display mode. ROUTED_MESSAGES shows routed history; CUSTOM_CONTENT shows content set via setContent. */
-    public TabHandle setMode(TabMode mode) {
-        tab.setContentMode(mode);
+    /** Switch to custom content mode (shows lines set via {@link #setContent}). */
+    public TabHandle useCustomContent() {
+        tab.setContentMode(TabMode.CUSTOM_CONTENT);
         return this;
     }
 
-    public TabMode getMode() { return tab.contentMode(); }
+    /** Switch back to routed messages mode (shows incoming chat history). */
+    public TabHandle useRoutedMessages() {
+        tab.setContentMode(TabMode.ROUTED_MESSAGES);
+        return this;
+    }
+
+    /** True if this tab is currently showing custom content rather than routed messages. */
+    public boolean isCustomContent() { return tab.contentMode() == TabMode.CUSTOM_CONTENT; }
 
     /** Generate a new UUID string to use as a click-event action id. Pass it to /multichat execute. */
     public String newActionId() {
@@ -327,6 +329,32 @@ public class TabHandle {
     // ------------------------------------------------------------------
     // Accessors
     // ------------------------------------------------------------------
+
+    /**
+     * Allow or prevent the player from deleting this tab via the tab list or /multichat tab remove.
+     * Default is {@code false} — the player cannot delete API tabs unless the API explicitly allows it.
+     */
+    public TabHandle setPlayerDeletable(boolean v) {
+        tab.setPlayerDeletable(v);
+        return this;
+    }
+
+    public boolean isPlayerDeletable() { return tab.playerDeletable(); }
+
+    /**
+     * Register a callback that fires when this tab is removed — either by the player (if playerDeletable)
+     * or by {@link net.mobilelize.multichat.api.MultiChatMod#unregisterTab}.
+     * Only one callback is stored; calling this again replaces the previous one.
+     */
+    public TabHandle onRemoved(Runnable callback) {
+        this.onRemovedCallback = callback;
+        return this;
+    }
+
+    /** Called internally when the tab is removed. */
+    void fireRemoved() {
+        if (onRemovedCallback != null) onRemovedCallback.run();
+    }
 
     public String  getId()   { return fullId; }
     public ChatTab getTab()  { return tab; }

@@ -28,7 +28,11 @@ public class MultiChatMod {
     }
 
     private TabHandle registerTabInternal(String name, String displayName, Set<Integer> defaultPanels) {
-        if (handles.containsKey(name)) return handles.get(name);
+        TabHandle existing = handles.get(name);
+        if (existing != null) {
+            if (existing.isReady()) return existing;
+            handles.remove(name); // tab was removed externally — re-register
+        }
 
         String fullId = modId + ":" + name;
         ChatTab saved = findSaved(fullId);
@@ -82,6 +86,18 @@ public class MultiChatMod {
         if (handle == null) return;
         ChatManager.getTabs().remove(handle.getTab());
         MultichatClient.saveTabsToConfig();
+        handle.fireRemoved();
+    }
+
+    /** Called by MultiChatApi when a tab is removed externally (e.g. player deletes it). */
+    void notifyTabRemoved(ChatTab tab) {
+        handles.entrySet().removeIf(e -> {
+            if (e.getValue().getTab() == tab) {
+                e.getValue().fireRemoved();
+                return true;
+            }
+            return false;
+        });
     }
 
     public TabHandle getTab(String name) { return handles.get(name); }

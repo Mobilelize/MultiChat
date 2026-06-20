@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.api.MultiChatApi;
 import net.mobilelize.multichat.client.*;
 
 import java.util.Collections;
@@ -298,7 +299,8 @@ public class TabListScreen extends ConfigScreen {
             boolean isActive  = isNotes && tab == ChatManager.activeNoteTab;
             boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API
                              || tab.type() == TabType.ALL || isNotes;
-            boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || isNotes;
+            boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || isNotes
+                             || (tab.type() == TabType.API && tab.playerDeletable());
 
             boolean hoverActive = isNotes && mouseX >= lx + 282 && mouseX < lx + 318 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverEdit   = canEdit   && mouseX >= lx + 322 && mouseX < lx + 358 && mouseY >= y && mouseY < y + ROW_HEIGHT;
@@ -507,6 +509,9 @@ public class TabListScreen extends ConfigScreen {
             }
             MultichatClient.saveTabsToConfig();
         } else if (tab.type() == TabType.FILTERED) {
+            MultichatClient.saveTabsToConfig();
+        } else if (tab.type() == TabType.API) {
+            MultiChatApi.notifyTabRemoved(tab);
             MultichatClient.saveTabsToConfig();
         }
         clearAndInit();

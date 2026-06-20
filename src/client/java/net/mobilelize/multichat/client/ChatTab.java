@@ -43,6 +43,7 @@ public class ChatTab {
     private final TabType    type;
     private final UUID       tabId                   = ChatManager.getNextTabId();
     private String           apiId                   = null;
+    private boolean          playerDeletable         = false;
     private final Set<Integer> visibleOnPanels       = new LinkedHashSet<>();
     private final FilterRuleSet filterRules          = new FilterRuleSet();
     private boolean          differenceMode          = false;
@@ -91,8 +92,10 @@ public class ChatTab {
     public void    setName(String v)  { name = v != null ? v : ""; }
     public TabType type()             { return type; }
     public UUID    id()               { return tabId; }
-    public String  apiId()            { return apiId; }
-    public void    setApiId(String v) { apiId = v; }
+    public String  apiId()                     { return apiId; }
+    public void    setApiId(String v)          { apiId = v; }
+    public boolean playerDeletable()           { return playerDeletable; }
+    public void    setPlayerDeletable(boolean v) { playerDeletable = v; }
 
     public boolean isSystemTab() {
         return type == TabType.ALL || type == TabType.VANILLA || type == TabType.INFO;

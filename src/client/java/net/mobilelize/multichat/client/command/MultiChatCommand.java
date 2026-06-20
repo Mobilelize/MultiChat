@@ -100,7 +100,12 @@ public class MultiChatCommand {
                     .then(literal("hide")
                         .executes(MultiChatCommand::infoHide))
                     .then(literal("show")
-                        .executes(MultiChatCommand::infoShow)))
+                        .executes(MultiChatCommand::infoShow))
+                    .then(literal("panel")
+                        .then(literal("hide")
+                            .executes(MultiChatCommand::infoPanelHide))
+                        .then(literal("show")
+                            .executes(MultiChatCommand::infoPanelShow))))
                 .then(literal("execute")
                     .then(argument("id", StringArgumentType.word())
                         .executes(MultiChatCommand::executeAction)))
@@ -172,7 +177,8 @@ public class MultiChatCommand {
         if (panel == null) { feedback(ctx, "No focused panel."); return 0; }
         ChatTab tab = panel.getActiveTab();
         if (tab == null) { feedback(ctx, "No active tab."); return 0; }
-        if (tab.type() != TabType.FILTERED && tab.type() != TabType.NOTES && tab.type() != TabType.SEARCH) {
+        boolean apiDeletable = tab.type() == TabType.API && tab.playerDeletable();
+        if (tab.type() != TabType.FILTERED && tab.type() != TabType.NOTES && tab.type() != TabType.SEARCH && !apiDeletable) {
             feedback(ctx, "Cannot remove tab [" + tab.name() + "]."); return 0;
         }
         ChatManager.getTabs().remove(tab);
@@ -180,6 +186,7 @@ public class MultiChatCommand {
             ChatManager.activeNoteTab = (NoteTab) ChatManager.getTabs().stream()
                 .filter(t -> t.type() == TabType.NOTES).findFirst().orElse(null);
         }
+        if (tab.type() == TabType.API) net.mobilelize.multichat.api.MultiChatApi.notifyTabRemoved(tab);
         MultichatClient.saveTabsToConfig();
         feedback(ctx, "Removed tab [" + tab.name() + "].");
         return 1;
@@ -219,6 +226,24 @@ public class MultiChatCommand {
         it.visibleOnPanels().remove(1);
         MultichatClient.saveTabsToConfig();
         feedback(ctx, "Info tab hidden from Panel 2.");
+        return 1;
+    }
+
+    private static int infoPanelHide(CommandContext<FabricClientCommandSource> ctx) {
+        ChatPanel panel = ChatManager.getAllPanels().stream().filter(p -> p.id() == 1).findFirst().orElse(null);
+        if (panel == null) { feedback(ctx, "Panel 2 not found."); return 0; }
+        panel.setEnabled(false);
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Panel 2 hidden.");
+        return 1;
+    }
+
+    private static int infoPanelShow(CommandContext<FabricClientCommandSource> ctx) {
+        ChatPanel panel = ChatManager.getAllPanels().stream().filter(p -> p.id() == 1).findFirst().orElse(null);
+        if (panel == null) { feedback(ctx, "Panel 2 not found."); return 0; }
+        panel.setEnabled(true);
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Panel 2 shown.");
         return 1;
     }
 
