@@ -7,6 +7,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -204,6 +205,75 @@ public class TabHandle {
     public int     getPingSilenceThresholdSec()  { return tab.pingSilenceThresholdSec(); }
     public int     getPingAfkThresholdSec()      { return tab.pingAfkThresholdSec(); }
     public boolean getPingUseGlobalConditions()  { return tab.pingUseGlobalConditions(); }
+
+    // ------------------------------------------------------------------
+    // Message access & control
+    // ------------------------------------------------------------------
+
+    /** All stored messages as text, newest first. */
+    public List<LzText> getMessages() {
+        return tab.messages().stream().map(ChatTab.MessageEntry::content).toList();
+    }
+
+    /** All stored message entries, newest first. Full data including rendered form and chat entry. */
+    public List<ChatTab.MessageEntry> getMessageEntries() {
+        return Collections.unmodifiableList(tab.messages());
+    }
+
+    /** Clear all messages from this tab and all panels. No ping, no event. */
+    public TabHandle clearMessages() {
+        tab.clearMessages();
+        for (ChatPanel panel : ChatManager.getAllPanels()) panel.clearTabLines(tab);
+        return this;
+    }
+
+    /**
+     * Add a message silently — no ping, no {@code MessageAddedToTab} event.
+     * Respects message cap.
+     */
+    public TabHandle addMessageSilent(LzText message) {
+        int tick = LzChat.ticks();
+        LzChatEntry entry = new LzChatEntry(tick, message, null);
+        ChatTab.MessageEntry me = new ChatTab.MessageEntry(message, message, entry);
+        tab.addFirst(me);
+        if (tab.messageCap() > 0 && tab.messageCount() > tab.messageCap()) tab.removeLast();
+        for (ChatPanel panel : ChatManager.getAllActivePanels()) panel.addTabMessage(tab, me);
+        return this;
+    }
+
+    /** Add a vanilla {@link Text} message silently. */
+    public TabHandle addMessageSilent(Text message) {
+        return addMessageSilent(LzText.wrapMc(message));
+    }
+
+    /** Add a plain string message silently. */
+    public TabHandle addMessageSilent(String message) {
+        return addMessageSilent(LzText.literal(message));
+    }
+
+    /**
+     * Replace all stored messages with the provided list (pass oldest → newest order).
+     * No pings, no events. Ignores message cap — caller controls the size.
+     */
+    public TabHandle setMessages(List<LzText> messages) {
+        tab.clearMessages();
+        for (ChatPanel panel : ChatManager.getAllPanels()) panel.clearTabLines(tab);
+        int tick = LzChat.ticks();
+        for (LzText msg : messages) {
+            LzChatEntry entry = new LzChatEntry(tick, msg, null);
+            tab.addFirst(new ChatTab.MessageEntry(msg, msg, entry));
+        }
+        for (ChatPanel panel : ChatManager.getAllActivePanels()) panel.rebuildTabLines(tab);
+        return this;
+    }
+
+    // ------------------------------------------------------------------
+    // Unread
+    // ------------------------------------------------------------------
+
+    public int getUnreadCount() { return tab.unreadCount(); }
+
+    public TabHandle clearUnread() { tab.clearUnread(); return this; }
 
     // ------------------------------------------------------------------
     // Custom content

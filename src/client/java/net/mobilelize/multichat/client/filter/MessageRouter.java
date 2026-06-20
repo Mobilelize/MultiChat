@@ -4,6 +4,7 @@ import net.minecraft.client.gui.hud.ChatHudLine;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.api.MessageReceivedCallback;
 import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatTab;
 import net.mobilelize.multichat.client.SearchTab;
@@ -25,6 +26,7 @@ public class MessageRouter {
 
     public static void routeMessages(ChatHudLine message) {
         final LzText content  = LzText.wrapMc(message.content());
+        if (MessageReceivedCallback.EVENT.invoker().onMessageReceived(content)) return;
         final int    tick     = message.creationTick();
         final LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(message.indicator());
 

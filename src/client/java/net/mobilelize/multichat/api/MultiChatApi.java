@@ -67,6 +67,13 @@ public final class MultiChatApi {
     public static final net.fabricmc.fabric.api.event.Event<TabActionCallback> TAB_ACTION =
         TabActionCallback.EVENT;
 
+    /**
+     * Fires when the focused panel changes (Ctrl+Arrow or tab click that switches focus).
+     * {@code previous} is null if no panel was focused before.
+     */
+    public static final net.fabricmc.fabric.api.event.Event<PanelFocusedCallback> PANEL_FOCUSED =
+        PanelFocusedCallback.EVENT;
+
     // ------------------------------------------------------------------
     // Read-only access
     // ------------------------------------------------------------------
@@ -111,5 +118,18 @@ public final class MultiChatApi {
     public static ChatTab getAllTab() {
         return ChatManager.getTabs().stream()
             .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
+    }
+
+    /** The currently focused panel (last clicked or Ctrl+Arrow'd into), or {@code null}. */
+    public static ChatPanel getFocusedPanel() { return ChatManager.focusedPanel; }
+
+    /** The active context tab (prefix applied to outgoing messages), or {@code null} if none. */
+    public static ChatTab getContextTab() { return ChatManager.contextTab; }
+
+    /** All tabs visible on the given panel (by panel ID). Includes all tab types. */
+    public static List<ChatTab> getTabsOnPanel(int panelId) {
+        return ChatManager.getTabs().stream()
+            .filter(t -> t.visibleOnPanels().contains(panelId))
+            .toList();
     }
 }

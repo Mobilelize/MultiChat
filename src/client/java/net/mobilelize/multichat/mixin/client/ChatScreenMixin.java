@@ -11,6 +11,7 @@ import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.multichat.api.MessageSentCallback;
+import net.mobilelize.multichat.api.PanelFocusedCallback;
 import net.mobilelize.multichat.api.TabChangedCallback;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.mouse.MouseClient;
@@ -154,9 +155,11 @@ public abstract class ChatScreenMixin {
                 if (candidates.size() > 1) {
                     int idx = candidates.indexOf(ChatManager.focusedPanel);
                     if (idx < 0) idx = 0;
+                    ChatPanel prevPanel = ChatManager.focusedPanel;
                     ChatManager.focusedPanel = goRight
                         ? candidates.get((idx + 1) % candidates.size())
                         : candidates.get((idx - 1 + candidates.size()) % candidates.size());
+                    PanelFocusedCallback.EVENT.invoker().onPanelFocused(ChatManager.focusedPanel, prevPanel);
                     if (MultichatClient.CONFIG.flashOnPanelFocus)
                         ChatManager.focusedPanel.flash(ChatRenderer.currentTick);
                     if (MultichatClient.CONFIG.panelContextEnabled) {
@@ -380,8 +383,11 @@ public abstract class ChatScreenMixin {
                         panel.setActiveTabId(i);
                         panel.scrollActiveTabIntoView();
                         tab.clearUnread();
-                        if (MultichatClient.CONFIG.switchFocusedPanelOnTabClick)
+                        if (MultichatClient.CONFIG.switchFocusedPanelOnTabClick) {
+                            ChatPanel prevPanel = ChatManager.focusedPanel;
                             ChatManager.focusedPanel = panel;
+                            if (!wasFocused) PanelFocusedCallback.EVENT.invoker().onPanelFocused(panel, prevPanel);
+                        }
                         if (!wasFocused && MultichatClient.CONFIG.switchFocusedPanelOnTabClick
                                 && MultichatClient.CONFIG.flashOnPanelFocus) {
                             panel.flash(ChatRenderer.currentTick);
