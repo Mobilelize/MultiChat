@@ -184,11 +184,10 @@ public class ChatHudMixin {
             return;
         }
 
-        int windowWidth  = LzClient.scaledWindowWidth();
-        int windowHeight = LzClient.scaledWindowHeight();
-
-        ChatRenderer.IndicatorResult result = ChatRenderer.resolveIndicatorAt(mouseX, mouseY, windowWidth, windowHeight);
-        if (result.found()) {
+        // Read from render-time cache. To migrate when getIndicatorAt is removed in a newer MC
+        // version: delete this hook and pass lastHoveredIndicator to the Interactable consumer instead.
+        ChatRenderer.IndicatorResult result = ChatRenderer.lastHoveredIndicator;
+        if (result != null && result.found()) {
             cir.setReturnValue(result.indicator() != null ? result.indicator().mc() : null);
         } else if (!leftIsVanilla) {
             cir.setReturnValue(null);
@@ -221,10 +220,10 @@ public class ChatHudMixin {
         boolean leftIsVanilla = leftActive != null && mpS.isEnabled()
             && leftActive.type() == TabType.VANILLA;
 
-        int windowWidth  = LzClient.scaledWindowWidth();
-        int windowHeight = LzClient.scaledWindowHeight();
-
-        Style style = ChatRenderer.resolveStyleAt(x, y, windowWidth, windowHeight);
+        // Read from render-time cache. To migrate when getTextStyleAt is removed in a newer MC
+        // version: delete this hook and pass lastHoveredStyle to the Interactable/Consumer<Style>
+        // callback instead.
+        Style style = ChatRenderer.lastHoveredStyle;
         if (style != null) {
             cir.setReturnValue(style);
         } else if (!leftIsVanilla) {

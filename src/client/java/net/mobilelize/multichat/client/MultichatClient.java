@@ -158,6 +158,10 @@ public class MultichatClient implements ClientModInitializer {
             p.setAnchor(ChatPanel.Anchor.RIGHT);
             p.setName("Second");
             panels.add(1, p);
+            List<ChatTab> visible = p.getVisibleTabs();
+            for (int i = 0; i < visible.size(); i++) {
+                if (visible.get(i) instanceof InfoTab) { p.setActiveTabId(i); break; }
+            }
         }
     }
 

@@ -7,7 +7,6 @@ import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.MessageAddedToTabCallback;
-import net.mobilelize.multichat.client.ping.PingPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -141,13 +140,14 @@ public class ChatManager {
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
                 if (!tab.matchesText(text) || !tab.matchesTime(me.entry().creationTick)) continue;
+                if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(text, me.entry().indicator)) continue;
                 newest.put(text, me);
                 counts.merge(text, 1, Integer::sum);
             }
-            List<Map.Entry<String, ChatTab.MessageEntry>> entries = new ArrayList<>(newest.entrySet());
-            for (int i = entries.size() - 1; i >= 0; i--) {
-                ChatTab.MessageEntry me = entries.get(i).getValue();
-                int count = counts.get(entries.get(i).getKey());
+            // Forward iteration: oldest unique first → addFirst each → newest ends at index 0
+            for (Map.Entry<String, ChatTab.MessageEntry> e : newest.entrySet()) {
+                ChatTab.MessageEntry me = e.getValue();
+                int count = counts.get(e.getKey());
                 LzText base = tab.showTimestamps()
                     ? stampedText(me.entry().creationTick, me.entry().originalContent, me.entry().indicator)
                     : me.entry().originalContent;
@@ -246,6 +246,59 @@ public class ChatManager {
 
         for (ChatPanel panel : getAllActivePanels())
             panel.rebuildTabLines(tab);
+    }
+
+    // ------------------------------------------------------------------
+    // Incremental collapse-identical update for live search routing
+    // ------------------------------------------------------------------
+
+    public static void addSearchMessageWithCollapse(SearchTab st, int tick, LzText content, LzMessageIndicator indicator, LzText rawLzText, LzChatEntry entry) {
+        final String text = rawLzText.mc().getString();
+
+        ChatTab.MessageEntry existingEntry = null;
+        for (ChatTab.MessageEntry me : st.messages()) {
+            if (me.entry().originalContent != null &&
+                    me.entry().originalContent.mc().getString().equals(text)) {
+                existingEntry = me;
+                break;
+            }
+        }
+
+        int newCount;
+        if (existingEntry != null) {
+            final LzChatEntry existingLzEntry = existingEntry.entry();
+            newCount = st.collapseCounts().getOrDefault(existingLzEntry, 1) + 1;
+            st.messages().remove(existingEntry);
+            for (ChatPanel p : getAllActivePanels()) {
+                List<LzChatLine> lines = p.getTabLines(st);
+                if (lines == null) continue;
+                int removeStart = -1;
+                for (int li = 0; li < lines.size(); li++) {
+                    if (lines.get(li).entry() == existingLzEntry) { removeStart = li; break; }
+                }
+                int before = lines.size();
+                lines.removeIf(line -> line.entry() == existingLzEntry);
+                int removed = before - lines.size();
+                if (removed > 0 && removeStart >= 0) {
+                    int scrolled = p.getScrolledLines(st);
+                    if (scrolled > 0 && removeStart < scrolled) {
+                        int overlap = Math.min(removed, scrolled - removeStart);
+                        p.setScrolledLines(st, Math.max(0, scrolled - overlap));
+                    }
+                }
+            }
+            st.collapseCounts().remove(existingLzEntry);
+        } else {
+            newCount = 1;
+        }
+
+        LzText base = st.showTimestamps() ? stampedText(tick, rawLzText, indicator) : rawLzText;
+        LzText rendered = newCount > 1
+                ? LzText.wrapMc(base.mc().copy().append(LzText.format(" " + MultichatClient.CONFIG.collapseCounterFormat.replace("{count}", String.valueOf(newCount))).mc()))
+                : base;
+        ChatTab.MessageEntry newMsg = new ChatTab.MessageEntry(rendered, content, entry);
+        if (newCount > 1) st.collapseCounts().put(entry, newCount);
+        addNewMessage(st, newMsg);
     }
 
     // ------------------------------------------------------------------

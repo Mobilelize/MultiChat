@@ -179,15 +179,6 @@ public class ConfigMenu {
         ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
 
         advanced.addEntry(eb.startBooleanToggle(
-                LzText.literal("Server Network Message Capture").mc(),
-                MultichatClient.CONFIG.earlyMessageCapture)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Use Fabric API to capture server network messages before other mods modify them. Fixes filter rules when other mods prepend text to messages (e.g. timestamps).").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.earlyMessageCapture = v)
-                .build());
-
-
-        advanced.addEntry(eb.startBooleanToggle(
                 LzText.literal("Log API Messages").mc(),
                 MultichatClient.CONFIG.logApiMessages)
                 .setDefaultValue(true)

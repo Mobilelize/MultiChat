@@ -56,12 +56,7 @@ public class MessageRouter {
                     final SearchTab st = (SearchTab) tab;
                     if (!st.matches(fullText, indicator, tick)) break;
                     if (st.collapseIdentical()) {
-                        final Map<ChatPanel, Integer> savedScrolls = new HashMap<>();
-                        for (ChatPanel p : ChatManager.getAllActivePanels()) savedScrolls.put(p, p.getScrolledLines(st));
-                        ChatManager.refilterSearch(st);
-                        int maxScroll = Math.max(0, st.messageCount() - 1);
-                        for (ChatPanel p : ChatManager.getAllActivePanels())
-                            p.setScrolledLines(st, Math.min(savedScrolls.getOrDefault(p, 0), maxScroll));
+                        ChatManager.addSearchMessageWithCollapse(st, tick, content, indicator, rawLzText, sharedEntry);
                     } else {
                         ChatManager.processMessage(st, tick, content, indicator, rawLzText, sharedEntry);
                     }

@@ -44,7 +44,6 @@ public class MultiChatConfig extends LzConfig {
     public boolean switchFocusedPanelOnTabClick = true;
     public boolean flashOnPanelFocus            = true;
     public boolean showContextDisplay           = true;
-    public boolean earlyMessageCapture          = true;
     public boolean panelContextEnabled          = true;
     public boolean logApiMessages               = true;
 

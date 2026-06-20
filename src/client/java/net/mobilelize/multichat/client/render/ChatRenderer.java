@@ -39,6 +39,12 @@ public class ChatRenderer {
 
     public static int lastMouseX = 0;
 
+    // Resolved once per render frame so getTextStyleAt / getIndicatorAt hooks can read from cache.
+    // When those hooks are removed in a newer MC version, pass these to the Interactable/Consumer
+    // callback that replaces them instead of reading from cache in a hook.
+    public static @Nullable Style           lastHoveredStyle     = null;
+    public static @Nullable IndicatorResult lastHoveredIndicator = null;
+
     public static final int TAB_HEIGHT = 10;
     public static final int ARROW_W    = 10;
     private static final int FLASH_TICKS = 12;
@@ -55,6 +61,8 @@ public class ChatRenderer {
 
     public static void render(ChatHud chat, LzDrawContext context, int currentTick,
                                int mouseX, int mouseY, boolean focused, boolean skipLeftMessages) {
+        lastHoveredStyle     = null;
+        lastHoveredIndicator = null;
         ChatHudAccessor accessor = (ChatHudAccessor) chat;
 
         lastMouseX = mouseX;
@@ -109,6 +117,11 @@ public class ChatRenderer {
                     focused);
         }
 
+        if (focused) {
+            lastHoveredStyle     = resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
+            lastHoveredIndicator = resolveIndicatorAt(mouseX, mouseY, windowWidth, windowHeight);
+        }
+
         LzClient.mc().getProfiler().pop();
     }
 
@@ -155,26 +168,6 @@ public class ChatRenderer {
             lastRendered = i;
         }
         panel.setTabLastRendered(lastRendered);
-
-        if (hasRight && lastRendered + 1 < visibleTabs.size()) {
-            int remaining = tabAreaEnd - x;
-            if (remaining > 4) {
-                ChatTab nextTab = visibleTabs.get(lastRendered + 1);
-                String label = getTabLabel(panel, nextTab);
-                int tabWidth = LzDraw.textWidth(label) + 8;
-                boolean active = (lastRendered + 1 == panel.activeTabIndex());
-
-                int sx1 = Math.round((x + 4 + xOffset) * scale);
-                int sy1 = Math.round(topY * scale);
-                int sx2 = Math.round((tabAreaEnd + 4 + xOffset) * scale);
-                int sy2 = Math.round((topY + TAB_HEIGHT) * scale);
-
-                LzDraw.enableScissor(context, sx1, sy1, sx2, sy2);
-                LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(nextTab, active, panel));
-                LzDraw.drawText(context, label, x + 4, topY + 1, tabFgColor(nextTab, active, panel));
-                LzDraw.disableScissor(context);
-            }
-        }
 
         if (hasRight) {
             int ax = tabAreaEnd;
