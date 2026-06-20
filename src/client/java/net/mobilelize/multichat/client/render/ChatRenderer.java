@@ -168,6 +168,7 @@ public class ChatRenderer {
             lastRendered = i;
         }
         panel.setTabLastRendered(lastRendered);
+        if (panel.consumePendingScrollIntoView()) panel.scrollActiveTabIntoView();
 
         if (hasRight) {
             int ax = tabAreaEnd;

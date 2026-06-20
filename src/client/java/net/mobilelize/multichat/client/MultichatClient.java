@@ -41,7 +41,7 @@ public class MultichatClient implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraftClient -> {
-            if (LzWorld.isLoaded() && firstTime) {
+            if (firstTime && LzWorld.isLoaded()) {
                 firstTime = false;
                 for (ChatTab tab : ChatManager.getTabs()) {
                     if (tab instanceof NoteTab nt) nt.rebuildMessages();
@@ -105,7 +105,7 @@ public class MultichatClient implements ClientModInitializer {
             if (panel.panelContextTabId() != null)
                 panel.setPanelContextTab(tabById.get(panel.panelContextTabId()));
             panel.setActiveTabId(panel.activeTabIndex());
-            panel.setTabScrollOffset(panel.activeTabIndex());
+            panel.scrollActiveTabIntoView();
         }
 
         //for (NoteTab nt : CONFIG.noteTabs) nt.rebuildMessages();

@@ -26,9 +26,10 @@ public class ChatPanel {
     private boolean showBadges         = true;
     private boolean showTabs           = true;
     private boolean tabsAtTop          = false;
-    private transient int tabScrollOffset  = 0;
-    private transient int tabLastRendered  = -1;
-    private transient int tabFlashTick     = -1000;
+    private transient int     tabScrollOffset       = 0;
+    private transient int     tabLastRendered       = -1;
+    private transient boolean pendingScrollIntoView = false;
+    private transient int     tabFlashTick          = -1000;
 
     private float  customX                    = 0f;
     private float  customY                    = 0f;
@@ -306,12 +307,22 @@ public class ChatPanel {
     }
 
     public void scrollActiveTabIntoView() {
+        if (tabLastRendered < 0) {
+            pendingScrollIntoView = true;
+            return;
+        }
         if (activeTabId < tabScrollOffset) {
             tabScrollOffset = activeTabId;
-        } else if (tabLastRendered >= 0 && activeTabId > tabLastRendered) {
-            int max = Math.max(0, getVisibleTabs().size() - 1);
-            tabScrollOffset = Math.min(activeTabId, max);
+        } else if (activeTabId > tabLastRendered) {
+            int visibleCount = tabLastRendered - tabScrollOffset + 1;
+            tabScrollOffset = Math.max(0, activeTabId - visibleCount + 1);
         }
+    }
+
+    public boolean consumePendingScrollIntoView() {
+        if (!pendingScrollIntoView) return false;
+        pendingScrollIntoView = false;
+        return true;
     }
 
     public int resolveTopY(int windowHeight) {
