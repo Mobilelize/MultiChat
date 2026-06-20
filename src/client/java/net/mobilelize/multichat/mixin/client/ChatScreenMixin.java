@@ -67,7 +67,7 @@ public abstract class ChatScreenMixin {
                         int idx = ChatSelection.hitLine(selPanel, mouseX, mouseY,
                             selPanel.resolveLines(), scale, lineH, windowHeight, chatWidth, xOff);
                         if (idx >= 0) {
-                            float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
+                            float localX = Math.max(0f, (mouseX / scale) - 4 - xOff);
                             List<LzChatLine> _selLines = selPanel.getTabLines(active);
                         int charIdx  = ChatSelection.charIndexAtX(
                                 _selLines != null ? _selLines.get(idx).content() : null, localX);
@@ -168,6 +168,7 @@ public abstract class ChatScreenMixin {
                 // Arrow → switch tab on focused panel
                 ChatPanel panel = ChatManager.focusedPanel;
                 if (panel == null || !panel.isEnabled() || panel.getVisibleTabs().isEmpty()) panel = ChatManager.primaryPanel();
+                if (panel == null) return;
                 List<ChatTab> visible = panel.getVisibleTabs();
                 if (visible.size() > 1) {
                     panel.setActiveTabId(goRight

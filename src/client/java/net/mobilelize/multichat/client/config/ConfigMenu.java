@@ -323,7 +323,7 @@ public class ConfigMenu {
 
         pings.addEntry(eb.startDropdownMenu(
                 LzText.literal("Default Ping Sound").mc(),
-                DropdownMenuBuilder.TopCellElementBuilder.<String>of(MultichatClient.CONFIG.pingSound, s -> s),
+                DropdownMenuBuilder.TopCellElementBuilder.of(MultichatClient.CONFIG.pingSound, s -> s),
                 DropdownMenuBuilder.CellCreatorBuilder.of())
                 .setDefaultValue("minecraft:entity.experience_orb.pickup")
                 .setSelections(PingPlayer.allSoundIds())

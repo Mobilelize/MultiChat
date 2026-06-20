@@ -118,7 +118,7 @@ public class PanelLayoutScreen extends LzScreen {
         for (Map.Entry<ChatPanel, Object[]> e : originals.entrySet()) {
             ChatPanel p = e.getKey();
             Object[]  o = e.getValue();
-            if (p.anchor()            != (ChatPanel.Anchor) o[0]) return true;
+            if (p.anchor()            != o[0]) return true;
             if (p.customX()           != (float) o[1])            return true;
             if (p.customY()           != (float) o[2])            return true;
             if (p.customWidth()       != (int) o[3])              return true;

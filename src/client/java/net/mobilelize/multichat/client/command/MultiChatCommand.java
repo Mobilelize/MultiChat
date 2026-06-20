@@ -206,7 +206,7 @@ public class MultiChatCommand {
         InfoTab it = (InfoTab) ChatManager.getTabs().stream()
             .filter(t -> t instanceof InfoTab).findFirst().orElse(null);
         if (it == null) { feedback(ctx, "Info tab not found."); return 0; }
-        if (!it.visibleOnPanels().contains(1)) it.visibleOnPanels().add(1);
+        it.visibleOnPanels().add(1);
         MultichatClient.saveTabsToConfig();
         feedback(ctx, "Info tab shown on Panel 2.");
         return 1;

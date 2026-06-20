@@ -29,9 +29,7 @@ public class MultichatClient implements ClientModInitializer {
         LzAfk.init();
         restoreFromConfig();
         MultiChatCommand.register();
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-            MouseClient.init();
-        });
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> MouseClient.init());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             saveTabsToConfig();
             MouseClient.cleanup();

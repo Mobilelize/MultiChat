@@ -252,7 +252,7 @@ public class NoteEditScreen extends LzScreen {
         if (noteIdx < 0) {
             NoteTab.NoteEntry e = new NoteTab.NoteEntry(LzText.format(text), 0);
             e.setRawFormat(text);
-            noteTab.noteEntries().add(0, e);
+            noteTab.noteEntries().addFirst(e);
         } else if (noteIdx < noteTab.noteEntries().size()) {
             NoteTab.NoteEntry e = noteTab.noteEntries().get(noteIdx);
             e.setContent(LzText.format(text));
