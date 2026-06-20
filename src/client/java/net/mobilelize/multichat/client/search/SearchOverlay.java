@@ -137,7 +137,7 @@ public class SearchOverlay extends LzScreen {
                 ChatTab prev = panel.getActiveTab();
                 if (prev != null) tab.storePreviousTab(panel.id(), prev);
                 panel.setActiveTabId(idx);
-                panel.scrollActiveTabIntoView();
+                panel.deferScrollActiveTabIntoView();
                 break;
             }
         }

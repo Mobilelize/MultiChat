@@ -320,6 +320,8 @@ public class ChatPanel {
         }
     }
 
+    public void deferScrollActiveTabIntoView() { pendingScrollIntoView = true; }
+
     public boolean consumePendingScrollIntoView() {
         if (!pendingScrollIntoView) return false;
         pendingScrollIntoView = false;
