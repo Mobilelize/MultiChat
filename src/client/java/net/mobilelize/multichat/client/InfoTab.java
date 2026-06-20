@@ -206,8 +206,8 @@ public class InfoTab extends ChatTab {
             .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY));
         LzMutableText cmdText = LzText.format("    &3" + command);
         cmdText.mc().styled(s -> s
-            .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command))
-            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover.mc())));
+            .withClickEvent(new ClickEvent.SuggestCommand(command))
+            .withHoverEvent(new HoverEvent.ShowText(hover.mc())));
         return LzText.empty().append(cmdText).append(LzText.format("  &7" + desc));
     }
 
@@ -216,8 +216,8 @@ public class InfoTab extends ChatTab {
                 .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY));
         LzMutableText cmdText = LzText.format("&3" + command);
         cmdText.mc().styled(s -> s
-                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover.mc())));
+                .withClickEvent(new ClickEvent.SuggestCommand(command))
+                .withHoverEvent(new HoverEvent.ShowText(hover.mc())));
         return LzText.empty().append(cmdText).append(LzText.format("  &7" + desc));
     }
 
@@ -259,8 +259,8 @@ public class InfoTab extends ChatTab {
         t.mc().styled(s -> s
             .withColor(0xFF5555)
             .withBold(true)
-            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
-            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverText.mc())));
+            .withClickEvent(new ClickEvent.RunCommand(command))
+            .withHoverEvent(new HoverEvent.ShowText(hoverText.mc())));
         return t;
     }
 
@@ -271,8 +271,8 @@ public class InfoTab extends ChatTab {
         t.mc().styled(s -> s
             .withColor(Colors.TEXT_LINK)
             .withUnderline(true)
-            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
-            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverText.mc())));
+            .withClickEvent(new ClickEvent.RunCommand(command))
+            .withHoverEvent(new HoverEvent.ShowText(hoverText.mc())));
         return t;
     }
 }
