@@ -26,31 +26,39 @@ public class HelpScreen {
         help.addEntry(eb.startTextDescription(LzText.format(
                 """
                         &e&lCommands&r
-                          &f/multichat&r&7                     Open tab list
-                          &f/multichat edit &b<tab>&r&7          Open tab settings
-                          &f/multichat panels&r&7               Open panel list
-                          &f/multichat panels &b<name>&r&7       Open panel settings
-                          &f/multichat layout&r&7               Open panel layout editor
-                          &f/multichat settings&r&7             Open global settings
-                          &f/multichat quickactions&r&7         Open quick actions overlay
-                          &f/multichat quickactions edit&r&7    Edit quick actions
-                          &f/multichat context&r&7              Clear chat context
-                          &f/multichat context &b<tab>&r&7       Route typed chat to tab's prefix
-                          &f/multichat note&r&7                 Open active note tab editor
-                          &f/multichat note add &b<text>&r&7     Append text to active note tab
-                          &f/multichat note open &b<name>&r&7    Open a specific note tab editor
-                          &f/multichat help&r&7                 Open this screen"""
+                          &f/multichat&r&7                          Open tab list
+                          &f/multichat tab&r&7                      Open tab list
+                          &f/multichat tab add&r&7                  Add a new filtered tab (auto-named)
+                          &f/multichat tab add &b<name>&r&7          Add a new filtered tab with a name
+                          &f/multichat tab remove&r&7               Remove the active tab on the focused panel
+                          &f/multichat tab edit &b<name>&r&7          Open settings for a specific tab
+                          &f/multichat panels&r&7                   Open panel list
+                          &f/multichat panels &b<name>&r&7           Open panel settings
+                          &f/multichat layout&r&7                   Open panel layout editor
+                          &f/multichat settings&r&7                 Open global settings
+                          &f/multichat quickactions&r&7             Open quick actions overlay
+                          &f/multichat quickactions edit&r&7        Edit quick actions
+                          &f/multichat context&r&7                  Clear chat context
+                          &f/multichat context &b<tab>&r&7           Route typed chat to tab's prefix
+                          &f/multichat note&r&7                     Open active note tab editor
+                          &f/multichat note add &b<text>&r&7         Append text to active note tab
+                          &f/multichat note open &b<name>&r&7        Open a specific note tab editor
+                          &f/multichat info show&r&7                 Show the info tab on Panel 2
+                          &f/multichat info hide&r&7                 Hide the info tab from Panel 2
+                          &f/multichat help&r&7                     Open this screen"""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
                 """
                         &e&lTabs&r
                         &7Tabs organize chat into views. Each panel shows a list of tabs at the bottom (or top).
-                          &f[All]&r&7  Receives every message.
+                          &f[All]&r&7  Receives every message. Read-only.
                           &f[Vanilla]&r&7  The default Minecraft chat. Only visible on the main panel.
                           &f[Filtered]&r&7  User-defined tab. Shows messages matching its whitelist/blacklist rules.
-                          &f[Search]&r&7  Temporary tab created by a search query.
-                          &f[API]&r&7  Controlled by another mod via the MultiChat API."""
+                          &f[Search]&r&7  Temporary tab created by a search query. Replaced when a new search runs.
+                          &f[API]&r&7  Controlled by another mod via the MultiChat API.
+                          &f[Notes]&r&7  Personal scratchpad. Write and save notes. Never receives routed messages.
+                          &f[Info]&r&7  This quick-reference guide. Show/hide with &f/multichat info show&r&7 / &fhide&r&7."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
@@ -122,7 +130,13 @@ public class HelpScreen {
                         &7Click and drag in chat to select text. &fCtrl+C&r&7 copies the selection.
                         &fCtrl+F&r&7 (or your configured key) opens Search. With text selected, it pre-fills the query.
                         Right-click any message for: &fCopy, Search for this, Jump to All, Delete.&r
-                        &7Search supports &fCONTAINS, STARTS_WITH, WORD, FUZZY, REGEX&r&7 modes and live updates as new messages arrive."""
+                        &7Search supports &fCONTAINS, STARTS_WITH, WORD, FUZZY, REGEX&r&7 modes and live updates as new messages arrive.
+                        Hold &fCtrl&r&7 to force text-select mode — cursor switches to IBeam even over clickable links.
+
+                        &e&lCursor&r
+                        &7The cursor changes based on what's under it (can be disabled in settings).
+                          &fHand&r&7 — over tabs, clickable text, or context menus.
+                          &fIBeam&r&7 — over selectable message text, or any text when Ctrl is held."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(

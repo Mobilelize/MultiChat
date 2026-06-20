@@ -14,6 +14,7 @@ import net.mobilelize.multichat.client.InfoTab;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.NoteTab;
 import net.mobilelize.multichat.client.TabType;
+import java.util.List;
 import net.mobilelize.multichat.client.config.ConfigMenu;
 import net.mobilelize.multichat.client.config.HelpScreen;
 import net.mobilelize.multichat.client.config.NoteEditorScreen;
@@ -40,10 +41,21 @@ public class MultiChatCommand {
                     LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
                     return 1;
                 })
-                .then(literal("edit")
-                    .then(argument("tab", StringArgumentType.greedyString())
-                        .suggests(editSuggestions())
-                        .executes(MultiChatCommand::editTab)))
+                .then(literal("tab")
+                    .executes(ctx -> {
+                        LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
+                        return 1;
+                    })
+                    .then(literal("add")
+                        .executes(MultiChatCommand::addTab)
+                        .then(argument("name", StringArgumentType.greedyString())
+                            .executes(MultiChatCommand::addNamedTab)))
+                    .then(literal("remove")
+                        .executes(MultiChatCommand::removeActiveTab))
+                    .then(literal("edit")
+                        .then(argument("tab", StringArgumentType.greedyString())
+                            .suggests(editSuggestions())
+                            .executes(MultiChatCommand::editTab))))
                 .then(literal("panels")
                     .executes(ctx -> {
                         LzClient.send(() -> LzClient.mc().setScreen(new PanelListScreen(null)));
@@ -98,7 +110,9 @@ public class MultiChatCommand {
                             .executes(MultiChatCommand::noteOpen))))
                 .then(literal("info")
                     .then(literal("hide")
-                        .executes(MultiChatCommand::infoHide)))
+                        .executes(MultiChatCommand::infoHide))
+                    .then(literal("show")
+                        .executes(MultiChatCommand::infoShow)))
                 .then(literal("execute")
                     .then(argument("id", StringArgumentType.word())
                         .executes(MultiChatCommand::executeAction)))
@@ -143,6 +157,46 @@ public class MultiChatCommand {
         return 1;
     }
 
+    private static int addTab(CommandContext<FabricClientCommandSource> ctx) {
+        List<String> existing = ChatManager.getTabs().stream().map(t -> t.name().toLowerCase()).toList();
+        int n = 1;
+        while (existing.contains("tab " + n)) n++;
+        String name = "Tab " + n;
+        ChatManager.getTabs().add(new ChatTab(name, TabType.FILTERED, List.of(0, 1)));
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Added tab [" + name + "].");
+        return 1;
+    }
+
+    private static int addNamedTab(CommandContext<FabricClientCommandSource> ctx) {
+        String name = StringArgumentType.getString(ctx, "name");
+        if (ChatManager.getTabs().stream().anyMatch(t -> t.type() == TabType.FILTERED && t.name().equalsIgnoreCase(name))) {
+            feedback(ctx, "Filtered tab '" + name + "' already exists."); return 0;
+        }
+        ChatManager.getTabs().add(new ChatTab(name, TabType.FILTERED, List.of(0, 1)));
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Added tab [" + name + "].");
+        return 1;
+    }
+
+    private static int removeActiveTab(CommandContext<FabricClientCommandSource> ctx) {
+        ChatPanel panel = ChatManager.focusedPanel;
+        if (panel == null) { feedback(ctx, "No focused panel."); return 0; }
+        ChatTab tab = panel.getActiveTab();
+        if (tab == null) { feedback(ctx, "No active tab."); return 0; }
+        if (tab.type() != TabType.FILTERED && tab.type() != TabType.NOTES && tab.type() != TabType.SEARCH) {
+            feedback(ctx, "Cannot remove tab [" + tab.name() + "]."); return 0;
+        }
+        ChatManager.getTabs().remove(tab);
+        if (tab.type() == TabType.NOTES && ChatManager.activeNoteTab == tab) {
+            ChatManager.activeNoteTab = (NoteTab) ChatManager.getTabs().stream()
+                .filter(t -> t.type() == TabType.NOTES).findFirst().orElse(null);
+        }
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Removed tab [" + tab.name() + "].");
+        return 1;
+    }
+
     private static int setContext(CommandContext<FabricClientCommandSource> ctx) {
         String name = StringArgumentType.getString(ctx, "tab");
         ChatTab tab = findContextTab(name);
@@ -157,6 +211,16 @@ public class MultiChatCommand {
     private static int executeAction(CommandContext<FabricClientCommandSource> ctx) {
         String id = StringArgumentType.getString(ctx, "id");
         TabActionCallback.EVENT.invoker().onAction(id);
+        return 1;
+    }
+
+    private static int infoShow(CommandContext<FabricClientCommandSource> ctx) {
+        InfoTab it = (InfoTab) ChatManager.getTabs().stream()
+            .filter(t -> t instanceof InfoTab).findFirst().orElse(null);
+        if (it == null) { feedback(ctx, "Info tab not found."); return 0; }
+        if (!it.visibleOnPanels().contains(1)) it.visibleOnPanels().add(1);
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Info tab shown on Panel 2.");
         return 1;
     }
 
