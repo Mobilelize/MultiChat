@@ -53,6 +53,7 @@ public record FilterRule (FilterType type, String value, IndicatorFilter indicat
 
     public static String normalizeFilterText(String text) {
         return text
+                .replace("￼", "")
                 .replaceAll("\\p{C}", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
