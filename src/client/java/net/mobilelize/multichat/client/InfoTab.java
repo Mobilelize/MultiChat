@@ -81,6 +81,7 @@ public class InfoTab extends ChatTab {
 
         // ── Commands ──────────────────────────────────────────────────────────
         lines.add(sectionHeader("◆", "&3", "COMMANDS"));
+        lines.add(tip("/mlchat is a short alias for /multichat", ""));
         lines.add(blank());
         lines.add(cmdLink("/multichat",            "Open tab list"));
         lines.add(cmdLink("/multichat settings",   "Open global settings"));
