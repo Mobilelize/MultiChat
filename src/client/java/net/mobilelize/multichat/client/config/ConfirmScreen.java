@@ -54,11 +54,6 @@ public class ConfirmScreen extends LzScreen {
     }
 
     @Override
-    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
-        super.lzRender(ctx, mouseX, mouseY, delta);
-    }
-
-    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == Keys.ESCAPE) { close(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
