@@ -41,8 +41,9 @@ public class MessageRouter {
             ? FilterRule.normalizeFilterText(fullText) : fullText;
 
         final TreeMap<Integer, List<ChatTab>> diffByLayer = new TreeMap<>(Comparator.reverseOrder());
-        for (ChatTab tab : ChatManager.getAllActivePanelsTabs()) {
-            if (tab.type() == TabType.FILTERED && tab.differenceMode() && !tab.differenceException())
+        for (ChatTab tab : ChatManager.getTabs()) {
+            if (tab.type() == TabType.FILTERED && tab.differenceMode() && !tab.differenceException()
+                    && ChatManager.isTabInAnyEnabledPanel(tab))
                 diffByLayer.computeIfAbsent(tab.differenceLayerIndex(), k -> new ArrayList<>()).add(tab);
         }
 
