@@ -1,5 +1,8 @@
 package net.mobilelize.multichat.client.render;
 
+import net.minecraft.client.font.Alignment;
+import net.minecraft.client.font.DrawnTextConsumer;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
@@ -12,6 +15,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3x2f;
 
 import java.util.HashSet;
 import java.util.List;
@@ -27,9 +31,8 @@ public class ChatRenderer {
 
     public static int lastMouseX = 0;
 
-    // Resolved once per render frame so getTextStyleAt / getIndicatorAt hooks can read from cache.
-    // When those hooks are removed in a newer MC version, pass these to the Interactable/Consumer
-    // callback that replaces them instead of reading from cache in a hook.
+    // lastHoveredStyle: set per-frame via DrawnTextConsumer callback in renderAt().
+    // lastHoveredIndicator: set per-frame via resolveIndicatorAt() in render().
     public static @Nullable Style           lastHoveredStyle     = null;
     public static @Nullable IndicatorResult lastHoveredIndicator = null;
 
@@ -209,17 +212,17 @@ public class ChatRenderer {
         LzDraw.scale(context, scale, scale);
         LzDraw.translate(context, 4.0F + xOffset, 0.0F);
 
-        net.minecraft.client.font.DrawnTextConsumer hoverDrawer = null;
-        net.minecraft.client.font.DrawnTextConsumer.Transformation hoverTransform = null;
+        DrawnTextConsumer hoverDrawer = null;
+        DrawnTextConsumer.Transformation hoverTransform = null;
         Style[] hoverCapture = { null };
         if (showScrollbar) {
-            net.minecraft.client.gui.DrawContext rawCtx = context.mc();
+            DrawContext rawCtx = context.mc();
             hoverDrawer = rawCtx.getTextConsumer(
-                net.minecraft.client.gui.DrawContext.HoverType.TOOLTIP_AND_CURSOR,
+                DrawContext.HoverType.TOOLTIP_AND_CURSOR,
                 style -> { if (hoverCapture[0] == null) hoverCapture[0] = style; }
             );
             hoverTransform = hoverDrawer.getTransformation()
-                .withPose(new org.joml.Matrix3x2f(rawCtx.getMatrices()));
+                .withPose(new Matrix3x2f(rawCtx.getMatrices()));
         }
 
         int linesDrawn = 0;
@@ -287,8 +290,8 @@ public class ChatRenderer {
                 }
             }
 
-            if (hoverDrawer != null) {
-                hoverDrawer.text(net.minecraft.client.font.Alignment.LEFT, 0, textY,
+            if (hoverDrawer != null && hoverTransform != null) {
+                hoverDrawer.text(Alignment.LEFT, 0, textY,
                     hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
             } else {
                 LzDraw.pushMatrix(context);

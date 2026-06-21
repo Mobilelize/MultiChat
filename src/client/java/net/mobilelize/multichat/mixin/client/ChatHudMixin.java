@@ -42,11 +42,8 @@ public class ChatHudMixin {
     private List<ChatHudLine> messages;
 
     // ── Render ────────────────────────────────────────────────────────────────
-    // MC-VERSION-SENSITIVE: descriptor "render(Lnet/minecraft/client/gui/DrawContext;IIIZ)V"
-    // New MC adds TextRenderer + extra boolean → update to:
-    //   "render(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;IIIZZ)V"
-    // and update callback params: (DrawContext, TextRenderer, int, int, int, boolean interactable, boolean bl)
-    // The `focused` param is renamed `interactable`; `bl` is new.
+    // MC-VERSION-SENSITIVE: descriptor must match exactly.
+    // MC 1.21.11: TextRenderer added as 2nd param; focused→interactable; extra boolean bl (shouldInsert) at end.
 
     @Inject(
         method = "render(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;IIIZZ)V",
