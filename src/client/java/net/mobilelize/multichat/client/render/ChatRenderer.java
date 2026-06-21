@@ -106,7 +106,6 @@ public class ChatRenderer {
         }
 
         if (focused) {
-            lastHoveredStyle     = resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
             lastHoveredIndicator = resolveIndicatorAt(mouseX, mouseY, windowWidth, windowHeight);
         }
 
@@ -210,6 +209,19 @@ public class ChatRenderer {
         LzDraw.scale(context, scale, scale);
         LzDraw.translate(context, 4.0F + xOffset, 0.0F);
 
+        net.minecraft.client.font.DrawnTextConsumer hoverDrawer = null;
+        net.minecraft.client.font.DrawnTextConsumer.Transformation hoverTransform = null;
+        Style[] hoverCapture = { null };
+        if (showScrollbar) {
+            net.minecraft.client.gui.DrawContext rawCtx = context.mc();
+            hoverDrawer = rawCtx.getTextConsumer(
+                net.minecraft.client.gui.DrawContext.HoverType.TOOLTIP_AND_CURSOR,
+                style -> { if (hoverCapture[0] == null) hoverCapture[0] = style; }
+            );
+            hoverTransform = hoverDrawer.getTransformation()
+                .withPose(new org.joml.Matrix3x2f(rawCtx.getMatrices()));
+        }
+
         int linesDrawn = 0;
 
         for (int r = 0; r + scrolledLines < totalMessages && r < visibleLineCount; r++) {
@@ -275,10 +287,15 @@ public class ChatRenderer {
                 }
             }
 
-            LzDraw.pushMatrix(context);
-            LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
-            LzDraw.drawText(context, visible.content(), 0, textY, 16777215 + (textAlpha << 24));
-            LzDraw.popMatrix(context);
+            if (hoverDrawer != null) {
+                hoverDrawer.text(net.minecraft.client.font.Alignment.LEFT, 0, textY,
+                    hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
+            } else {
+                LzDraw.pushMatrix(context);
+                LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
+                LzDraw.drawText(context, visible.content(), 0, textY, 16777215 + (textAlpha << 24));
+                LzDraw.popMatrix(context);
+            }
         }
 
         long queueCount = LzClient.mc().getMessageHandler().getUnprocessedMessageCount();
@@ -307,6 +324,7 @@ public class ChatRenderer {
             }
         }
 
+        if (hoverCapture[0] != null) lastHoveredStyle = hoverCapture[0];
         LzDraw.popMatrix(context);
     }
 

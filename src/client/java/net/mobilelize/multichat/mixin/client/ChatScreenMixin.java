@@ -303,7 +303,12 @@ public abstract class ChatScreenMixin {
                     && LzKeys.isCtrlDown();
                 if (!ctrlSkip) {
                     var style = ChatRenderer.resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
-                    if (style != null && style.getClickEvent() != null) break;
+                    if (style != null && style.getClickEvent() != null) {
+                        ScreenInvoker.invokeHandleClickEvent(
+                            style.getClickEvent(), LzClient.mc(), (net.minecraft.client.gui.screen.Screen)(Object)this);
+                        cir.setReturnValue(true);
+                        return;
+                    }
                 }
 
                 float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
