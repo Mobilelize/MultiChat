@@ -7,6 +7,7 @@ import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.MessageAddedToTabCallback;
+import net.mobilelize.multichat.client.filter.FilterRule;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -140,7 +141,8 @@ public class ChatManager {
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
                 if (!tab.matchesText(text) || !tab.matchesTime(me.entry().creationTick)) continue;
-                if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(text, me.entry().indicator)) continue;
+                String fText1 = MultichatClient.CONFIG.normalizeFilterText ? FilterRule.normalizeFilterText(text) : text;
+                if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText1, me.entry().indicator)) continue;
                 newest.put(text, me);
                 counts.merge(text, 1, Integer::sum);
             }
@@ -163,7 +165,8 @@ public class ChatManager {
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
                 if (!tab.matchesText(text)) continue;
-                if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(text, me.entry().indicator)) continue;
+                String fText2 = MultichatClient.CONFIG.normalizeFilterText ? FilterRule.normalizeFilterText(text) : text;
+                if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText2, me.entry().indicator)) continue;
                 if (!tab.matchesTime(me.entry().creationTick)) continue;
                 LzText base = tab.showTimestamps()
                     ? stampedText(me.entry().creationTick, me.entry().originalContent, me.entry().indicator)
@@ -208,13 +211,15 @@ public class ChatManager {
             ChatTab.MessageEntry src = all.get(i);
             LzText raw = src.entry().originalContent;
             if (raw == null) continue;
-            String fullText = raw.mc().getString();
+            String fullText   = raw.mc().getString();
+            String filterText = MultichatClient.CONFIG.normalizeFilterText
+                ? FilterRule.normalizeFilterText(fullText) : fullText;
             LzMessageIndicator indicator = src.entry().indicator;
 
             boolean include = effectiveDiff
-                ? higherDiffTabs.stream().noneMatch(t -> t.filterRules().matches(fullText, indicator))
-                  && tab.filterRules().matches(fullText, indicator)
-                : tab.filterRules().matches(fullText, indicator);
+                ? higherDiffTabs.stream().noneMatch(t -> t.filterRules().matches(filterText, indicator))
+                  && tab.filterRules().matches(filterText, indicator)
+                : tab.filterRules().matches(filterText, indicator);
             if (!include) continue;
 
             boolean doCollapse = tab.collapseRepeating()
