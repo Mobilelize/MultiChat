@@ -111,7 +111,12 @@ public class MultiChatCommand {
                         .executes(MultiChatCommand::executeAction)))
                 .then(literal("help")
                     .executes(MultiChatCommand::printHelp)));
-            dispatcher.register(literal("mlchat").redirect(root));
+            dispatcher.register(literal("mlchat")
+                .executes(ctx -> {
+                    LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
+                    return 1;
+                })
+                .redirect(root));
         });
     }
 
