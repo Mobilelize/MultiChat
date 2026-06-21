@@ -7,6 +7,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.MessageReceivedCallback;
 import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
 
@@ -35,7 +36,9 @@ public class MessageRouter {
         if (rawLzText == null) rawLzText = content;
 
 
-        final String fullText = rawLzText.mc().getString();
+        final String fullText   = rawLzText.mc().getString();
+        final String filterText = MultichatClient.CONFIG.normalizeFilterText
+            ? FilterRule.normalizeFilterText(fullText) : fullText;
 
         final TreeMap<Integer, List<ChatTab>> diffByLayer = new TreeMap<>(Comparator.reverseOrder());
         for (ChatTab tab : ChatManager.getAllActivePanelsTabs()) {
@@ -52,12 +55,12 @@ public class MessageRouter {
                 case ALL     -> ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
                 case FILTERED -> {
                     if (tab.differenceMode() && !tab.differenceException()) break;
-                    if (tab.filterRules().matches(fullText, indicator))
+                    if (tab.filterRules().matches(filterText, indicator))
                         ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
-                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(fullText, indicator))
+                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator))
                         ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
                 }
                 case SEARCH -> {
@@ -75,7 +78,7 @@ public class MessageRouter {
         boolean activeNonDiffMatched = false;
         for (ChatTab tab : ChatManager.getAllActivePanelsTabs()) {
             if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
-                    && tab.filterRules().matches(fullText, indicator)) {
+                    && tab.filterRules().matches(filterText, indicator)) {
                 activeNonDiffMatched = true; break;
             }
         }
@@ -83,7 +86,7 @@ public class MessageRouter {
             for (ChatTab tab : ChatManager.getTabs()) {
                 if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
                         && tab.differenceInclusion() && ChatManager.isTabInAnyEnabledPanel(tab)
-                        && tab.filterRules().matches(fullText, indicator)) {
+                        && tab.filterRules().matches(filterText, indicator)) {
                     activeNonDiffMatched = true; break;
                 }
             }
@@ -93,7 +96,7 @@ public class MessageRouter {
             for (List<ChatTab> layerTabs : diffByLayer.values()) {
                 boolean anyMatched = false;
                 for (ChatTab tab : layerTabs) {
-                    if (tab.filterRules().matches(fullText, indicator)) {
+                    if (tab.filterRules().matches(filterText, indicator)) {
                         ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
                         anyMatched = true;
                     }

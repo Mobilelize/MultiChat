@@ -186,6 +186,14 @@ public class ConfigMenu {
                 .build());
 
         advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Normalize Filter Text").mc(),
+                MultichatClient.CONFIG.normalizeFilterText)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Strip invisible/control characters and collapse whitespace before matching filter rules. Helps when messages contain hidden formatting characters that prevent filters from matching. Only affects routing — not collapse, count, or display.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.normalizeFilterText = v)
+                .build());
+
+        advanced.addEntry(eb.startBooleanToggle(
                 LzText.literal("Disable MultiChat").mc(),
                 MultichatClient.CONFIG.modDisabled)
                 .setDefaultValue(false)
