@@ -1,6 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -234,8 +236,9 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
+        if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
 
         // Resize handles take priority over drag
@@ -299,7 +302,8 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (unfocusedLineDragging != null && button == 0) {
             float scale      = unfocusedLineDragging.resolveScale();
             int   lineHeight = unfocusedLineDragging.resolveLineHeight();
@@ -352,21 +356,21 @@ public class PanelLayoutScreen extends LzScreen {
             return true;
         }
 
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(Click click) {
         dragging              = null;
         resizing              = null;
         unfocusedLineDragging = null;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(click);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) { attemptClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyInput input) {
+        if (input.key() == Keys.ESCAPE) { attemptClose(); return true; }
+        return super.keyPressed(input);
     }
 
     private void attemptClose() {

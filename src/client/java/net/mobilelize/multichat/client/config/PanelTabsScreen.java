@@ -1,6 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -154,8 +156,9 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) return true;
+    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+        double mx = click.x(); double my = click.y(); int button = click.button();
+        if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
 
         int lx = width / 2 - 130;
@@ -207,7 +210,8 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double my = click.y();
         if (scrollDragging) {
             int max = maxScroll(), trackH = listBottom() - LIST_TOP;
             int totalH = tabs().size() * ROW_HEIGHT;
@@ -218,13 +222,13 @@ public class PanelTabsScreen extends LzScreen {
                     scrollDragStartOff + (int)((my - scrollDragStartY) * max / travel)));
             return true;
         }
-        return super.mouseDragged(mx, my, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(Click click) {
         scrollDragging = false;
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleased(click);
     }
 
     @Override
@@ -237,9 +241,9 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) { attemptClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyInput input) {
+        if (input.key() == Keys.ESCAPE) { attemptClose(); return true; }
+        return super.keyPressed(input);
     }
 
     private boolean isDirty() {

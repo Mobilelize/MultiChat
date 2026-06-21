@@ -1,7 +1,9 @@
 package net.mobilelize.multichat.client.config;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
@@ -158,8 +160,9 @@ public class NoteEditScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
+        if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
 
         int swX0 = px1() + 36, swY = cy() - 53;
@@ -202,7 +205,8 @@ public class NoteEditScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double mouseY = click.y();
         if (prevDragging) {
             List<LzOrderedText> lines = previewLines();
             int maxScroll = prevMaxScroll(lines);
@@ -215,13 +219,13 @@ public class NoteEditScreen extends LzScreen {
                     prevDragStart + (int)((mouseY - prevDragY) * maxScroll / travel)));
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(Click click) {
         prevDragging = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(click);
     }
 
     @Override
@@ -241,10 +245,10 @@ public class NoteEditScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ENTER || keyCode == Keys.NUMPAD_ENTER) { save(); return true; }
-        if (keyCode == Keys.ESCAPE) { close(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyInput input) {
+        if (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER) { save(); return true; }
+        if (input.key() == Keys.ESCAPE) { close(); return true; }
+        return super.keyPressed(input);
     }
 
     private void save() {

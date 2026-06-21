@@ -1,6 +1,8 @@
 package net.mobilelize.multichat.client.quickaction;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -245,8 +247,9 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
+        if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
 
         // Scrollbar
@@ -327,7 +330,8 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double mouseY = click.y();
         if (scrollDragging) {
             int max    = maxScroll();
             int trackH = listBottom() - LIST_TOP;
@@ -339,13 +343,13 @@ public class QuickActionsEditScreen extends ConfigScreen {
                     scrollDragStartOff + (int)((mouseY - scrollDragStartY) * max / travel)));
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(Click click) {
         scrollDragging = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(click);
     }
 
     @Override
@@ -355,20 +359,20 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (editingIdx >= 0 && (keyCode == Keys.ENTER || keyCode == Keys.NUMPAD_ENTER)) {
+    public boolean keyPressed(KeyInput input) {
+        if (editingIdx >= 0 && (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER)) {
             commit(); return true;
         }
-        if (keyCode == Keys.ESCAPE) {
+        if (input.key() == Keys.ESCAPE) {
             if (swapPending) { swapPending = false; return true; }
             if (editingIdx >= 0) { editingIdx = -1; clearChildren(); init(); return true; }
             close(); return true;
         }
         if (editingIdx < 0 && selectedIdx >= 0) {
-            if (keyCode == Keys.UP)   { move(selectedIdx, true);  return true; }
-            if (keyCode == Keys.DOWN) { move(selectedIdx, false); return true; }
+            if (input.key() == Keys.UP)   { move(selectedIdx, true);  return true; }
+            if (input.key() == Keys.DOWN) { move(selectedIdx, false); return true; }
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(input);
     }
 
     private void doRemoveAction(List<MultiChatConfig.QuickActionConfig> list, int i) {

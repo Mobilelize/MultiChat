@@ -8,6 +8,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 
@@ -59,9 +60,9 @@ public class ConfirmScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) { close(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyInput input) {
+        if (input.key() == Keys.ESCAPE) { close(); return true; }
+        return super.keyPressed(input);
     }
 
     @Override

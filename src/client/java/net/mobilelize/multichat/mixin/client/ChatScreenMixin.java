@@ -1,6 +1,8 @@
 package net.mobilelize.multichat.mixin.client;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.mobilelize.fabriclib.client.LzChat;
@@ -107,12 +109,12 @@ public abstract class ChatScreenMixin {
     // Key press — search keybind
     // ------------------------------------------------------------------
 
-    @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
-    private void onKeyPressed(int keyCode, int scanCode, int modifiers,
+    @Inject(method = "keyPressed(Lnet/minecraft/client/input/KeyInput;)Z", at = @At("HEAD"), cancellable = true)
+    private void onKeyPressed(KeyInput input,
                                CallbackInfoReturnable<Boolean> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
         if (MultichatClient.CONFIG.selectionEnabled
-                && keyCode == Keys.C && (modifiers & 2) != 0 && ChatSelection.hasSelection()) {
+                && input.key() == Keys.C && (input.modifiers() & 2) != 0 && ChatSelection.hasSelection()) {
             String text = ChatSelection.getSelectedText();
             if (!text.isEmpty()) {
                 LzClient.setClipboard(text);
@@ -122,8 +124,8 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.searchKeybindEnabled
-                && keyCode == MultichatClient.CONFIG.searchKeybindKey
-                && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (modifiers & 2) != 0)) {
+                && input.key() == MultichatClient.CONFIG.searchKeybindKey
+                && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
             String selText = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", "").trim() : "";
             LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
@@ -132,8 +134,8 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.quickActionKeybindEnabled
-                && keyCode == MultichatClient.CONFIG.quickActionKeybindKey
-                && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || (modifiers & 2) != 0)) {
+                && input.key() == MultichatClient.CONFIG.quickActionKeybindKey
+                && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
             String sel = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
             LzClient.mc().setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
@@ -142,10 +144,10 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.arrowKeySwitchTabs
-                && (keyCode == Keys.RIGHT || keyCode == Keys.LEFT)
+                && (input.key() == Keys.RIGHT || input.key() == Keys.LEFT)
                 && chatField.getText().isEmpty()) {
-            boolean goRight   = keyCode == Keys.RIGHT;
-            boolean ctrlHeld  = (modifiers & 2) != 0;
+            boolean goRight   = input.key() == Keys.RIGHT;
+            boolean ctrlHeld  = (input.modifiers() & 2) != 0;
 
             if (ctrlHeld) {
                 // Ctrl+Arrow → cycle focused panel
@@ -195,9 +197,10 @@ public abstract class ChatScreenMixin {
     // Mouse click — tabs, context menus
     // ------------------------------------------------------------------
 
-    @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"), cancellable = true)
-    private void onMouseClicked(double mouseX, double mouseY, int button,
+    @Inject(method = "mouseClicked(Lnet/minecraft/client/gui/Click;Z)Z", at = @At("HEAD"), cancellable = true)
+    private void onMouseClicked(Click click, boolean isDoubleClickParam,
                                  CallbackInfoReturnable<Boolean> cir) {
+        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
         if (button == 0 && ContextMenu.isOpen()) {
             cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY));

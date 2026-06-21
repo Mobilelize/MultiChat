@@ -1,6 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -171,8 +173,9 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) return true;
+    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+        double mx = click.x(); double my = click.y(); int button = click.button();
+        if (super.mouseClicked(click, isDoubleClick)) return true;
 
         int lx  = width / 2 - 200;
         int lxSb = lx + 405;
@@ -234,7 +237,8 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double my = click.y();
         if (scrollDragging) {
             int max    = maxScroll();
             int trackH = listBottom() - LIST_TOP;
@@ -246,13 +250,13 @@ public class PanelListScreen extends ConfigScreen {
                     scrollDragStartOff + (int)((my - scrollDragStartY) * max / travel)));
             return true;
         }
-        return super.mouseDragged(mx, my, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(Click click) {
         scrollDragging = false;
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleased(click);
     }
 
     @Override
@@ -265,9 +269,9 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) { close(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyInput input) {
+        if (input.key() == Keys.ESCAPE) { close(); return true; }
+        return super.keyPressed(input);
     }
 
     private void doRemovePanel(ChatPanel panel) {

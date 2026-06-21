@@ -1,6 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -206,8 +208,9 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
+        if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
 
         // Scrollbar
@@ -287,7 +290,8 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double mouseY = click.y();
         if (scrollDragging) {
             int max     = maxScroll();
             int trackH  = listBottom() - LIST_TOP;
@@ -299,13 +303,13 @@ public class NoteEditorScreen extends LzScreen {
                     scrollDragStartOff + (int)((mouseY - scrollDragStartY) * max / travel)));
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(Click click) {
         scrollDragging = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(click);
     }
 
     @Override
@@ -318,16 +322,16 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) {
+    public boolean keyPressed(KeyInput input) {
+        if (input.key() == Keys.ESCAPE) {
             if (swapPending) { swapPending = false; return true; }
             close(); return true;
         }
         if (selectedIdx >= 0) {
-            if (keyCode == Keys.UP)   { move(selectedIdx, true);  return true; }
-            if (keyCode == Keys.DOWN) { move(selectedIdx, false); return true; }
+            if (input.key() == Keys.UP)   { move(selectedIdx, true);  return true; }
+            if (input.key() == Keys.DOWN) { move(selectedIdx, false); return true; }
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(input);
     }
 
     private void doRemove(int i) {

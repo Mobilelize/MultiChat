@@ -10,6 +10,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
+import net.minecraft.client.input.KeyInput;
 import net.mobilelize.multichat.client.*;
 
 public class SearchOverlay extends LzScreen {
@@ -181,10 +182,10 @@ public class SearchOverlay extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == Keys.ESCAPE) { close(); return true; }
-        if (keyCode == Keys.ENTER || keyCode == Keys.NUMPAD_ENTER) { createSearch(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyInput input) {
+        if (input.key() == Keys.ESCAPE) { close(); return true; }
+        if (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER) { createSearch(); return true; }
+        return super.keyPressed(input);
     }
 
     @Override
