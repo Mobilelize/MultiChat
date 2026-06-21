@@ -154,7 +154,25 @@ public class ChatRenderer {
             lastRendered = i;
         }
         panel.setTabLastRendered(lastRendered);
-        if (panel.consumePendingScrollIntoView()) panel.scrollActiveTabIntoView();
+        if (panel.consumePendingScrollIntoView()) {
+            int active = panel.activeTabIndex();
+            if (active < panel.tabScrollOffset()) {
+                panel.setTabScrollOffset(active);
+            } else if (active > lastRendered) {
+                int fullWidth = chatWidth + 8; // x range [-4, chatWidth+4]
+                int usedWidth = 0;
+                int newOffset = active;
+                for (int i = active; i >= 0; i--) {
+                    int tw = LzDraw.textWidth(getTabLabel(panel, visibleTabs.get(i))) + 8;
+                    if (i < active) usedWidth += 1; // gap between tabs
+                    usedWidth += tw;
+                    int available = fullWidth - (i > 0 ? ARROW_W : 0);
+                    if (usedWidth > available) break;
+                    newOffset = i;
+                }
+                panel.setTabScrollOffset(newOffset);
+            }
+        }
 
         if (hasRight && lastRendered + 1 < visibleTabs.size()) {
             int remaining = tabAreaEnd - x;

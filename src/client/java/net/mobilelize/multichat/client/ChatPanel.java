@@ -308,16 +308,7 @@ public class ChatPanel {
     }
 
     public void scrollActiveTabIntoView() {
-        if (tabLastRendered < 0) {
-            pendingScrollIntoView = true;
-            return;
-        }
-        if (activeTabId < tabScrollOffset) {
-            tabScrollOffset = activeTabId;
-        } else if (activeTabId > tabLastRendered) {
-            int visibleCount = tabLastRendered - tabScrollOffset + 1;
-            tabScrollOffset = Math.max(0, activeTabId - visibleCount + 1);
-        }
+        pendingScrollIntoView = true;
     }
 
     public void deferScrollActiveTabIntoView() { pendingScrollIntoView = true; }
