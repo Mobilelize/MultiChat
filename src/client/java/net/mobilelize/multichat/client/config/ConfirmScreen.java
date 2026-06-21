@@ -38,7 +38,6 @@ public class ConfirmScreen extends LzScreen {
     @Override
     public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
-        super.lzRender(ctx, mouseX, mouseY, delta);
 
         int mw  = 240, mh = 74;
         int mx1 = width  / 2 - mw / 2;
