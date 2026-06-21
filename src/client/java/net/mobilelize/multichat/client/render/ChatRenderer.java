@@ -156,6 +156,26 @@ public class ChatRenderer {
         panel.setTabLastRendered(lastRendered);
         if (panel.consumePendingScrollIntoView()) panel.scrollActiveTabIntoView();
 
+        if (hasRight && lastRendered + 1 < visibleTabs.size()) {
+            int remaining = tabAreaEnd - x;
+            if (remaining > 4) {
+                ChatTab nextTab = visibleTabs.get(lastRendered + 1);
+                String label = getTabLabel(panel, nextTab);
+                int tabWidth = LzDraw.textWidth(label) + 8;
+                boolean active = (lastRendered + 1 == panel.activeTabIndex());
+
+                int sx1 = Math.round((x + xOffset) * scale);
+                int sy1 = Math.round(topY * scale);
+                int sx2 = Math.round((tabAreaEnd + xOffset) * scale);
+                int sy2 = Math.round((topY + TAB_HEIGHT) * scale);
+
+                LzDraw.enableScissor(context, sx1, sy1, sx2, sy2);
+                LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(nextTab, active, panel));
+                LzDraw.drawText(context, label, x, topY + 1, tabFgColor(nextTab, active, panel));
+                LzDraw.disableScissor(context);
+            }
+        }
+
         if (hasRight) {
             int ax = tabAreaEnd;
             LzDraw.fill(context, ax, topY, ax + ARROW_W, topY + TAB_HEIGHT, Colors.TAB_BAR_NO_COLOR_INACTIVE);
