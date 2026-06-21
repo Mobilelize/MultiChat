@@ -50,4 +50,11 @@ public record FilterRule (FilterType type, String value, IndicatorFilter indicat
             case CHAT_ERROR -> raw == MessageIndicator.chatError();
         };
     }
+
+    public static String normalizeFilterText(String text) {
+        return text
+                .replaceAll("\\p{C}", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
 }
