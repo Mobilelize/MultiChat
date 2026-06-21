@@ -25,6 +25,7 @@ public class MultiChatConfig extends LzConfig {
 
     // ── General ───────────────────────────────────────────────────────────────
     public boolean modDisabled                  = false;
+    public boolean normalizeFilterText          = false;
     public boolean showIndicators               = true;
     public boolean cursorChangingEnabled         = true;
     public boolean selectionEnabled             = true;
