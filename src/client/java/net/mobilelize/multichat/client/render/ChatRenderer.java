@@ -155,7 +155,25 @@ public class ChatRenderer {
             lastRendered = i;
         }
         panel.setTabLastRendered(lastRendered);
-        if (panel.consumePendingScrollIntoView()) panel.scrollActiveTabIntoView();
+        if (panel.consumePendingScrollIntoView()) {
+            int active = panel.activeTabIndex();
+            if (active < panel.tabScrollOffset()) {
+                panel.setTabScrollOffset(active);
+            } else if (active > lastRendered) {
+                int fullWidth = chatWidth + 8; // x range [-4, chatWidth+4]
+                int usedWidth = 0;
+                int newOffset = active;
+                for (int i = active; i >= 0; i--) {
+                    int tw = LzDraw.textWidth(getTabLabel(panel, visibleTabs.get(i))) + 8;
+                    if (i < active) usedWidth += 1; // gap between tabs
+                    usedWidth += tw;
+                    int available = fullWidth - (i > 0 ? ARROW_W : 0);
+                    if (usedWidth > available) break;
+                    newOffset = i;
+                }
+                panel.setTabScrollOffset(newOffset);
+            }
+        }
 
         if (hasRight && lastRendered + 1 < visibleTabs.size()) {
             int remaining = tabAreaEnd - x;
@@ -165,12 +183,7 @@ public class ChatRenderer {
                 int tabWidth = LzDraw.textWidth(label) + 8;
                 boolean active = (lastRendered + 1 == panel.activeTabIndex());
 
-                int sx1 = Math.round((x + xOffset) * scale);
-                int sy1 = Math.round(topY * scale);
-                int sx2 = Math.round((tabAreaEnd + xOffset) * scale);
-                int sy2 = Math.round((topY + TAB_HEIGHT) * scale);
-
-                LzDraw.enableScissor(context, sx1, sy1, sx2, sy2);
+                LzDraw.enableScissor(context, x, topY, tabAreaEnd, topY + TAB_HEIGHT);
                 LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(nextTab, active, panel));
                 LzDraw.drawText(context, label, x, topY + 1, tabFgColor(nextTab, active, panel));
                 LzDraw.disableScissor(context);
