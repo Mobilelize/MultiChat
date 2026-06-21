@@ -23,8 +23,8 @@ import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.lit
 public class MultiChatCommand {
 
     public static void register() {
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-            dispatcher.register(literal("multichat")
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            var root = dispatcher.register(literal("multichat")
                 .executes(ctx -> {
                     LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
                     return 1;
@@ -110,7 +110,9 @@ public class MultiChatCommand {
                     .then(argument("id", StringArgumentType.word())
                         .executes(MultiChatCommand::executeAction)))
                 .then(literal("help")
-                    .executes(MultiChatCommand::printHelp))));
+                    .executes(MultiChatCommand::printHelp)));
+            dispatcher.register(literal("mlchat").redirect(root));
+        });
     }
 
     private static int noteAdd(CommandContext<FabricClientCommandSource> ctx) {

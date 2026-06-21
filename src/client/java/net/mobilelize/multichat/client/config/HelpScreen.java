@@ -26,6 +26,7 @@ public class HelpScreen {
         help.addEntry(eb.startTextDescription(LzText.format(
                 """
                         &e&lCommands&r
+                          &7Alias: &f/mlchat&r&7 works the same as &f/multichat&r
                           &f/multichat&r&7                          Open tab list
                           &f/multichat tab&r&7                      Open tab list
                           &f/multichat tab add&r&7                  Add a new filtered tab (auto-named)
