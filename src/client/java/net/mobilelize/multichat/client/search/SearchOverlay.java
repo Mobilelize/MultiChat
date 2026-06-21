@@ -67,7 +67,6 @@ public class SearchOverlay extends LzScreen {
         queryField.setPlaceholder(LzText.literal("Search query…").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         queryField.setMaxLength(256);
         if (!initialQuery.isEmpty()) queryField.setText(initialQuery);
-        this.setFocused(queryField);
 
         fromField = addDrawableChild(new LzTextField(fx, top + 30, half, 20));
         fromField.setPlaceholder(LzText.literal("e.g. 10m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
@@ -97,6 +96,8 @@ public class SearchOverlay extends LzScreen {
 
         addDrawableChild(LzButton.of("Cancel",        cx - 86, top + 138, 80,  20, b -> close()));
         addDrawableChild(LzButton.of("Create Search", cx + 6,  top + 138, 100, 20, b -> createSearch()));
+
+        this.setFocused(queryField);
     }
 
     private SearchMode cycleMode() {
