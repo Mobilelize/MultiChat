@@ -36,7 +36,7 @@ public class ConfirmScreen extends LzScreen {
     }
 
     @Override
-    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
 
@@ -44,18 +44,19 @@ public class ConfirmScreen extends LzScreen {
         int mx1 = width  / 2 - mw / 2;
         int my1 = height / 2 - mh / 2;
 
-        // Drop shadow
         LzDraw.fill(ctx, mx1 + 4, my1 + 4, mx1 + mw + 4, my1 + mh + 4, Colors.OVERLAY);
-        // Panel
         LzDraw.fill(ctx, mx1, my1, mx1 + mw, my1 + mh, Colors.MODAL_BG);
-        // Accent top bar
         LzDraw.fill(ctx, mx1, my1, mx1 + mw, my1 + 3, Colors.DIALOG_CONFIRM_ACCENT);
-        // Border
         LzDraw.drawBorder(ctx, mx1, my1, mx1 + mw, my1 + mh, Colors.BORDER_DEEPER);
 
         LzDraw.drawCenteredText(ctx, LzText.literal(message), width / 2, my1 + 14, Colors.TEXT_LIGHT);
         LzDraw.drawCenteredText(ctx, LzText.literal("Unsaved changes will be lost."),
             width / 2, my1 + 26, Colors.TEXT_GRAY);
+    }
+
+    @Override
+    public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
+        super.lzRender(ctx, mouseX, mouseY, delta);
     }
 
     @Override
