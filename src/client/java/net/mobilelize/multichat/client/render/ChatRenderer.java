@@ -1,6 +1,7 @@
 package net.mobilelize.multichat.client.render;
 
 import net.minecraft.client.gui.hud.ChatHud;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.util.profiler.Profilers;
 import net.mobilelize.fabriclib.client.*;
@@ -373,11 +374,22 @@ public class ChatRenderer {
             int lineIdx = LzMath.floor(chatY + panel.getScrolledLines(active));
             if (lineIdx < 0 || lineIdx >= msgs.size()) continue;
 
-            Style style = LzDraw.textHandler()
-                .getStyleAt(msgs.get(lineIdx).content().mc(), LzMath.floor(localChatX));
+            Style style = getStyleAt(msgs.get(lineIdx).content().mc(), LzMath.floor(localChatX));
             if (style != null) return style;
         }
         return null;
+    }
+
+    private static @org.jetbrains.annotations.Nullable Style getStyleAt(OrderedText text, int x) {
+        net.minecraft.client.font.TextHandler handler = LzDraw.textHandler();
+        float[] w = { 0 };
+        Style[] out = { null };
+        text.accept((index, style, codePoint) -> {
+            w[0] += handler.getWidth(v -> v.accept(0, style, codePoint));
+            if (w[0] > x) { out[0] = style; return false; }
+            return true;
+        });
+        return out[0];
     }
 
     public static IndicatorResult resolveIndicatorAt(double mouseX, double mouseY,

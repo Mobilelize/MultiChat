@@ -302,11 +302,8 @@ public abstract class ChatScreenMixin {
                 boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
                     && LzKeys.isCtrlDown();
                 if (!ctrlSkip) {
-                    var chat = LzChat.chatHud();
-                    if (chat != null) {
-                        var style = chat.getTextStyleAt(mouseX, mouseY);
-                        if (style != null && style.getClickEvent() != null) break;
-                    }
+                    var style = ChatRenderer.resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
+                    if (style != null && style.getClickEvent() != null) break;
                 }
 
                 float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
@@ -489,13 +486,10 @@ public abstract class ChatScreenMixin {
 
             // Clickable text → hand (skipped when Ctrl held — Ctrl is selection mode)
             if (!ctrlHeld) {
-                var chat = LzChat.chatHud();
-                if (chat != null) {
-                    var style = chat.getTextStyleAt(mouseX, mouseY);
-                    if (style != null && style.getClickEvent() != null) {
-                        MouseClient.setHandCursor();
-                        return;
-                    }
+                var style = ChatRenderer.lastHoveredStyle;
+                if (style != null && style.getClickEvent() != null) {
+                    MouseClient.setHandCursor();
+                    return;
                 }
             }
 

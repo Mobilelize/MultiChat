@@ -1,11 +1,11 @@
 package net.mobilelize.multichat.mixin.client;
 
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.ChatHudLine;
 import net.minecraft.client.gui.hud.MessageIndicator;
 import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
@@ -49,33 +49,35 @@ public class ChatHudMixin {
     // The `focused` param is renamed `interactable`; `bl` is new.
 
     @Inject(
-        method = "render(Lnet/minecraft/client/gui/DrawContext;IIIZ)V",
+        method = "render(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;IIIZZ)V",
         at = @At("HEAD"),
         cancellable = true
     )
-    private void hookRenderHead(DrawContext context, int currentTick, int mouseX, int mouseY,
-                                 boolean focused, CallbackInfo ci) {
+    private void hookRenderHead(DrawContext context, TextRenderer textRenderer, int currentTick,
+                                 int mouseX, int mouseY, boolean interactable, boolean bl,
+                                 CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatPanel mp = ChatManager.primaryPanel();
         ChatTab activeLeft = mp != null ? mp.getActiveTab() : null;
         boolean leftVanilla = activeLeft != null && mp.isEnabled() && activeLeft.type() == TabType.VANILLA;
         if (!leftVanilla) {
             ci.cancel();
-            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, focused, false);
+            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, interactable, false);
         }
     }
 
     @Inject(
-        method = "render(Lnet/minecraft/client/gui/DrawContext;IIIZ)V",
+        method = "render(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;IIIZZ)V",
         at = @At("RETURN")
     )
-    private void hookRenderReturn(DrawContext context, int currentTick, int mouseX, int mouseY,
-                                   boolean focused, CallbackInfo ci) {
+    private void hookRenderReturn(DrawContext context, TextRenderer textRenderer, int currentTick,
+                                   int mouseX, int mouseY, boolean interactable, boolean bl,
+                                   CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatPanel mp = ChatManager.primaryPanel();
         ChatTab activeLeft = mp != null ? mp.getActiveTab() : null;
         if (activeLeft != null && mp.isEnabled() && activeLeft.type() == TabType.VANILLA) {
-            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, focused, true);
+            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, interactable, true);
         }
     }
 
@@ -157,71 +159,9 @@ public class ChatHudMixin {
         MessageRouter.routeMessages(messages.getFirst());
     }
 
-    // ── Indicator hit-test ────────────────────────────────────────────────────
-    // MC-VERSION-SENSITIVE: getIndicatorAt may be removed in newer MC.
-    // Logic lives in ChatRenderer.resolveIndicatorAt — only the hook changes.
-    // If removed: find the replacement (likely DrawnTextConsumer/Interactable callback)
-    // and wire ChatRenderer.resolveIndicatorAt into that instead.
-
-    @Inject(method = "getIndicatorAt", at = @At("HEAD"), cancellable = true)
-    private void getIndicatorAt(double mouseX, double mouseY,
-                                 CallbackInfoReturnable<@Nullable MessageIndicator> cir) {
-        if (MultichatClient.CONFIG.modDisabled) return;
-        if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); return; }
-
-        ChatPanel mpI = ChatManager.primaryPanel();
-        ChatTab leftActive  = mpI != null ? mpI.getActiveTab() : null;
-        boolean leftIsVanilla = leftActive != null && mpI.isEnabled() && leftActive.type() == TabType.VANILLA;
-
-        if (!MultichatClient.CONFIG.showIndicators) {
-            if (!leftIsVanilla) cir.setReturnValue(null);
-            return;
-        }
-
-        // Read from render-time cache. To migrate when getIndicatorAt is removed in a newer MC
-        // version: delete this hook and pass lastHoveredIndicator to the Interactable consumer instead.
-        ChatRenderer.IndicatorResult result = ChatRenderer.lastHoveredIndicator;
-        if (result != null && result.found()) {
-            cir.setReturnValue(result.indicator() != null ? result.indicator().mc() : null);
-        } else if (!leftIsVanilla) {
-            cir.setReturnValue(null);
-        }
-    }
-
     @Unique
     private static int getIndicatorWidth(@Nullable LzMessageIndicator indicator) {
         return indicator != null && indicator.hasIcon() ? indicator.iconWidth() + 6 : 0;
     }
 
-    // ── Text style hit-test ───────────────────────────────────────────────────
-    // MC-VERSION-SENSITIVE: getTextStyleAt may be removed in newer MC.
-    // Logic lives in ChatRenderer.resolveStyleAt — only the hook changes.
-    // If removed: find the replacement (likely Interactable.text() Consumer<Style> callback)
-    // and wire ChatRenderer.resolveStyleAt into that instead.
-
-    @Inject(method = "getTextStyleAt", at = @At("HEAD"), cancellable = true)
-    private void suppressTextStyleWhenMenuOpen(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
-        if (MultichatClient.CONFIG.modDisabled) return;
-        if (ContextMenu.isOpen() || MessageContextMenu.isOpen()) { cir.setReturnValue(null); }
-    }
-
-    @Inject(method = "getTextStyleAt", at = @At("RETURN"), cancellable = true)
-    private void getTextStyleAtAllPanels(double x, double y, CallbackInfoReturnable<@Nullable Style> cir) {
-        if (MultichatClient.CONFIG.modDisabled) return;
-
-        ChatPanel mpS = ChatManager.primaryPanel();
-        ChatTab leftActive = mpS != null ? mpS.getActiveTab() : null;
-        boolean leftIsVanilla = leftActive != null && mpS.isEnabled()
-            && leftActive.type() == TabType.VANILLA;
-
-        // Read from render-time cache. To migrate when getTextStyleAt is removed in a newer MC
-        // version: delete this hook and pass lastHoveredStyle to the Interactable/Consumer<Style>
-        // callback instead.
-        Style style = ChatRenderer.lastHoveredStyle;
-        if (style != null) {
-            cir.setReturnValue(style);
-        } else if (!leftIsVanilla) {
-            cir.setReturnValue(null);
-        }
-    }
 }
