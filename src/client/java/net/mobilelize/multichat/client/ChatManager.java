@@ -136,8 +136,7 @@ public class ChatManager {
         if (tab.collapseIdentical()) {
             LinkedHashMap<String, ChatTab.MessageEntry> newest = new LinkedHashMap<>();
             LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
-            for (int i = source.size() - 1; i >= 0; i--) {
-                ChatTab.MessageEntry me = source.get(i);
+            for (ChatTab.MessageEntry me : source) {
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
                 if (!tab.matchesText(text) || !tab.matchesTime(me.entry().creationTick)) continue;
@@ -146,7 +145,7 @@ public class ChatManager {
                 newest.putIfAbsent(text, me);
                 counts.merge(text, 1, Integer::sum);
             }
-            // Forward iteration: oldest unique first → addFirst each → newest ends at index 0
+            // Render newest→oldest with addLast: newest ends at index 0
             for (Map.Entry<String, ChatTab.MessageEntry> e : newest.entrySet()) {
                 ChatTab.MessageEntry me = e.getValue();
                 int count = counts.get(e.getKey());
@@ -157,7 +156,7 @@ public class ChatManager {
                     ? LzText.wrapMc(base.mc().copy().append(LzText.format(" " + MultichatClient.CONFIG.collapseCounterFormat.replace("{count}", String.valueOf(count))).mc()))
                     : base;
                 if (count > 1) tab.collapseCounts().put(me.entry(), count);
-                tab.addFirst(me.newRender(rendered));
+                tab.addLast(me.newRender(rendered));
             }
         } else {
             for (int i = source.size() - 1; i >= 0; i--) {
