@@ -11,6 +11,7 @@ import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.client.search.SearchOverlay;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class MessageContextMenu {
@@ -146,7 +147,14 @@ public class MessageContextMenu {
             .filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (allTab == null) return;
 
-        List<LzChatLine> allMsgs = sourcePanel.getTabLines(allTab);
+        ChatPanel targetPanel = sourcePanel.getVisibleTabs().contains(allTab) ? sourcePanel
+            : ChatManager.getAllPanels().stream()
+                .sorted(Comparator.comparingInt(ChatPanel::id))
+                .filter(p -> p.getVisibleTabs().contains(allTab))
+                .findFirst().orElse(null);
+        if (targetPanel == null) return;
+
+        List<LzChatLine> allMsgs = targetPanel.getTabLines(allTab);
         if (allMsgs == null) return;
         int allIdx = allMsgs.indexOf(line);
 
@@ -179,15 +187,15 @@ public class MessageContextMenu {
         }
         if (allIdx < 0) return;
 
-        List<ChatTab> panelTabs = sourcePanel.getVisibleTabs();
+        List<ChatTab> panelTabs = targetPanel.getVisibleTabs();
         int allPanelIdx = panelTabs.indexOf(allTab);
         if (allPanelIdx < 0) return;
 
-        sourcePanel.setActiveTabId(allPanelIdx);
-        sourcePanel.scrollActiveTabIntoView();
+        targetPanel.setActiveTabId(allPanelIdx);
+        targetPanel.scrollActiveTabIntoView();
         allTab.clearUnread();
-        int maxScroll = Math.max(0, allMsgs.size() - sourcePanel.resolveLines());
-        sourcePanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));
+        int maxScroll = Math.max(0, allMsgs.size() - targetPanel.resolveLines());
+        targetPanel.setScrolledLines(allTab, LzMath.clamp(allIdx, 0, maxScroll));
 
         LzChatEntry targetEntry = allMsgs.get(allIdx).entry();
         if (targetEntry != null) {
