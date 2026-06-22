@@ -62,6 +62,9 @@ public class MultichatClient implements ClientModInitializer {
             .map(t -> (NoteTab) t)
             .collect(Collectors.toList());
         CONFIG.activeNoteTabId = ChatManager.activeNoteTab != null ? ChatManager.activeNoteTab.id() : null;
+        CONFIG.infoTabOnPanel2 = ChatManager.getTabs().stream()
+            .filter(t -> t.type() == TabType.INFO)
+            .anyMatch(t -> t.visibleOnPanels().contains(1));
         CONFIG.save();
     }
 
@@ -126,12 +129,12 @@ public class MultichatClient implements ClientModInitializer {
             tabs.addFirst(new ChatTab("All", TabType.ALL, List.of(0, 1)));
         }
         if (!hasInfo) {
-            tabs.add(2, new InfoTab(List.of(1)));
+            tabs.add(2, new InfoTab(CONFIG.infoTabOnPanel2 ? List.of(1) : List.of()));
         }
     }
 
     private static void ensureDefaultPanels() {
-        java.util.List<ChatPanel> panels = ChatManager.getAllPanels();
+        List<ChatPanel> panels = ChatManager.getAllPanels();
 
         // Primary panel — always index 0, id 0
         if (panels.isEmpty() || panels.get(0).id() != 0) {
@@ -141,6 +144,7 @@ public class MultichatClient implements ClientModInitializer {
             p.setEnabled(true);
             p.setAnchor(ChatPanel.Anchor.LEFT);
             p.setName("Main");
+            p.setLockUnfocusedToFocused(false);
             panels.addFirst(p);
         }
         panels.get(0).setPrimary(true);
@@ -152,6 +156,7 @@ public class MultichatClient implements ClientModInitializer {
             p.setEnabled(true);
             p.setAnchor(ChatPanel.Anchor.RIGHT);
             p.setName("Second");
+            p.setLockUnfocusedToFocused(false);
             panels.add(1, p);
             List<ChatTab> visible = p.getVisibleTabs();
             for (int i = 0; i < visible.size(); i++) {
