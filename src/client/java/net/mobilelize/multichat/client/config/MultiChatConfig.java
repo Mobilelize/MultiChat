@@ -18,6 +18,7 @@ public class MultiChatConfig extends LzConfig {
     public List<ChatTab>   tabs            = new ArrayList<>(); // FILTERED, API, ALL, VANILLA
     public List<NoteTab>   noteTabs        = new ArrayList<>(); // NOTES — separate for Gson subtype
     public UUID            activeNoteTabId = null;
+    public boolean         infoTabOnPanel2 = true;
 
     // ── Tab appearance globals (per-panel override when >= 0) ─────────────────
     public double tabBgOpacity = -1;
