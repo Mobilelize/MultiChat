@@ -143,7 +143,7 @@ public class ChatManager {
                 if (!tab.matchesText(text) || !tab.matchesTime(me.entry().creationTick)) continue;
                 String fText1 = MultichatClient.CONFIG.normalizeFilterText ? FilterRule.normalizeFilterText(text) : text;
                 if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText1, me.entry().indicator)) continue;
-                newest.put(text, me);
+                newest.putIfAbsent(text, me);
                 counts.merge(text, 1, Integer::sum);
             }
             // Forward iteration: oldest unique first → addFirst each → newest ends at index 0
