@@ -1,7 +1,5 @@
 package net.mobilelize.multichat.client;
 
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzMutableText;
@@ -206,9 +204,9 @@ public class InfoTab extends ChatTab {
         LzText hover = LzText.literal("Click to suggest command")
             .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY));
         LzMutableText cmdText = LzText.format("    &3" + command);
-        cmdText.mc().styled(s -> s
-            .withClickEvent(new ClickEvent.SuggestCommand(command))
-            .withHoverEvent(new HoverEvent.ShowText(hover.mc())));
+        cmdText.withStyle(LzStyle.empty()
+            .withClickSuggestCommand(command)
+            .withHoverText(hover));
         return LzText.empty().append(cmdText).append(LzText.format("  &7" + desc));
     }
 
@@ -216,9 +214,9 @@ public class InfoTab extends ChatTab {
         LzText hover = LzText.literal("Click to suggest command")
                 .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY));
         LzMutableText cmdText = LzText.format("&3" + command);
-        cmdText.mc().styled(s -> s
-                .withClickEvent(new ClickEvent.SuggestCommand(command))
-                .withHoverEvent(new HoverEvent.ShowText(hover.mc())));
+        cmdText.withStyle(LzStyle.empty()
+                .withClickSuggestCommand(command)
+                .withHoverText(hover));
         return LzText.empty().append(cmdText).append(LzText.format("  &7" + desc));
     }
 
@@ -257,11 +255,11 @@ public class InfoTab extends ChatTab {
         LzText hoverText = LzText.literal(tooltip)
             .withStyle(LzStyle.ofFormatting(LzFormatting.RED));
         LzMutableText t = LzText.literal(label);
-        t.mc().styled(s -> s
+        t.withStyle(LzStyle.empty()
             .withColor(0xFF5555)
             .withBold(true)
-            .withClickEvent(new ClickEvent.RunCommand(command))
-            .withHoverEvent(new HoverEvent.ShowText(hoverText.mc())));
+            .withClickRunCommand(command)
+            .withHoverText(hoverText));
         return t;
     }
 
@@ -269,11 +267,11 @@ public class InfoTab extends ChatTab {
         LzText hoverText = LzText.literal(tooltip)
             .withStyle(LzStyle.ofFormatting(LzFormatting.GRAY));
         LzMutableText t = LzText.literal(label);
-        t.mc().styled(s -> s
+        t.withStyle(LzStyle.empty()
             .withColor(Colors.TEXT_LINK)
             .withUnderline(true)
-            .withClickEvent(new ClickEvent.RunCommand(command))
-            .withHoverEvent(new HoverEvent.ShowText(hoverText.mc())));
+            .withClickRunCommand(command)
+            .withHoverText(hoverText));
         return t;
     }
 }
