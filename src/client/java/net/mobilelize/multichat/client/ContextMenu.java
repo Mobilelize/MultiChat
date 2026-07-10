@@ -286,6 +286,7 @@ public class ContextMenu {
                         if (prev != null && p.getVisibleTabs().contains(prev)) {
                             p.setActiveTabId(p.getVisibleTabs().indexOf(prev));
                             p.scrollActiveTabIntoView();
+                            prev.clearUnread();
                         }
                     }
                 }
