@@ -17,6 +17,7 @@ import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3x2f;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -258,8 +259,9 @@ public class ChatRenderer {
                 .withPose(new Matrix3x2f(rawCtx.getMatrices()));
         }
 
-        int linesDrawn = 0;
+        record Row(int s, LzChatLine visible, int lineTop, int lineBot, int textY, int textAlpha, int bgAlpha) {}
 
+        List<Row> rows = new ArrayList<>();
         int maxR = Math.min(visibleLineCount, totalMessages - scrolledLines) - 1;
         for (int r = maxR; r >= 0; r--) {
             int s = r + scrolledLines;
@@ -272,7 +274,6 @@ public class ChatRenderer {
             double opacityMult = focused ? 1.0 : getOpacityMultiplier(age);
             int textAlpha = (int)(255.0 * opacityMult * chatOpacity);
             int bgAlpha   = (int)(255.0 * opacityMult * bgOpacity);
-            linesDrawn++;
 
             if (textAlpha <= 3) continue;
 
@@ -280,22 +281,28 @@ public class ChatRenderer {
             int lineBot = lineTop - lineHeight;
             int textY   = lineTop + textOffset;
 
-            LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (bgAlpha << 24) | lineBgRgb);
+            rows.add(new Row(s, visible, lineTop, lineBot, textY, textAlpha, bgAlpha));
+        }
+        int linesDrawn = rows.size();
 
-            LzChatEntry visibleEntry = visible.entry();
+        // Pass 1: all background-layer fills, for every row, before any text is drawn.
+        for (Row row : rows) {
+            LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (row.bgAlpha() << 24) | lineBgRgb);
+
+            LzChatEntry visibleEntry = row.visible().entry();
             if (!ChatRenderer.highlightEntries.isEmpty()
                     && ChatRenderer.currentTick < ChatRenderer.highlightUntilTick
                     && visibleEntry != null && ChatRenderer.highlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | Colors.HIGHLIGHT_SEARCH_RGB);
+                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | Colors.HIGHLIGHT_SEARCH_RGB);
             }
             if (!ChatRenderer.copyHighlightEntries.isEmpty()
                     && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
                     && visibleEntry != null && ChatRenderer.copyHighlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | Colors.HIGHLIGHT_NEW_RGB);
+                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | Colors.HIGHLIGHT_NEW_RGB);
             }
 
             int flashAge = currentTick - panel.tabFlashTick();
@@ -303,20 +310,27 @@ public class ChatRenderer {
                 float t = (float) flashAge / FLASH_TICKS;
                 int flashAlpha = (int)(80 * (1f - t) * (1f - t));
                 if (flashAlpha > 0)
-                    LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (flashAlpha << 24) | Colors.HIGHLIGHT_FLASH_RGB);
+                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (flashAlpha << 24) | Colors.HIGHLIGHT_FLASH_RGB);
             }
 
             if (MultichatClient.CONFIG.selectionEnabled) {
-                int[] selRect = ChatSelection.lineHighlight(visible, s, panel);
+                int[] selRect = ChatSelection.lineHighlight(row.visible(), row.s(), panel);
                 if (selRect != null)
-                    LzDraw.fill(context, selRect[0], lineBot, selRect[1], lineTop, Colors.SELECTION);
+                    LzDraw.fill(context, selRect[0], row.lineBot(), selRect[1], row.lineTop(), Colors.SELECTION);
             }
+        }
+
+        // Pass 2: indicators + text, for every row, always drawn on top of every background above.
+        for (Row row : rows) {
+            LzChatLine visible = row.visible();
+            int textAlpha = row.textAlpha();
+            int textY     = row.textY();
 
             if (MultichatClient.CONFIG.showIndicators) {
                 LzMessageIndicator indicator = visible.indicator();
                 if (indicator != null) {
-                    LzDraw.fill(context, -4, lineBot, -2, lineTop, indicator.indicatorColor() | (textAlpha << 24));
-                    if (s == hoveredIndex && indicator.hasIcon()) {
+                    LzDraw.fill(context, -4, row.lineBot(), -2, row.lineTop(), indicator.indicatorColor() | (textAlpha << 24));
+                    if (row.s() == hoveredIndex && indicator.hasIcon()) {
                         int iconX = LzDraw.textWidth(visible.content()) + 4;
                         int iconY = textY + 9 - indicator.iconHeight() - 1;
                         indicator.drawIcon(context, iconX, iconY);
