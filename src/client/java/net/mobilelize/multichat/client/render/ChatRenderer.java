@@ -244,7 +244,8 @@ public class ChatRenderer {
 
         int linesDrawn = 0;
 
-        for (int r = 0; r + scrolledLines < totalMessages && r < visibleLineCount; r++) {
+        int maxR = Math.min(visibleLineCount, totalMessages - scrolledLines) - 1;
+        for (int r = maxR; r >= 0; r--) {
             int s = r + scrolledLines;
             LzChatLine visible = visibleMessages.get(s);
             if (visible == null) continue;
