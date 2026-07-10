@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -43,10 +43,10 @@ public class PanelListScreen extends ConfigScreen {
 
         // Name field + Add + Layout on one row — left-anchored at list edge
         panelNameField = new LzTextField(width / 2 - 198, height - 74, 284, 20);
-        panelNameField.setPlaceholder(LzText.literal("New panel name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
-        addSelectableChild(panelNameField);
-        addDrawableChild(LzButton.of("Layout", width / 2 + 90, height - 74, 60, 20, b -> LzClient.mc().setScreen(new PanelLayoutScreen(this))));
-        addDrawableChild(LzButton.of("Add",    width / 2 + 154, height - 74, 40, 20, b -> addPanel()));
+        panelNameField.setHint(LzText.literal("New panel name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+        addWidget(panelNameField);
+        addRenderableWidget(LzButton.of("Layout", width / 2 + 90, height - 74, 60, 20, b -> LzClient.mc().setScreen(new PanelLayoutScreen(this))));
+        addRenderableWidget(LzButton.of("Add",    width / 2 + 154, height - 74, 40, 20, b -> addPanel()));
 
         addConfigNav(width, height, NavPage.PANELS);
     }
@@ -58,7 +58,7 @@ public class PanelListScreen extends ConfigScreen {
 
         ChatPanel panel = new ChatPanel();
         panel.setId(id);
-        String fieldText = panelNameField != null ? panelNameField.getText().trim() : "";
+        String fieldText = panelNameField != null ? panelNameField.getValue().trim() : "";
         String baseName = fieldText.isEmpty() ? "Panel " + (ChatManager.getAllPanels().size() + 1) : fieldText;
         Set<String> usedNames = ChatManager.getAllPanels().stream().map(ChatPanel::name).collect(Collectors.toSet());
         String uniqueName = baseName;
@@ -78,7 +78,7 @@ public class PanelListScreen extends ConfigScreen {
 
         ChatManager.getAllPanels().add(panel);
         MultichatClient.saveTabsToConfig();
-        clearAndInit();
+        rebuildWidgets();
     }
 
     @Override
@@ -86,7 +86,7 @@ public class PanelListScreen extends ConfigScreen {
         super.lzRender(ctx, mouseX, mouseY, delta);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, Colors.TEAL);
         LzDraw.drawCenteredText(ctx, LzText.format("&7layout panels  ·  click Tabs to assign"), width / 2, 21, Colors.TEXT_WHITE);
-        if (panelNameField != null) panelNameField.render(ctx.mc(), mouseX, mouseY, delta);
+        if (panelNameField != null) panelNameField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         int lx = width / 2 - 200;
         List<ChatPanel> panels = panels();
@@ -173,7 +173,7 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mx = click.x(); double my = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
 
@@ -237,7 +237,7 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
         double my = click.y();
         if (scrollDragging) {
             int max    = maxScroll();
@@ -254,7 +254,7 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         scrollDragging = false;
         return super.mouseReleased(click);
     }
@@ -269,8 +269,8 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == Keys.ESCAPE) { close(); return true; }
+    public boolean keyPressed(KeyEvent input) {
+        if (input.key() == Keys.ESCAPE) { onClose(); return true; }
         return super.keyPressed(input);
     }
 
@@ -279,7 +279,7 @@ public class PanelListScreen extends ConfigScreen {
         ChatManager.getTabs().forEach(t -> t.visibleOnPanels().remove(id));
         ChatManager.getAllPanels().remove(panel);
         MultichatClient.saveTabsToConfig();
-        clearAndInit();
+        rebuildWidgets();
     }
 
 }

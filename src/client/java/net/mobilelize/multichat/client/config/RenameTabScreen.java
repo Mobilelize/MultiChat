@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -9,7 +9,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.multichat.client.*;
 
 public class RenameTabScreen extends LzScreen {
@@ -30,13 +30,13 @@ public class RenameTabScreen extends LzScreen {
         int cy = height / 2;
 
         field = new LzTextField(cx - 100, cy - 10, 200, 20);
-        field.setText(tab.name());
+        field.setValue(tab.name());
         field.setMaxLength(64);
-        addSelectableChild(field);
+        addWidget(field);
         setInitialFocus(field);
 
-        addDrawableChild(LzButton.of("OK",     cx - 53, cy + 18, 50, 18, b -> save()));
-        addDrawableChild(LzButton.of("Cancel", cx + 3,  cy + 18, 50, 18, b -> close()));
+        addRenderableOnly(LzButton.of("OK",     cx - 53, cy + 18, 50, 18, b -> save()));
+        addRenderableWidget(LzButton.of("Cancel", cx + 3,  cy + 18, 50, 18, b -> onClose()));
     }
 
     @Override
@@ -44,11 +44,11 @@ public class RenameTabScreen extends LzScreen {
         if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, height / 2 - 26, Colors.TEXT_WHITE);
-        field.render(ctx.mc(), mouseX, mouseY, delta);
+        field.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
     }
 
     private void save() {
-        String name = field.getText().trim();
+        String name = field.getValue().trim();
         if (name.isEmpty()) return;
         boolean nameConflict = ChatManager.getTabs().stream()
             .filter(t -> t != tab && t.type() == tab.type())
@@ -56,16 +56,16 @@ public class RenameTabScreen extends LzScreen {
         if (nameConflict) return;
         tab.setName(name);
         MultichatClient.saveTabsToConfig();
-        close();
+        onClose();
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER) { save(); return true; }
-        if (input.key() == Keys.ESCAPE) { close(); return true; }
+        if (input.key() == Keys.ESCAPE) { onClose(); return true; }
         return super.keyPressed(input);
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().setScreen(parent); }
 }

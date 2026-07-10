@@ -1,5 +1,7 @@
 package net.mobilelize.multichat.client;
 
+import net.minecraft.client.multiplayer.chat.GuiMessage;
+import net.minecraft.client.multiplayer.chat.GuiMessageSource;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.text.LzOrderedText;
@@ -83,9 +85,16 @@ public class ChatPanel {
     private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
         int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
         List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(entry.rendered().mc()), width);
+        GuiMessage parent = new GuiMessage(
+            entry.entry().creationTick,
+            entry.rendered().mc(),
+            null,
+            GuiMessageSource.SYSTEM_CLIENT,
+            entry.entry().indicator != null ? entry.entry().indicator.mc() : null
+        );
         for (int i = 0; i < lines.size(); i++) {
             boolean endOfEntry = i == lines.size() - 1;
-            panelLines.addFirst(LzChatLine.create(entry.entry().creationTick, lines.get(i), entry.entry().indicator, endOfEntry, entry.entry()));
+            panelLines.addFirst(LzChatLine.create(parent, lines.get(i), endOfEntry, entry.entry()));
         }
     }
 
@@ -218,7 +227,7 @@ public class ChatPanel {
     // Focused line count from MC options — not isChatFocused()-dependent.
     public int resolveFocusedLines() {
         if (primary || customHeightLines <= 0) {
-            double h = LzClient.mc().options.getChatHeightFocused().getValue();
+            double h = LzClient.mc().options.chatHeightFocused().get();
             int heightPx = (int)(h * 160.0 + 20.0);
             return Math.max(1, heightPx / resolveLineHeight());
         }

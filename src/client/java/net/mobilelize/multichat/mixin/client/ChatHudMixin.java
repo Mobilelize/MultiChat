@@ -1,12 +1,13 @@
 package net.mobilelize.multichat.mixin.client;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.hud.ChatHudLine;
-import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
+import net.minecraft.client.multiplayer.chat.GuiMessageSource;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MessageSignature;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
@@ -34,24 +35,25 @@ import java.util.List;
 // All rendering and hit-test logic has been moved to ChatRenderer so only the
 // hook descriptors and thin glue need updating here.
 // =============================================================================
-@Mixin(value = ChatHud.class, priority = 2000)
+@Mixin(value = ChatComponent.class, priority = 2000)
 public class ChatHudMixin {
 
     @Final
     @Shadow
-    private List<ChatHudLine> messages;
+    private List<GuiMessage> allMessages;
 
     // ── Render ────────────────────────────────────────────────────────────────
     // MC-VERSION-SENSITIVE: descriptor must match exactly.
-    // MC 1.21.11: TextRenderer added as 2nd param; focused→interactable; extra boolean bl (shouldInsert) at end.
+    // MC 26.1: render(...) renamed extractRenderState(...); focused bool replaced by
+    // ChatComponent.DisplayMode enum (displayMode.foreground == old interactable/focused).
 
     @Inject(
-        method = "render(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;IIIZZ)V",
+        method = "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;IIILnet/minecraft/client/gui/components/ChatComponent$DisplayMode;Z)V",
         at = @At("HEAD"),
         cancellable = true
     )
-    private void hookRenderHead(DrawContext context, TextRenderer textRenderer, int currentTick,
-                                 int mouseX, int mouseY, boolean interactable, boolean bl,
+    private void hookRenderHead(GuiGraphicsExtractor graphics, Font font, int currentTick,
+                                 int mouseX, int mouseY, ChatComponent.DisplayMode displayMode, boolean changeCursorOnInsertions,
                                  CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatPanel mp = ChatManager.primaryPanel();
@@ -59,34 +61,35 @@ public class ChatHudMixin {
         boolean leftVanilla = activeLeft != null && mp.isEnabled() && activeLeft.type() == TabType.VANILLA;
         if (!leftVanilla) {
             ci.cancel();
-            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, interactable, false);
+            ChatRenderer.render((ChatComponent)(Object)this, LzDrawContext.wrap(graphics), currentTick, mouseX, mouseY, displayMode.foreground, false);
         }
     }
 
     @Inject(
-        method = "render(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/client/font/TextRenderer;IIIZZ)V",
+        method = "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/gui/Font;IIILnet/minecraft/client/gui/components/ChatComponent$DisplayMode;Z)V",
         at = @At("RETURN")
     )
-    private void hookRenderReturn(DrawContext context, TextRenderer textRenderer, int currentTick,
-                                   int mouseX, int mouseY, boolean interactable, boolean bl,
+    private void hookRenderReturn(GuiGraphicsExtractor graphics, Font font, int currentTick,
+                                   int mouseX, int mouseY, ChatComponent.DisplayMode displayMode, boolean changeCursorOnInsertions,
                                    CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatPanel mp = ChatManager.primaryPanel();
         ChatTab activeLeft = mp != null ? mp.getActiveTab() : null;
         if (activeLeft != null && mp.isEnabled() && activeLeft.type() == TabType.VANILLA) {
-            ChatRenderer.render((ChatHud)(Object)this, LzDrawContext.wrap(context), currentTick, mouseX, mouseY, interactable, true);
+            ChatRenderer.render((ChatComponent)(Object)this, LzDrawContext.wrap(graphics), currentTick, mouseX, mouseY, displayMode.foreground, true);
         }
     }
 
     // ── Scroll ────────────────────────────────────────────────────────────────
+    // MC 26.1: resetScroll -> resetChatScroll, scroll -> scrollChat.
 
-    @Inject(method = "resetScroll", at = @At("HEAD"))
+    @Inject(method = "resetChatScroll", at = @At("HEAD"))
     private void resetPanelScroll(CallbackInfo ci) {
         for (ChatPanel panel : ChatManager.getAllPanels())
             panel.resetScrollPositionsExcept(TabType.NOTES);
     }
 
-    @Inject(method = "scroll", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "scrollChat", at = @At("HEAD"), cancellable = true)
     private void scrollPanel(int scroll, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         ChatPanel mp = ChatManager.primaryPanel();
@@ -96,8 +99,8 @@ public class ChatHudMixin {
 
         int windowWidth  = LzClient.scaledWindowWidth();
         int windowHeight = LzClient.scaledWindowHeight();
-        double sf        = LzClient.mc().getWindow().getScaleFactor();
-        double mouseY    = LzClient.mc().mouse.getY() / sf;
+        double sf        = LzClient.mc().getWindow().getGuiScale();
+        double mouseY    = LzClient.mc().mouseHandler.ypos() / sf;
 
         for (ChatPanel panel : ChatManager.getAllPanels()) {
             if (!panel.isEnabled()) continue;
@@ -129,31 +132,32 @@ public class ChatHudMixin {
     }
 
     // ── Refresh ───────────────────────────────────────────────────────────────
+    // MC 26.1: refresh -> rescaleChat.
 
-    @Inject(method = "refresh", at = @At("HEAD"))
+    @Inject(method = "rescaleChat", at = @At("HEAD"))
     private void onRefresh(CallbackInfo ci) {
         ChatManager.resetForRefresh();
     }
 
     // ── Route incoming messages ───────────────────────────────────────────────
-    // MC-VERSION-SENSITIVE: addMessage descriptor. Hooks the public 3-arg overload only —
-    // refresh() calls addVisibleMessage directly and never triggers these.
+    // MC 26.1: the only remaining addMessage overload is the private 4-arg one;
+    // addClientSystemMessage/addServerSystemMessage/addPlayerMessage all funnel into it.
 
     @Inject(
-        method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V",
+        method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
         at = @At("HEAD")
     )
-    private void captureRaw(Text message, @Nullable MessageSignatureData sig, @Nullable MessageIndicator indicator, CallbackInfo ci) {
+    private void captureRaw(Component message, @Nullable MessageSignature sig, GuiMessageSource source, @Nullable GuiMessageTag tag, CallbackInfo ci) {
         MessageRouter.pendingRaw = LzText.wrapMc(message);
     }
 
     @Inject(
-        method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V",
+        method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
         at = @At("RETURN")
     )
-    private void routeOnReturn(Text message, @Nullable MessageSignatureData sig, @Nullable MessageIndicator indicator, CallbackInfo ci) {
-        if (messages.isEmpty()) return;
-        MessageRouter.routeMessages(messages.getFirst());
+    private void routeOnReturn(Component message, @Nullable MessageSignature sig, GuiMessageSource source, @Nullable GuiMessageTag tag, CallbackInfo ci) {
+        if (allMessages.isEmpty()) return;
+        MessageRouter.routeMessages(allMessages.getFirst());
     }
 
     @Unique

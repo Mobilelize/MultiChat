@@ -5,7 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.TabActionCallback;
@@ -17,8 +17,9 @@ import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.List;
 
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
+
 
 public class MultiChatCommand {
 
@@ -267,7 +268,7 @@ public class MultiChatCommand {
         return (ctx, builder) -> {
             for (ChatTab tab : ChatManager.getTabs())
                 if (tab.type() == TabType.NOTES
-                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
+                        && SharedSuggestionProvider.matchesSubStr(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
                     builder.suggest(tab.name());
             return builder.buildFuture();
         };
@@ -276,7 +277,7 @@ public class MultiChatCommand {
     private static SuggestionProvider<FabricClientCommandSource> panelSuggestions() {
         return (ctx, builder) -> {
             for (ChatPanel panel : ChatManager.getAllPanels())
-                if (CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), panel.name().toLowerCase()))
+                if (SharedSuggestionProvider.matchesSubStr(builder.getRemaining().toLowerCase(), panel.name().toLowerCase()))
                     builder.suggest(panel.name());
             return builder.buildFuture();
         };
@@ -286,7 +287,7 @@ public class MultiChatCommand {
         return (ctx, builder) -> {
             for (ChatTab tab : ChatManager.getTabs())
                 if ((tab.type() == TabType.FILTERED || tab.type() == TabType.API)
-                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
+                        && SharedSuggestionProvider.matchesSubStr(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
                     builder.suggest(tab.name());
             return builder.buildFuture();
         };
@@ -296,7 +297,7 @@ public class MultiChatCommand {
         return (ctx, builder) -> {
             for (ChatTab tab : ChatManager.getTabs())
                 if ((tab.type() == TabType.FILTERED || tab.type() == TabType.API)
-                        && CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
+                        && SharedSuggestionProvider.matchesSubStr(builder.getRemaining().toLowerCase(), tab.name().toLowerCase()))
                     builder.suggest(tab.name());
             return builder.buildFuture();
         };

@@ -4,7 +4,7 @@ import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.input.LzInputUtil;
 import net.mobilelize.fabriclib.text.LzText;
@@ -218,7 +218,7 @@ public class ConfigMenu {
                 .setDefaultValue(LzInputUtil.fromKeyCode(70, 0))
                 .setAllowModifiers(false)
                 .setTooltip(LzText.literal("Key to open search (combine with Require Ctrl for e.g. Ctrl+F).").mc())
-                .setKeySaveConsumer(key -> MultichatClient.CONFIG.searchKeybindKey = key.getCode())
+                .setKeySaveConsumer(key -> MultichatClient.CONFIG.searchKeybindKey = key.getValue())
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
@@ -302,7 +302,7 @@ public class ConfigMenu {
                 .setDefaultValue(LzInputUtil.fromKeyCode(81, 0))
                 .setAllowModifiers(false)
                 .setTooltip(LzText.literal("Key to open Quick Actions (default: Q, combine with Require Ctrl for Ctrl+Q).").mc())
-                .setKeySaveConsumer(key -> MultichatClient.CONFIG.quickActionKeybindKey = key.getCode())
+                .setKeySaveConsumer(key -> MultichatClient.CONFIG.quickActionKeybindKey = key.getValue())
                 .build());
 
         quickActions.addEntry(eb.startBooleanToggle(

@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -52,18 +52,18 @@ public class PanelTabsScreen extends LzScreen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
 
         int btnGroupX = width / 2 - 74;
-        addDrawableChild(LzButton.of("Add All", btnGroupX, LIST_TOP - 22, 72, 18, b -> {
+        addRenderableWidget(LzButton.of("Add All", btnGroupX, LIST_TOP - 22, 72, 18, b -> {
             for (ChatTab t : ChatManager.getTabs()) {
                 if (t.type() == TabType.VANILLA && !panel.primary()) continue;
                 if (t.type() == TabType.INFO   &&  panel.primary()) continue;
                 t.visibleOnPanels().add(panel.id());
             }
         }));
-        addDrawableChild(LzButton.of("Remove All", btnGroupX + 76, LIST_TOP - 22, 72, 18, b -> {
+        addRenderableWidget(LzButton.of("Remove All", btnGroupX + 76, LIST_TOP - 22, 72, 18, b -> {
             for (ChatTab t : ChatManager.getTabs()) t.visibleOnPanels().remove(panel.id());
         }));
-        addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
-        addDrawableChild(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> attemptClose()));
+        addRenderableWidget(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
+        addRenderableWidget(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> attemptClose()));
     }
 
     @Override
@@ -156,7 +156,7 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mx = click.x(); double my = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
@@ -210,7 +210,7 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
         double my = click.y();
         if (scrollDragging) {
             int max = maxScroll(), trackH = listBottom() - LIST_TOP;
@@ -226,7 +226,7 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         scrollDragging = false;
         return super.mouseReleased(click);
     }
@@ -241,7 +241,7 @@ public class PanelTabsScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (input.key() == Keys.ESCAPE) { attemptClose(); return true; }
         return super.keyPressed(input);
     }
@@ -261,7 +261,7 @@ public class PanelTabsScreen extends LzScreen {
 
     private void save() {
         MultichatClient.saveTabsToConfig();
-        close();
+        onClose();
     }
 
     private void cancel() {
@@ -271,9 +271,9 @@ public class PanelTabsScreen extends LzScreen {
         }
         panel.setPanelContextTab(originalPanelContextTab);
         MultichatClient.saveTabsToConfig();
-        close();
+        onClose();
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().setScreen(parent); }
 }

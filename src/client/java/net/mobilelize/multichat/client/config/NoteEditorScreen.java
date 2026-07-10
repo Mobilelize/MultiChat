@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -65,17 +65,17 @@ public class NoteEditorScreen extends LzScreen {
     protected void init() {
         scrollOffset = Math.min(scrollOffset, maxScroll());
         if (selectedIdx >= notes().size()) selectedIdx = -1;
-        addDrawableChild(LzButton.of("Add Note", width / 2 - 60, height - 26, 58, 18, b -> {
+        addRenderableWidget(LzButton.of("Add Note", width / 2 - 60, height - 26, 58, 18, b -> {
             LzClient.mc().setScreen(new NoteEditScreen(this, noteTab, -1));
         }));
-        addDrawableChild(LzButton.of("Done", width / 2 + 2, height - 26, 50, 18, b -> close()));
-        addDrawableChild(LzButton.of(
+        addRenderableWidget(LzButton.of("Done", width / 2 + 2, height - 26, 50, 18, b -> onClose()));
+        addRenderableWidget(LzButton.of(
             noteTab.renderOutOfFocus() ? "Render Out of Focus: ON" : "Render Out of Focus: OFF",
             4, height - 26, 150, 18,
             b -> {
                 noteTab.setRenderOutOfFocus(!noteTab.renderOutOfFocus());
                 MultichatClient.saveTabsToConfig();
-                clearChildren();
+                clearWidgets();
                 init();
             }
         ));
@@ -208,7 +208,7 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
@@ -290,7 +290,7 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
         double mouseY = click.y();
         if (scrollDragging) {
             int max     = maxScroll();
@@ -307,7 +307,7 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         scrollDragging = false;
         return super.mouseReleased(click);
     }
@@ -322,10 +322,10 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (input.key() == Keys.ESCAPE) {
             if (swapPending) { swapPending = false; return true; }
-            close(); return true;
+            onClose(); return true;
         }
         if (selectedIdx >= 0) {
             if (input.key() == Keys.UP)   { move(selectedIdx, true);  return true; }
@@ -340,10 +340,10 @@ public class NoteEditorScreen extends LzScreen {
         else if (selectedIdx == i) selectedIdx = -1;
         swapPending = false;
         MultichatClient.saveTabsToConfig();
-        clearChildren();
+        clearWidgets();
         init();
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().setScreen(parent); }
 }

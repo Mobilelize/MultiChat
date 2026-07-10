@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.client.gui.hud.MessageIndicator;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 
 import java.util.regex.Pattern;
@@ -40,14 +40,14 @@ public record FilterRule (FilterType type, String value, IndicatorFilter indicat
     }
 
     private boolean indicatorMatches(LzMessageIndicator ind) {
-        final MessageIndicator raw = ind != null ? ind.mc() : null;
+        final GuiMessageTag raw = ind != null ? ind.mc() : null;
         return switch (indicator) {
             case ANY        -> true;
             case PLAYER     -> raw == null;
-            case SYSTEM     -> raw == MessageIndicator.system() || raw == MessageIndicator.singlePlayer();
-            case NOT_SECURE -> raw == MessageIndicator.notSecure();
-            case MODIFIED   -> raw != null && raw.icon() == MessageIndicator.Icon.CHAT_MODIFIED;
-            case CHAT_ERROR -> raw == MessageIndicator.chatError();
+            case SYSTEM     -> raw == GuiMessageTag.system() || raw == GuiMessageTag.systemSinglePlayer();
+            case NOT_SECURE -> raw == GuiMessageTag.chatNotSecure();
+            case MODIFIED   -> raw != null && raw.icon() == GuiMessageTag.Icon.CHAT_MODIFIED;
+            case CHAT_ERROR -> raw == GuiMessageTag.chatError();
         };
     }
 

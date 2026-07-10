@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -57,18 +57,18 @@ public class PanelLayoutScreen extends LzScreen {
                 originals.put(p, new Object[] { p.anchor(), p.customX(), p.customY(), p.customWidth(), p.customHeightLines(), p.customUnfocusedHeightLines() });
         }
 
-        addDrawableChild(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
-        addDrawableChild(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> cancel()));
-        addDrawableChild(LzButton.of(snapEnabled ? "Snap: ON" : "Snap: OFF", width - 82, height - 26, 78, 18, b -> {
+        addRenderableWidget(LzButton.of("Save",   width / 2 - 53, height - 26, 50, 18, b -> save()));
+        addRenderableWidget(LzButton.of("Cancel", width / 2 + 3,  height - 26, 50, 18, b -> cancel()));
+        addRenderableWidget(LzButton.of(snapEnabled ? "Snap: ON" : "Snap: OFF", width - 82, height - 26, 78, 18, b -> {
             snapEnabled = !snapEnabled;
             b.setMessage(LzText.literal(snapEnabled ? "Snap: ON" : "Snap: OFF"));
         }));
-        addDrawableChild(LzButton.of("To Wall", 4, height - 26, 58, 18, b -> snapToNearestWall(lastDragged)));
+        addRenderableWidget(LzButton.of("To Wall", 4, height - 26, 58, 18, b -> snapToNearestWall(lastDragged)));
     }
 
     // Unfocused line count from MC options — used as fallback when customUnfocusedHeightLines is unset.
     private int unfocusedMcLines(ChatPanel panel) {
-        double h = LzClient.mc().options.getChatHeightUnfocused().getValue();
+        double h = LzClient.mc().options.chatHeightUnfocused().get();
         int heightPx = (int)(h * 160.0 + 20.0);
         return Math.max(1, heightPx / panel.resolveLineHeight());
     }
@@ -236,7 +236,7 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
@@ -302,7 +302,7 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (unfocusedLineDragging != null && button == 0) {
             float scale      = unfocusedLineDragging.resolveScale();
@@ -360,7 +360,7 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         dragging              = null;
         resizing              = null;
         unfocusedLineDragging = null;
@@ -368,7 +368,7 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (input.key() == Keys.ESCAPE) { attemptClose(); return true; }
         return super.keyPressed(input);
     }
@@ -380,7 +380,7 @@ public class PanelLayoutScreen extends LzScreen {
 
     private void save() {
         MultichatClient.saveTabsToConfig();
-        close();
+        onClose();
     }
 
     private void cancel() { attemptClose(); }
@@ -396,9 +396,9 @@ public class PanelLayoutScreen extends LzScreen {
             p.setCustomHeightLines((int) o[4]);
             p.setCustomUnfocusedHeightLines((int) o[5]);
         }
-        close();
+        onClose();
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().setScreen(parent); }
 }

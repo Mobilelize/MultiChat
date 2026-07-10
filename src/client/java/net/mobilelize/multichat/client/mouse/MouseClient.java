@@ -49,7 +49,7 @@ public class MouseClient {
         currentCursor = cursor;
 
         GLFW.glfwSetCursor(
-                LzClient.mc().getWindow().getHandle(),
+                LzClient.mc().getWindow().handle(),
                 cursor
         );
     }

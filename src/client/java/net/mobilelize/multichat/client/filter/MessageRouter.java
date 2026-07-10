@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.client.gui.hud.ChatHudLine;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.text.LzText;
@@ -27,11 +27,11 @@ public class MessageRouter {
     // Set before routing an API-injected message to prevent double-adding to the source tab.
     public static ChatTab skipTabOnRoute = null;
 
-    public static void routeMessages(ChatHudLine message) {
+    public static void routeMessages(GuiMessage message) {
         final LzText content  = LzText.wrapMc(message.content());
         if (MessageReceivedCallback.EVENT.invoker().onMessageReceived(content)) return;
-        final int    tick     = message.creationTick();
-        final LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(message.indicator());
+        final int    tick     = message.addedTime();
+        final LzMessageIndicator indicator = LzMessageIndicator.wrapNullable(message.tag());
 
         LzText rawLzText = pendingRaw;
         pendingRaw = null;

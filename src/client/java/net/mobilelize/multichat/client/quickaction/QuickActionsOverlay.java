@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.quickaction;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -66,9 +66,9 @@ public class QuickActionsOverlay extends LzScreen {
     // ── internal ──────────────────────────────────────────────────────────────
 
     private void reinit() {
-        if (selectionField != null) selText = selectionField.getText();
+        if (selectionField != null) selText = selectionField.getValue();
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll()));
-        clearChildren();
+        clearWidgets();
         init();
     }
 
@@ -89,16 +89,16 @@ public class QuickActionsOverlay extends LzScreen {
         int x = overlayX();
 
         selectionField = new LzTextField(x + PAD, selFieldY(), W - PAD * 2, 18);
-        selectionField.setPlaceholder(LzText.literal("(no selection)").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
-        selectionField.setText(selText);
-        addSelectableChild(selectionField);
+        selectionField.setHint(LzText.literal("(no selection)").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+        selectionField.setValue(selText);
+        addWidget(selectionField);
 
         if (selectedIdx >= 0 && selectedIdx < actions().size()) {
             String resolved = actions().get(selectedIdx).template.replace("{selected}", selText);
             commandField = new LzTextField(x + PAD, cmdFieldY(), W - PAD * 2, 18);
-            commandField.setPlaceholder(LzText.literal("Command...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
-            commandField.setText(resolved);
-            addSelectableChild(commandField);
+            commandField.setHint(LzText.literal("Command...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+            commandField.setValue(resolved);
+            addWidget(commandField);
             setFocused(commandField);
         } else {
             commandField = null;
@@ -123,7 +123,7 @@ public class QuickActionsOverlay extends LzScreen {
 
         LzDraw.drawText(ctx, LzText.literal("Quick Actions"), x + PAD, y + PAD, Colors.GOLD);
         LzDraw.drawText(ctx, LzText.format("&7Selected text &8(editable)&7:"), x + PAD, y + PAD + 12, Colors.TEXT_WHITE);
-        selectionField.render(ctx.mc(), mouseX, mouseY, delta);
+        selectionField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         LzDraw.fill(ctx, x + 1, y + HEADER_H - 1, x + W - 1, y + HEADER_H, Colors.PANEL_BG);
 
@@ -170,19 +170,19 @@ public class QuickActionsOverlay extends LzScreen {
             int divY = listEndY() - 1;
             LzDraw.fill(ctx, x + 1, divY, x + W - 1, divY + 1, Colors.BORDER_DARK);
             LzDraw.drawText(ctx, LzText.format("&7Command &8(editable)&7:"), x + PAD, listEndY() + 3, Colors.TEXT_WHITE);
-            commandField.render(ctx.mc(), mouseX, mouseY, delta);
+            commandField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
             LzDraw.drawCenteredText(ctx, LzText.format("&7Enter to run  ·  Esc to cancel"),
                 x + W / 2, cmdFieldY() + 22, Colors.TEXT_WHITE);
         }
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
 
         if (mouseX < ox || mouseX > ox + W || mouseY < oy || mouseY > oy + oh) {
-            close(); return true;
+            onClose(); return true;
         }
 
         if (button == 0) {
@@ -215,21 +215,21 @@ public class QuickActionsOverlay extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER) {
             if (selectedIdx >= 0) { runCurrent(); return true; }
         }
         if (input.key() == Keys.ESCAPE) {
             if (selectedIdx >= 0) { selectedIdx = -1; reinit(); return true; }
-            close(); return true;
+            onClose(); return true;
         }
         return super.keyPressed(input);
     }
 
     private void runCurrent() {
         if (commandField == null) return;
-        String cmd = commandField.getText().trim();
-        if (cmd.isEmpty()) { close(); return; }
+        String cmd = commandField.getValue().trim();
+        if (cmd.isEmpty()) { onClose(); return; }
         if (MultichatClient.CONFIG.quickActionPasteToChat) {
             MultichatClient.pendingChatText = cmd;
         } else if (cmd.startsWith("/")) {
@@ -237,12 +237,12 @@ public class QuickActionsOverlay extends LzScreen {
         } else {
             LzConnection.sendChatMessage(cmd);
         }
-        close();
+        onClose();
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().setScreen(parent); }
 
     @Override
-    public boolean shouldPause() { return false; }
+    public boolean isPauseScreen() { return false; }
 }

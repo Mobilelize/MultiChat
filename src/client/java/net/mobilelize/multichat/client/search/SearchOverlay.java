@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.search;
 
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -10,7 +10,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.multichat.client.*;
 
 public class SearchOverlay extends LzScreen {
@@ -64,39 +64,39 @@ public class SearchOverlay extends LzScreen {
         int half = (fw - 6) / 2;
         int btnW = (fw - 4) / 2;
 
-        queryField = addDrawableChild(new LzTextField(fx, top, fw, 20));
-        queryField.setPlaceholder(LzText.literal("Search query…").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+        queryField = addRenderableWidget(new LzTextField(fx, top, fw, 20));
+        queryField.setHint(LzText.literal("Search query…").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         queryField.setMaxLength(256);
-        if (!initialQuery.isEmpty()) queryField.setText(initialQuery);
+        if (!initialQuery.isEmpty()) queryField.setValue(initialQuery);
 
-        fromField = addDrawableChild(new LzTextField(fx, top + 30, half, 20));
-        fromField.setPlaceholder(LzText.literal("e.g. 10m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+        fromField = addRenderableWidget(new LzTextField(fx, top + 30, half, 20));
+        fromField.setHint(LzText.literal("e.g. 10m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         fromField.setMaxLength(32);
 
-        toField = addDrawableChild(new LzTextField(fx + half + 6, top + 30, half, 20));
-        toField.setPlaceholder(LzText.literal("e.g. 5m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+        toField = addRenderableWidget(new LzTextField(fx + half + 6, top + 30, half, 20));
+        toField.setHint(LzText.literal("e.g. 5m").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         toField.setMaxLength(32);
 
-        addDrawableChild(LzButton.of("Mode: " + searchMode.name(), fx, top + 58, btnW, 20,
+        addRenderableWidget(LzButton.of("Mode: " + searchMode.name(), fx, top + 58, btnW, 20,
             b -> { searchMode = cycleMode(); b.setMessage(LzText.literal("Mode: " + searchMode.name())); }));
 
-        addDrawableChild(LzButton.of("Case: " + (caseSensitive ? "ON" : "OFF"), fx + btnW + 4, top + 58, btnW, 20,
+        addRenderableWidget(LzButton.of("Case: " + (caseSensitive ? "ON" : "OFF"), fx + btnW + 4, top + 58, btnW, 20,
             b -> { caseSensitive = !caseSensitive; b.setMessage(LzText.literal("Case: " + (caseSensitive ? "ON" : "OFF"))); }));
 
-        addDrawableChild(LzButton.of("Badge: " + (showBadge ? "ON" : "OFF"), fx, top + 84, btnW, 20,
+        addRenderableWidget(LzButton.of("Badge: " + (showBadge ? "ON" : "OFF"), fx, top + 84, btnW, 20,
             b -> { showBadge = !showBadge; b.setMessage(LzText.literal("Badge: " + (showBadge ? "ON" : "OFF"))); }));
 
-        addDrawableChild(LzButton.of("Live Update: " + (liveUpdate ? "ON" : "OFF"), fx + btnW + 4, top + 84, btnW, 20,
+        addRenderableWidget(LzButton.of("Live Update: " + (liveUpdate ? "ON" : "OFF"), fx + btnW + 4, top + 84, btnW, 20,
             b -> { liveUpdate = !liveUpdate; b.setMessage(LzText.literal("Live Update: " + (liveUpdate ? "ON" : "OFF"))); }));
 
-        addDrawableChild(LzButton.of("Timestamps: " + (showTimestamps ? "ON" : "OFF"), fx, top + 110, btnW, 20,
+        addRenderableWidget(LzButton.of("Timestamps: " + (showTimestamps ? "ON" : "OFF"), fx, top + 110, btnW, 20,
             b -> { showTimestamps = !showTimestamps; b.setMessage(LzText.literal("Timestamps: " + (showTimestamps ? "ON" : "OFF"))); }));
 
-        addDrawableChild(LzButton.of("Collapse: " + (collapseIdentical ? "ON" : "OFF"), fx + btnW + 4, top + 110, btnW, 20,
+        addRenderableWidget(LzButton.of("Collapse: " + (collapseIdentical ? "ON" : "OFF"), fx + btnW + 4, top + 110, btnW, 20,
             b -> { collapseIdentical = !collapseIdentical; b.setMessage(LzText.literal("Collapse: " + (collapseIdentical ? "ON" : "OFF"))); }));
 
-        addDrawableChild(LzButton.of("Cancel",        cx - 86, top + 138, 80,  20, b -> close()));
-        addDrawableChild(LzButton.of("Create Search", cx + 6,  top + 138, 100, 20, b -> createSearch()));
+        addRenderableWidget(LzButton.of("Cancel",        cx - 86, top + 138, 80,  20, b -> onClose()));
+        addRenderableWidget(LzButton.of("Create Search", cx + 6,  top + 138, 100, 20, b -> createSearch()));
 
         this.setFocused(queryField);
     }
@@ -112,9 +112,9 @@ public class SearchOverlay extends LzScreen {
     }
 
     private void createSearch() {
-        String query     = queryField.getText().trim();
-        int    fromTicks = TimeParser.parseTicks(fromField.getText().trim());
-        int    toTicks   = TimeParser.parseTicks(toField.getText().trim());
+        String query     = queryField.getValue().trim();
+        int    fromTicks = TimeParser.parseTicks(fromField.getValue().trim());
+        int    toTicks   = TimeParser.parseTicks(toField.getValue().trim());
 
         String name = "Search: " + (query.isEmpty() ? "(all)"
                       : query.length() > 14 ? query.substring(0, 14) + "…" : query);
@@ -144,7 +144,7 @@ public class SearchOverlay extends LzScreen {
             }
         }
 
-        close();
+        onClose();
     }
 
     @Override
@@ -183,15 +183,15 @@ public class SearchOverlay extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == Keys.ESCAPE) { close(); return true; }
+    public boolean keyPressed(KeyEvent input) {
+        if (input.key() == Keys.ESCAPE) { onClose(); return true; }
         if (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER) { createSearch(); return true; }
         return super.keyPressed(input);
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().setScreen(parent); }
 
     @Override
-    public boolean shouldPause() { return false; }
+    public boolean isPauseScreen() { return false; }
 }

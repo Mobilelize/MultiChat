@@ -167,12 +167,12 @@ public class ContextMenu {
         drawnY = my;
 
         var mc = LzClient.mc();
-        double scale = mc.getWindow().getScaleFactor();
-        int mouseX = (int)(mc.mouse.getX() / scale);
-        int mouseY = (int)(mc.mouse.getY() / scale);
+        double scale = mc.getWindow().getGuiScale();
+        int mouseX = (int)(mc.mouseHandler.xpos() / scale);
+        int mouseY = (int)(mc.mouseHandler.ypos() / scale);
 
         LzDraw.pushMatrix(context);
-        LzDraw.translate(context, 0, 0, 400);
+        context.mc().nextStratum();
 
         LzDraw.fill(context, mx, my, mx + menuW, my + menuH, Colors.MENU_BG);
         LzDraw.drawBorder(context, mx, my, mx + menuW, my + menuH, Colors.BORDER);

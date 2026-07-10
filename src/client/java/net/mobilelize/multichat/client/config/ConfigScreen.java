@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -39,27 +39,27 @@ public abstract class ConfigScreen extends LzScreen {
 
     protected void addConfigNav(int width, int height, NavPage current) {
         int sx = width / 2 - 136;
-        var tabs = addDrawableChild(LzButton.of("Tabs",
+        var tabs = addRenderableWidget(LzButton.of("Tabs",
             sx, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new TabListScreen(parent)); }));
-        var panels = addDrawableChild(LzButton.of("Panels",
+        var panels = addRenderableWidget(LzButton.of("Panels",
             sx + 92, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new PanelListScreen(parent)); }));
-        var qa = addDrawableChild(LzButton.of("Quick Actions",
+        var qa = addRenderableWidget(LzButton.of("Quick Actions",
             sx + 184, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new QuickActionsEditScreen(parent)); }));
         if (current == NavPage.TABS)          tabs.active   = false;
         if (current == NavPage.PANELS)        panels.active = false;
         if (current == NavPage.QUICK_ACTIONS) qa.active     = false;
-        addDrawableChild(LzButton.of(TabListScreen.quickDeleteMode ? "Del: ON" : "Del: OFF",
+        addRenderableWidget(LzButton.of(TabListScreen.quickDeleteMode ? "Del: ON" : "Del: OFF",
             sx, height - 24, 88, 20, b -> {
                 TabListScreen.quickDeleteMode = !TabListScreen.quickDeleteMode;
                 b.setMessage(LzText.literal(TabListScreen.quickDeleteMode ? "Del: ON" : "Del: OFF"));
             }));
-        addDrawableChild(LzButton.of("Settings",
+        addRenderableWidget(LzButton.of("Settings",
             sx + 92, height - 24, 88, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
-        addDrawableChild(LzButton.of("Done", sx + 184, height - 24, 88, 20, b -> close()));
+        addRenderableWidget(LzButton.of("Done", sx + 184, height - 24, 88, 20, b -> onClose()));
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         beforeClose();
         LzClient.mc().setScreen(parent);
     }

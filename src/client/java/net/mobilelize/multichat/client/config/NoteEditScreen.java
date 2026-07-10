@@ -1,9 +1,9 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
@@ -65,7 +65,7 @@ public class NoteEditScreen extends LzScreen {
     private int prevTextW() { return prevX2() - prevX1() - PREV_SB - 8; }
 
     private List<LzOrderedText> previewLines() {
-        String raw = field != null ? field.getText() : "";
+        String raw = field != null ? field.getValue() : "";
         if (raw.isEmpty()) return List.of(LzText.format("&8(preview)").ordered());
         return LzChat.breakLines(LzText.format(raw), prevTextW());
     }
@@ -81,14 +81,14 @@ public class NoteEditScreen extends LzScreen {
         if (noteIdx >= 0 && noteIdx < noteTab.noteEntries().size()) {
             NoteTab.NoteEntry e = noteTab.noteEntries().get(noteIdx);
             String raw = e.rawFormat();
-            field.setText(raw != null && !raw.isEmpty() ? raw : e.content().mc().getString());
+            field.setValue(raw != null && !raw.isEmpty() ? raw : e.content().mc().getString());
         }
-        addSelectableChild(field);
+        addWidget(field);
         setFocused(field);
 
         int cx = width / 2;
-        addDrawableChild(LzButton.of("Save",   cx - 53, cy() + 86, 50, 18, b -> save()));
-        addDrawableChild(LzButton.of("Cancel", cx + 3,  cy() + 86, 50, 18, b -> close()));
+        addRenderableWidget(LzButton.of("Save",   cx - 53, cy() + 86, 50, 18, b -> save()));
+        addRenderableWidget(LzButton.of("Cancel", cx + 3,  cy() + 86, 50, 18, b -> onClose()));
     }
 
     @Override
@@ -118,7 +118,7 @@ public class NoteEditScreen extends LzScreen {
 
         LzDraw.drawText(ctx, LzText.literal("Use &X codes or click swatches"), px1, cy - 36, Colors.TEXT_DISABLED);
 
-        field.render(ctx.mc(), mouseX, mouseY, delta);
+        field.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         // Scrollable preview
         List<LzOrderedText> lines = previewLines();
@@ -160,7 +160,7 @@ public class NoteEditScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
@@ -205,7 +205,7 @@ public class NoteEditScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
         double mouseY = click.y();
         if (prevDragging) {
             List<LzOrderedText> lines = previewLines();
@@ -223,7 +223,7 @@ public class NoteEditScreen extends LzScreen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         prevDragging = false;
         return super.mouseReleased(click);
     }
@@ -239,20 +239,20 @@ public class NoteEditScreen extends LzScreen {
     }
 
     private void insertAtCursor(String code) {
-        if (field instanceof TextFieldWidget mcf) mcf.write(code);
-        else field.setText(field.getText() + code);
+        if (field instanceof EditBox mcf) mcf.insertText(code);
+        else field.setValue(field.getValue() + code);
         setFocused(field);
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER) { save(); return true; }
-        if (input.key() == Keys.ESCAPE) { close(); return true; }
+        if (input.key() == Keys.ESCAPE) { onClose(); return true; }
         return super.keyPressed(input);
     }
 
     private void save() {
-        String text = field.getText().trim();
+        String text = field.getValue().trim();
         if (noteIdx < 0) {
             NoteTab.NoteEntry e = new NoteTab.NoteEntry(LzText.format(text), 0);
             e.setRawFormat(text);
@@ -264,9 +264,9 @@ public class NoteEditScreen extends LzScreen {
         }
         noteTab.rebuildMessages();
         MultichatClient.saveTabsToConfig();
-        close();
+        onClose();
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().setScreen(parent); }
 }

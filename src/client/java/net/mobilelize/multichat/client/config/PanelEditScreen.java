@@ -3,7 +3,7 @@ package net.mobilelize.multichat.client.config;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatPanel;

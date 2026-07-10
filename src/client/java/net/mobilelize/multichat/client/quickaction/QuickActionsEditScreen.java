@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.quickaction;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -74,28 +74,28 @@ public class QuickActionsEditScreen extends ConfigScreen {
 
         if (editingIdx >= 0) {
             nameField = new LzTextField(lx1 + 2, height - 74, 80, 20);
-            nameField.setPlaceholder(LzText.literal("Name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+            nameField.setHint(LzText.literal("Name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
             templateField = new LzTextField(lx1 + 86, height - 74, 224, 20);
-            templateField.setPlaceholder(LzText.literal("Template...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+            templateField.setHint(LzText.literal("Template...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
             var a = actions().get(editingIdx);
-            nameField.setText(a.name);
-            templateField.setText(a.template);
-            addSelectableChild(nameField);
-            addSelectableChild(templateField);
+            nameField.setValue(a.name);
+            templateField.setValue(a.template);
+            addWidget(nameField);
+            addWidget(templateField);
             setFocused(nameField);
 
-            addDrawableChild(LzButton.of("Cancel", lx1 + 314, height - 74, 40, 20, b -> {
-                editingIdx = -1; clearChildren(); init();
+            addRenderableWidget(LzButton.of("Cancel", lx1 + 314, height - 74, 40, 20, b -> {
+                editingIdx = -1; clearWidgets(); init();
             }));
-            addDrawableChild(LzButton.of("Save", lx1 + 358, height - 74, 40, 20, b -> commit()));
+            addRenderableWidget(LzButton.of("Save", lx1 + 358, height - 74, 40, 20, b -> commit()));
         } else {
             nameField = new LzTextField(lx1 + 2, height - 74, 80, 20);
-            nameField.setPlaceholder(LzText.literal("Name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+            nameField.setHint(LzText.literal("Name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
             templateField = new LzTextField(lx1 + 86, height - 74, 264, 20);
-            templateField.setPlaceholder(LzText.literal("Command — use {selected}...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
-            addSelectableChild(nameField);
-            addSelectableChild(templateField);
-            addDrawableChild(LzButton.of("Add", lx1 + 354, height - 74, 40, 20, b -> commit()));
+            templateField.setHint(LzText.literal("Command — use {selected}...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
+            addWidget(nameField);
+            addWidget(templateField);
+            addRenderableWidget(LzButton.of("Add", lx1 + 354, height - 74, 40, 20, b -> commit()));
         }
 
         addConfigNav(width, height, NavPage.QUICK_ACTIONS);
@@ -121,8 +121,8 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     private void commit() {
-        String name = nameField.getText().trim();
-        String tpl  = templateField.getText().trim();
+        String name = nameField.getValue().trim();
+        String tpl  = templateField.getValue().trim();
         if (name.isEmpty() || tpl.isEmpty()) return;
         if (editingIdx >= 0 && editingIdx < actions().size()) {
             var a  = actions().get(editingIdx);
@@ -136,7 +136,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
             actions().add(cfg);
         }
         MultichatClient.saveTabsToConfig();
-        clearChildren();
+        clearWidgets();
         init();
     }
 
@@ -144,8 +144,8 @@ public class QuickActionsEditScreen extends ConfigScreen {
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
 
-        nameField.render(ctx.mc(), mouseX, mouseY, delta);
-        templateField.render(ctx.mc(), mouseX, mouseY, delta);
+        nameField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
+        templateField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         LzDraw.drawCenteredText(ctx, LzText.literal("Quick Actions"), width / 2, 10, Colors.GOLD);
         if (editingIdx >= 0)
@@ -247,7 +247,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
         if (button != 0) return false;
@@ -307,7 +307,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
             if (mouseX >= ex && mouseX < ex + ACT_W && mouseY >= ry + 2 && mouseY < ry + ROW_H - 2) {
                 editingIdx = i;
                 swapPending = false;
-                clearChildren(); init();
+                clearWidgets(); init();
                 return true;
             }
 
@@ -330,7 +330,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
         double mouseY = click.y();
         if (scrollDragging) {
             int max    = maxScroll();
@@ -347,7 +347,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         scrollDragging = false;
         return super.mouseReleased(click);
     }
@@ -359,14 +359,14 @@ public class QuickActionsEditScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (editingIdx >= 0 && (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER)) {
             commit(); return true;
         }
         if (input.key() == Keys.ESCAPE) {
             if (swapPending) { swapPending = false; return true; }
-            if (editingIdx >= 0) { editingIdx = -1; clearChildren(); init(); return true; }
-            close(); return true;
+            if (editingIdx >= 0) { editingIdx = -1; clearWidgets(); init(); return true; }
+            onClose(); return true;
         }
         if (editingIdx < 0 && selectedIdx >= 0) {
             if (input.key() == Keys.UP)   { move(selectedIdx, true);  return true; }
@@ -383,7 +383,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
         else if (selectedIdx == i) selectedIdx = -1;
         swapPending = false;
         MultichatClient.saveTabsToConfig();
-        clearChildren(); init();
+        rebuildWidgets(); init();
     }
 
     @Override

@@ -3,6 +3,8 @@ package net.mobilelize.multichat.client;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.mobilelize.fabriclib.client.LzAfk;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.fabriclib.text.LzText;
@@ -171,7 +173,7 @@ public class MultichatClient implements ClientModInitializer {
 
     static String textToJson(LzText text) {
         try {
-            com.google.gson.JsonElement el = net.minecraft.text.TextCodecs.CODEC
+            com.google.gson.JsonElement el = ComponentSerialization.CODEC
                     .encodeStart(com.mojang.serialization.JsonOps.INSTANCE, text.mc())
                     .getOrThrow();
             return el.toString();
@@ -183,7 +185,7 @@ public class MultichatClient implements ClientModInitializer {
     static LzText textFromJson(String json) {
         try {
             com.google.gson.JsonElement el = com.google.gson.JsonParser.parseString(json);
-            net.minecraft.text.Text t = net.minecraft.text.TextCodecs.CODEC
+            Component t = ComponentSerialization.CODEC
                     .parse(com.mojang.serialization.JsonOps.INSTANCE, el)
                     .getOrThrow();
             return LzText.wrapMc(t);

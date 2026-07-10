@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -8,7 +8,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
-import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 
@@ -29,8 +29,8 @@ public class DeleteConfirmScreen extends LzScreen {
     protected void init() {
         int cx = width / 2;
         int by = height / 2 + 10;
-        addDrawableChild(LzButton.of("Delete", cx - 62, by, 58, 20, b -> { onConfirm.run(); close(); }));
-        addDrawableChild(LzButton.of("Cancel", cx + 4,  by, 58, 20, b -> close()));
+        addRenderableWidget(LzButton.of("Delete", cx - 62, by, 58, 20, b -> { onConfirm.run(); onClose(); }));
+        addRenderableWidget(LzButton.of("Cancel", cx + 4,  by, 58, 20, b -> onClose()));
     }
 
     @Override
@@ -52,11 +52,11 @@ public class DeleteConfirmScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == Keys.ESCAPE) { close(); return true; }
+    public boolean keyPressed(KeyEvent input) {
+        if (input.key() == Keys.ESCAPE) { onClose(); return true; }
         return super.keyPressed(input);
     }
 
     @Override
-    public void close() { LzClient.mc().setScreen(returnTo); }
+    public void onClose() { LzClient.mc().setScreen(returnTo); }
 }
