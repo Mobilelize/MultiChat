@@ -1,6 +1,7 @@
 package net.mobilelize.multichat.mixin.client;
 
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ChatInputSuggestor;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.mobilelize.fabriclib.client.LzChat;
@@ -37,6 +38,17 @@ public abstract class ChatScreenMixin {
 
     @Shadow public abstract String normalize(String chatText);
     @Shadow protected TextFieldWidget chatField;
+    @Shadow private ChatInputSuggestor chatInputSuggestor;
+
+    @Unique
+    private boolean isMouseOverSuggestor(double mouseX, double mouseY) {
+        ChatInputSuggestorAccessor acc = (ChatInputSuggestorAccessor) chatInputSuggestor;
+        if (!acc.invokeIsOpen()) return false;
+        ChatInputSuggestor.SuggestionWindow window = acc.getWindow();
+        if (window == null) return false;
+        var area = ((ChatInputSuggestorWindowAccessor) window).getArea();
+        return area != null && area.contains((int) mouseX, (int) mouseY);
+    }
 
     @Inject(method = "init()V", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
@@ -199,6 +211,7 @@ public abstract class ChatScreenMixin {
     private void onMouseClicked(double mouseX, double mouseY, int button,
                                  CallbackInfoReturnable<Boolean> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
+        if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
         if (button == 0 && ContextMenu.isOpen()) {
             cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY));
             return;
@@ -424,6 +437,11 @@ public abstract class ChatScreenMixin {
     @Unique
     private void updateCursor(int mouseX, int mouseY) {
         if (!MultichatClient.CONFIG.cursorChangingEnabled) return;
+
+        if (isMouseOverSuggestor(mouseX, mouseY)) {
+            MouseClient.resetCursor();
+            return;
+        }
 
         if (ContextMenu.containsMouse(mouseX, mouseY) || MessageContextMenu.containsMouse(mouseX, mouseY)) {
             MouseClient.setHandCursor();
