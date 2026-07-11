@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Style;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
@@ -23,6 +24,7 @@ import net.mobilelize.multichat.client.search.SearchOverlay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -39,6 +41,9 @@ public abstract class ChatScreenMixin {
 
     @Shadow public abstract String normalizeChatMessage(String chatText);
     @Shadow protected EditBox input;
+
+    @Invoker("handleComponentClicked")
+    abstract boolean invokeHandleComponentClicked(Style style, boolean shiftDown);
 
     @Inject(method = "init()V", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
@@ -304,8 +309,7 @@ public abstract class ChatScreenMixin {
                 if (!ctrlSkip) {
                     var style = ChatRenderer.resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
                     if (style != null && style.getClickEvent() != null) {
-                        ScreenInvoker.invokeHandleClickEvent(
-                            style.getClickEvent(), LzClient.mc(), (net.minecraft.client.gui.screens.Screen)(Object)this);
+                        invokeHandleComponentClicked(style, false);
                         cir.setReturnValue(true);
                         return;
                     }
