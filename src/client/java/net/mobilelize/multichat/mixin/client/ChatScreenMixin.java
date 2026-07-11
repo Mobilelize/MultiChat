@@ -4,7 +4,9 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Style;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatLine;
@@ -41,9 +43,20 @@ public abstract class ChatScreenMixin {
 
     @Shadow public abstract String normalizeChatMessage(String chatText);
     @Shadow protected EditBox input;
+    @Shadow private CommandSuggestions commandSuggestions;
 
     @Invoker("handleComponentClicked")
     abstract boolean invokeHandleComponentClicked(Style style, boolean shiftDown);
+
+    @Unique
+    private boolean isMouseOverSuggestor(double mouseX, double mouseY) {
+        if (!commandSuggestions.isVisible()) return false;
+        CommandSuggestions.SuggestionsList list =
+            ((ChatInputSuggestorAccessor) commandSuggestions).getSuggestionsList();
+        if (list == null) return false;
+        Rect2i rect = ((ChatInputSuggestorWindowAccessor) (Object) list).getRect();
+        return rect != null && rect.contains((int) mouseX, (int) mouseY);
+    }
 
     @Inject(method = "init()V", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
@@ -207,6 +220,7 @@ public abstract class ChatScreenMixin {
                                  CallbackInfoReturnable<Boolean> cir) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
+        if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
         if (button == 0 && ContextMenu.isOpen()) {
             cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY));
             return;
@@ -433,6 +447,11 @@ public abstract class ChatScreenMixin {
     @Unique
     private void updateCursor(int mouseX, int mouseY) {
         if (!MultichatClient.CONFIG.cursorChangingEnabled) return;
+
+        if (isMouseOverSuggestor(mouseX, mouseY)) {
+            MouseClient.resetCursor();
+            return;
+        }
 
         if (ContextMenu.containsMouse(mouseX, mouseY) || MessageContextMenu.containsMouse(mouseX, mouseY)) {
             MouseClient.setHandCursor();
