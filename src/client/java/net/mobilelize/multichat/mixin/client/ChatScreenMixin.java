@@ -133,7 +133,7 @@ public abstract class ChatScreenMixin {
                 && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
             String selText = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", "").trim() : "";
-            LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
+            LzClient.mc().gui.setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
             cir.setReturnValue(true);
             return;
         }
@@ -143,7 +143,7 @@ public abstract class ChatScreenMixin {
                 && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
             String sel = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
-            LzClient.mc().setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
+            LzClient.mc().gui.setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
             cir.setReturnValue(true);
             return;
         }

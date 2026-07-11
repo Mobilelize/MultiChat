@@ -374,7 +374,7 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     private void attemptClose() {
-        if (isDirty()) LzClient.mc().setScreen(new ConfirmScreen(this, "Save changes?", this::save, this::restoreAndClose));
+        if (isDirty()) LzClient.mc().gui.setScreen(new ConfirmScreen(this, "Save changes?", this::save, this::restoreAndClose));
         else restoreAndClose();
     }
 
@@ -400,5 +400,5 @@ public class PanelLayoutScreen extends LzScreen {
     }
 
     @Override
-    public void onClose() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().gui.setScreen(parent); }
 }

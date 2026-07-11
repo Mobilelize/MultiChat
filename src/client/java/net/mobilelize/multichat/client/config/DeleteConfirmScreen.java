@@ -58,5 +58,5 @@ public class DeleteConfirmScreen extends LzScreen {
     }
 
     @Override
-    public void onClose() { LzClient.mc().setScreen(returnTo); }
+    public void onClose() { LzClient.mc().gui.setScreen(returnTo); }
 }

@@ -45,7 +45,7 @@ public class PanelListScreen extends ConfigScreen {
         panelNameField = new LzTextField(width / 2 - 198, height - 74, 284, 20);
         panelNameField.setHint(LzText.literal("New panel name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         addWidget(panelNameField);
-        addRenderableWidget(LzButton.of("Layout", width / 2 + 90, height - 74, 60, 20, b -> LzClient.mc().setScreen(new PanelLayoutScreen(this))));
+        addRenderableWidget(LzButton.of("Layout", width / 2 + 90, height - 74, 60, 20, b -> LzClient.mc().gui.setScreen(new PanelLayoutScreen(this))));
         addRenderableWidget(LzButton.of("Add",    width / 2 + 154, height - 74, 40, 20, b -> addPanel()));
 
         addConfigNav(width, height, NavPage.PANELS);
@@ -211,13 +211,13 @@ public class PanelListScreen extends ConfigScreen {
 
         // Tabs button
         if (mx >= lx + 282 && mx < lx + 318) {
-            LzClient.mc().setScreen(new PanelTabsScreen(this, panel));
+            LzClient.mc().gui.setScreen(new PanelTabsScreen(this, panel));
             return true;
         }
 
         // Edit button
         if (mx >= lx + 322 && mx < lx + 358) {
-            LzClient.mc().setScreen(PanelEditScreen.create(this, panel));
+            LzClient.mc().gui.setScreen(PanelEditScreen.create(this, panel));
             return true;
         }
 
@@ -226,7 +226,7 @@ public class PanelListScreen extends ConfigScreen {
             if (TabListScreen.quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemovePanel(panel);
             } else {
-                LzClient.mc().setScreen(new DeleteConfirmScreen(this,
+                LzClient.mc().gui.setScreen(new DeleteConfirmScreen(this,
                     "Delete panel \"" + panel.name() + "\"?",
                     () -> doRemovePanel(panel)));
             }

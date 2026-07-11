@@ -27,12 +27,12 @@ public class MultiChatCommand {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             var root = dispatcher.register(literal("multichat")
                 .executes(ctx -> {
-                    LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
+                    LzClient.send(() -> LzClient.mc().gui.setScreen(new TabListScreen(null)));
                     return 1;
                 })
                 .then(literal("tab")
                     .executes(ctx -> {
-                        LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
+                        LzClient.send(() -> LzClient.mc().gui.setScreen(new TabListScreen(null)));
                         return 1;
                     })
                     .then(literal("add")
@@ -47,7 +47,7 @@ public class MultiChatCommand {
                             .executes(MultiChatCommand::editTab))))
                 .then(literal("panels")
                     .executes(ctx -> {
-                        LzClient.send(() -> LzClient.mc().setScreen(new PanelListScreen(null)));
+                        LzClient.send(() -> LzClient.mc().gui.setScreen(new PanelListScreen(null)));
                         return 1;
                     })
                     .then(argument("name", StringArgumentType.greedyString())
@@ -55,22 +55,22 @@ public class MultiChatCommand {
                         .executes(MultiChatCommand::openPanel)))
                 .then(literal("layout")
                     .executes(ctx -> {
-                        LzClient.send(() -> LzClient.mc().setScreen(new PanelLayoutScreen(null)));
+                        LzClient.send(() -> LzClient.mc().gui.setScreen(new PanelLayoutScreen(null)));
                         return 1;
                     }))
                 .then(literal("settings")
                     .executes(ctx -> {
-                        LzClient.send(() -> LzClient.mc().setScreen(ConfigMenu.create(null)));
+                        LzClient.send(() -> LzClient.mc().gui.setScreen(ConfigMenu.create(null)));
                         return 1;
                     }))
                 .then(literal("quickactions")
                     .executes(ctx -> {
-                        LzClient.send(() -> LzClient.mc().setScreen(new QuickActionsOverlay(null, "")));
+                        LzClient.send(() -> LzClient.mc().gui.setScreen(new QuickActionsOverlay(null, "")));
                         return 1;
                     })
                     .then(literal("edit")
                         .executes(ctx -> {
-                            LzClient.send(() -> LzClient.mc().setScreen(new QuickActionsEditScreen(null)));
+                            LzClient.send(() -> LzClient.mc().gui.setScreen(new QuickActionsEditScreen(null)));
                             return 1;
                         })))
                 .then(literal("context")
@@ -87,7 +87,7 @@ public class MultiChatCommand {
                     .executes(ctx -> {
                         NoteTab nt = ChatManager.activeNoteTab;
                         if (nt == null) { feedback(ctx, "No active note tab."); return 0; }
-                        LzClient.send(() -> LzClient.mc().setScreen(new NoteEditorScreen(null, nt)));
+                        LzClient.send(() -> LzClient.mc().gui.setScreen(new NoteEditorScreen(null, nt)));
                         return 1;
                     })
                     .then(literal("add")
@@ -114,7 +114,7 @@ public class MultiChatCommand {
                     .executes(MultiChatCommand::printHelp)));
             dispatcher.register(literal("mlchat")
                 .executes(ctx -> {
-                    LzClient.send(() -> LzClient.mc().setScreen(new TabListScreen(null)));
+                    LzClient.send(() -> LzClient.mc().gui.setScreen(new TabListScreen(null)));
                     return 1;
                 })
                 .redirect(root));
@@ -137,7 +137,7 @@ public class MultiChatCommand {
             .filter(t -> t.type() == TabType.NOTES && t.name().equalsIgnoreCase(name))
             .findFirst().orElse(null);
         if (nt == null) { feedback(ctx, "Note tab '" + name + "' not found."); return 0; }
-        LzClient.send(() -> LzClient.mc().setScreen(new NoteEditorScreen(null, nt)));
+        LzClient.send(() -> LzClient.mc().gui.setScreen(new NoteEditorScreen(null, nt)));
         return 1;
     }
 
@@ -146,7 +146,7 @@ public class MultiChatCommand {
         ChatPanel panel = ChatManager.getAllPanels().stream()
             .filter(p -> p.name().equalsIgnoreCase(name)).findFirst().orElse(null);
         if (panel == null) { feedback(ctx, "Panel '" + name + "' not found."); return 0; }
-        LzClient.send(() -> LzClient.mc().setScreen(PanelEditScreen.create(null, panel)));
+        LzClient.send(() -> LzClient.mc().gui.setScreen(PanelEditScreen.create(null, panel)));
         return 1;
     }
 
@@ -154,7 +154,7 @@ public class MultiChatCommand {
         String name = StringArgumentType.getString(ctx, "tab");
         ChatTab tab = findEditableTab(name);
         if (tab == null) { feedback(ctx, "Tab '" + name + "' not found."); return 0; }
-        LzClient.send(() -> LzClient.mc().setScreen(TabEditScreen.create(null, tab)));
+        LzClient.send(() -> LzClient.mc().gui.setScreen(TabEditScreen.create(null, tab)));
         return 1;
     }
 
@@ -256,7 +256,7 @@ public class MultiChatCommand {
     }
 
     private static int printHelp(CommandContext<FabricClientCommandSource> ctx) {
-        LzClient.send(() -> LzClient.mc().setScreen(HelpScreen.create(null)));
+        LzClient.send(() -> LzClient.mc().gui.setScreen(HelpScreen.create(null)));
         return 1;
     }
 

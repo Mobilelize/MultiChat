@@ -268,5 +268,5 @@ public class NoteEditScreen extends LzScreen {
     }
 
     @Override
-    public void onClose() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().gui.setScreen(parent); }
 }

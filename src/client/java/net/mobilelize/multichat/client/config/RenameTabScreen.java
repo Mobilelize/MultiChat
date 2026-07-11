@@ -67,5 +67,5 @@ public class RenameTabScreen extends LzScreen {
     }
 
     @Override
-    public void onClose() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().gui.setScreen(parent); }
 }

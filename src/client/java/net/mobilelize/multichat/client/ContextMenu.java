@@ -222,16 +222,16 @@ public class ContextMenu {
                 tab.setShowBadge(!tab.showBadge());
                 MultichatClient.saveTabsToConfig();
             }
-            case "Search in tab…" -> LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), tab));
+            case "Search in tab…" -> LzClient.mc().gui.setScreen(new SearchOverlay(LzClient.currentScreen(), tab));
             case "Edit Tab" -> {
                 var parent = LzClient.currentScreen();
                 if (tab.type() == TabType.NOTES)
-                    LzClient.mc().setScreen(new NoteEditorScreen(parent, (NoteTab) tab));
+                    LzClient.mc().gui.setScreen(new NoteEditorScreen(parent, (NoteTab) tab));
                 else
-                    LzClient.mc().setScreen(TabEditScreen.create(parent, tab));
+                    LzClient.mc().gui.setScreen(TabEditScreen.create(parent, tab));
             }
             case "Rename Tab" ->
-                LzClient.mc().setScreen(new RenameTabScreen(LzClient.currentScreen(), tab));
+                LzClient.mc().gui.setScreen(new RenameTabScreen(LzClient.currentScreen(), tab));
             case "Set Active Note Tab", "★ Active Note Tab" -> {
                 ChatManager.activeNoteTab = (NoteTab) tab;
                 MultichatClient.saveTabsToConfig();

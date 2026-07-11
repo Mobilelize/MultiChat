@@ -241,7 +241,7 @@ public class QuickActionsOverlay extends LzScreen {
     }
 
     @Override
-    public void onClose() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().gui.setScreen(parent); }
 
     @Override
     public boolean isPauseScreen() { return false; }

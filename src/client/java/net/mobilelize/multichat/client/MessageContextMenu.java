@@ -124,12 +124,12 @@ public class MessageContextMenu {
                 String text = ChatSelection.hasSelection()
                     ? ChatSelection.getSelectedText().replaceAll("\n", "").trim()
                     : extractFullMessage(line, sourcePanel).trim();
-                LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, text));
+                LzClient.mc().gui.setScreen(new SearchOverlay(LzClient.currentScreen(), null, text));
             }
             case "Quick Actions..." -> {
                 String sel = ChatSelection.hasSelection()
                     ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
-                LzClient.mc().setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
+                LzClient.mc().gui.setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
             }
             case "Add to Notes" -> addToNotes();
             case "Jump to All" -> jumpToAll();
