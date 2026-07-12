@@ -13,9 +13,7 @@ import net.mobilelize.multichat.client.TabType;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeMap;
 
 public class MessageRouter {
@@ -97,37 +95,15 @@ public class MessageRouter {
         }
 
         if (!activeNonDiffMatched) {
-            final Set<ChatTab> activeTabs = new HashSet<>(ChatManager.getAllActivePanelsTabs());
-            final boolean anyActiveDiff = diffByLayer.values().stream()
-                .flatMap(List::stream).anyMatch(activeTabs::contains);
-
-            if (!anyActiveDiff) {
-                // No active diff tab: all matching diff tabs (hidden or not) get the message
-                for (List<ChatTab> layerTabs : diffByLayer.values()) {
-                    for (ChatTab tab : layerTabs) {
-                        if (tab.filterRules().matches(filterText, indicator))
-                            ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
+            for (List<ChatTab> layerTabs : diffByLayer.values()) {
+                boolean anyMatched = false;
+                for (ChatTab tab : layerTabs) {
+                    if (tab.filterRules().matches(filterText, indicator)) {
+                        ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
+                        anyMatched = true;
                     }
                 }
-            } else {
-                // Active diff tab exists: process layers top-down
-                // Layers with no active tab: all matching get message, continue
-                // First layer with an active tab: only active matching tabs get message, stop
-                for (List<ChatTab> layerTabs : diffByLayer.values()) {
-                    boolean hasActiveAtLayer = layerTabs.stream().anyMatch(activeTabs::contains);
-                    if (hasActiveAtLayer) {
-                        for (ChatTab tab : layerTabs) {
-                            if (activeTabs.contains(tab) && tab.filterRules().matches(filterText, indicator))
-                                ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
-                        }
-                        break;
-                    } else {
-                        for (ChatTab tab : layerTabs) {
-                            if (tab.filterRules().matches(filterText, indicator))
-                                ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
-                        }
-                    }
-                }
+                if (anyMatched) break;
             }
         }
     }
