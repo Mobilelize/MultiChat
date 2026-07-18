@@ -2,11 +2,13 @@
 
 A Fabric 1.21 client-side mod that replaces the vanilla chat HUD with a multi-tab panel system. Supports two independent chat panels (left/right), tab filtering, search, notes, message selection, quick actions, and a full mod API for integration.
 
+Licensed under [GPL-3.0](LICENSE.txt).
+
 ---
 
 ## For Players
 
-- **Left panel** always visible; **right panel** optional (enable in Settings)
+- Unlimited panels — **left panel** always visible by default, **right panel** optional (enable in Settings), add more via `/multichat panels`
 - Tab types: `ALL` (all messages), `VANILLA` (vanilla HUD passthrough), `FILTERED` (user-defined rules), `NOTES` (personal note-taking), `INFO` (mod guide), `SEARCH` (session-only query tabs), `API` (created by other mods)
 - Right-click any message → Copy / Search / Jump to All / Delete message
 - `Ctrl+F` → open search overlay
@@ -59,29 +61,17 @@ A Fabric 1.21 client-side mod that replaces the vanilla chat HUD with a multi-ta
 
 ### Adding MultiChat as a dependency
 
-MultiChat is a **client-side** mod. MultiChat itself bundles `mobilelize-fabric-lib` as a nested Jar-in-Jar. When referencing MultiChat as a local file in Gradle, Loom does **not** automatically extract that nested jar — you need to pull it out manually and add it alongside MultiChat.
+MultiChat is a **client-side** mod. `mobilelize-fabric-lib` is no longer a separate nested jar — its code now lives directly inside MultiChat, so there is nothing to extract. Just grab the MultiChat jar.
 
 ---
 
-#### Step 1 — Extract the nested library jar
+#### Set up your `libs/` folder
 
-MultiChat's jar is a zip file. Inside it, at `META-INF/jars/`, is the embedded `mobilelize-fabric-lib` jar.
-
-1. Rename `multichat-1.0.0.jar` to `multichat-1.0.0.zip` (or open directly with 7-Zip / any zip tool)
-2. Navigate to `META-INF/jars/`
-3. Extract `mobilelize-fabric-lib-x.x.x.jar`
-4. Rename the zip back to `.jar`
-
----
-
-#### Step 2 — Set up your `libs/` folder
-
-Create a `libs/` folder at the root of your project and place both jars inside:
+Create a `libs/` folder at the root of your project and place the jar inside:
 
 ```
 libs/
   multichat-1.0.0.jar
-  mobilelize-fabric-lib-x.x.x.jar
 ```
 
 ---
@@ -96,7 +86,7 @@ dependencies {
 }
 ```
 
-Also place both jars in your `run/mods/` folder so they load during dev runs. They will **not** be bundled into your built jar.
+Also place the jar in your `run/mods/` folder so it loads during dev runs. It will **not** be bundled into your built jar.
 
 > Use this for a soft dependency — check `FabricLoader.getInstance().isModLoaded("multichat")` at runtime before calling any API.
 
@@ -104,7 +94,7 @@ Also place both jars in your `run/mods/` folder so they load during dev runs. Th
 
 #### Option B — Bundled (MultiChat ships inside your mod)
 
-Use this when you want to guarantee MultiChat is present without requiring players to install it separately. Loom embeds both jars in your built jar via JiJ so Fabric Loader auto-installs them.
+Use this when you want to guarantee MultiChat is present without requiring players to install it separately. Loom embeds the jar in your built jar via JiJ so Fabric Loader auto-installs it.
 
 ```gradle
 dependencies {
