@@ -2,6 +2,7 @@ package net.mobilelize.multichat.mixin.client;
 
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.components.CommandSuggestions;
@@ -112,7 +113,7 @@ public abstract class ChatScreenMixin {
         ContextMenu.render(lzCtx);
         MessageContextMenu.render(lzCtx);
 
-        updateCursor(mouseX, mouseY);
+        updateCursor(context, mouseX, mouseY);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"))
@@ -218,7 +219,10 @@ public abstract class ChatScreenMixin {
     @Inject(method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(MouseButtonEvent click, boolean isDoubleClickParam,
                                  CallbackInfoReturnable<Boolean> cir) {
-        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
+        // Truncate to int to match extractRenderState's mouseX/mouseY (what populates
+        // ChatRenderer.lastHoveredStyle) — click gives full sub-pixel precision, unfloored,
+        // which misses the clickable style at edges vs what hover just captured.
+        double mouseX = (int) click.x(); double mouseY = (int) click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
         if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
         if (button == 0 && ContextMenu.isOpen()) {
@@ -444,17 +448,23 @@ public abstract class ChatScreenMixin {
     @Unique private static double lastClickY    = -1;
     @Unique private static long   lastClickTime = 0;
 
+    // Cursor is requested on the same GuiGraphicsExtractor vanilla applies to the window at the
+    // very end of the frame. Setting it via MouseClient's raw glfwSetCursor instead — bypassing
+    // that accumulator — desyncs vanilla's own cursor tracking from what's actually on screen:
+    // the next time ANY vanilla widget touches the cursor, vanilla's end-of-frame apply silently
+    // stomps our hand/IBeam back to arrow one frame later. Routing through context.requestCursor
+    // keeps us inside vanilla's own accumulator so there's nothing left to race.
     @Unique
-    private void updateCursor(int mouseX, int mouseY) {
+    private void updateCursor(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         if (!MultichatClient.CONFIG.cursorChangingEnabled) return;
 
         if (isMouseOverSuggestor(mouseX, mouseY)) {
-            MouseClient.resetCursor();
+            context.requestCursor(CursorTypes.ARROW);
             return;
         }
 
         if (ContextMenu.containsMouse(mouseX, mouseY) || MessageContextMenu.containsMouse(mouseX, mouseY)) {
-            MouseClient.setHandCursor();
+            context.requestCursor(CursorTypes.POINTING_HAND);
             return;
         }
 
@@ -506,7 +516,7 @@ public abstract class ChatScreenMixin {
                             renderX += tabWidth + 1;
                         }
                     }
-                    if (overTab) { MouseClient.setHandCursor(); return; }
+                    if (overTab) { context.requestCursor(CursorTypes.POINTING_HAND); return; }
                 }
             }
 
@@ -516,7 +526,7 @@ public abstract class ChatScreenMixin {
             if (!ctrlHeld) {
                 var style = ChatRenderer.lastHoveredStyle;
                 if (style != null && style.getClickEvent() != null) {
-                    MouseClient.setHandCursor();
+                    context.requestCursor(CursorTypes.POINTING_HAND);
                     return;
                 }
             }
@@ -532,7 +542,7 @@ public abstract class ChatScreenMixin {
                         float localX = Math.max(0f, mouseX / scale - 4 - xOff);
                         int textW = LzClient.mc().font.width(lines.get(hit).content().mc());
                         if (localX <= textW) {
-                            MouseClient.setIBeamCursor();
+                            context.requestCursor(CursorTypes.IBEAM);
                             return;
                         }
                     }
@@ -541,11 +551,11 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
-            MouseClient.setIBeamCursor();
+            context.requestCursor(CursorTypes.IBEAM);
             return;
         }
 
-        MouseClient.resetCursor();
+        context.requestCursor(CursorTypes.ARROW);
     }
 
     @Unique
