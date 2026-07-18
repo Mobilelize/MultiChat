@@ -6,7 +6,7 @@
   "description": "Multi-panel tabbed chat for Minecraft. Filter, route, and organize messages across customizable panels with per-tab rules, badges, and timestamps.",
   "authors": [],
   "contact": {},
-  "license": "All-Rights-Reserved",
+  "license": "GPL-3.0-or-later",
   "icon": "assets/multichat/icon.png",
   "environment": "client",
   "entrypoints": {
