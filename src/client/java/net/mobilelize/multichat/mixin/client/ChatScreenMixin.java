@@ -13,6 +13,8 @@ import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
+import net.mobilelize.fabriclib.text.LzOrderedText;
+import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.multichat.api.MessageSentCallback;
 import net.mobilelize.multichat.api.PanelFocusedCallback;
 import net.mobilelize.multichat.api.TabChangedCallback;
@@ -505,29 +507,30 @@ public abstract class ChatScreenMixin {
 
             if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLines)) continue;
 
-            // Clickable text → hand (skipped when Ctrl held — Ctrl is selection mode)
-            if (!ctrlHeld) {
-                var chat = LzChat.chatHud();
-                if (chat != null) {
-                    var style = chat.getTextStyleAt(mouseX, mouseY);
-                    if (style != null && style.getClickEvent() != null) {
-                        MouseClient.setHandCursor();
-                        return;
-                    }
-                }
-            }
-
-            // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
-            if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
-                int hit = ChatSelection.hitLine(panel, mouseX, mouseY,
-                    visibleLines, scale, lineH, windowHeight, chatWidth, xOff);
-                if (hit >= 0) {
-                    ChatTab active = panel.getActiveTab();
-                    List<LzChatLine> lines = active != null ? panel.getTabLines(active) : null;
-                    if (lines != null && hit < lines.size()) {
-                        float localX = Math.max(0f, mouseX / scale - 4 - xOff);
-                        int textW = LzClient.mc().textRenderer.getWidth(lines.get(hit).content().mc());
-                        if (localX <= textW) {
+            // Single hit-test against our own rendered line — same geometry drives both the
+            // hand (clickable) and IBeam (plain text) decision, instead of hand-checking against
+            // vanilla's own ChatHud.getTextStyleAt (different coordinate space/geometry than our
+            // custom panels), which is what let hand↔IBeam and text↔text transitions get stuck.
+            int hit = ChatSelection.hitLine(panel, mouseX, mouseY,
+                visibleLines, scale, lineH, windowHeight, chatWidth, xOff);
+            if (hit >= 0) {
+                ChatTab active = panel.getActiveTab();
+                List<LzChatLine> lines = active != null ? panel.getTabLines(active) : null;
+                if (lines != null && hit < lines.size()) {
+                    LzOrderedText content = lines.get(hit).content();
+                    float localX = Math.max(0f, mouseX / scale - 4 - xOff);
+                    int   textW  = LzClient.mc().textRenderer.getWidth(content.mc());
+                    if (localX <= textW) {
+                        // Clickable text → hand (skipped when Ctrl held — Ctrl is selection mode)
+                        if (!ctrlHeld) {
+                            LzStyle style = ChatSelection.styleAtX(content, localX);
+                            if (style != null && style.mc().getClickEvent() != null) {
+                                MouseClient.setHandCursor();
+                                return;
+                            }
+                        }
+                        // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
+                        if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
                             MouseClient.setIBeamCursor();
                             return;
                         }
