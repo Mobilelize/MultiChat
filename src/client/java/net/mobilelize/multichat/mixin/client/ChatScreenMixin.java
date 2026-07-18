@@ -517,16 +517,12 @@ public abstract class ChatScreenMixin {
             }
 
             // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
-            // Vanilla-type tabs are rendered by vanilla itself (see ChatRenderer.render skip), so this
-            // panel's own geometry doesn't line up with what's actually on screen — skip, let vanilla
-            // handle its own cursor there (matches the TabType.VANILLA skip in resolveStyleAt/resolveIndicatorAt).
-            ChatTab active = panel.getActiveTab();
-            if (active != null && active.type() != TabType.VANILLA
-                    && (ctrlHeld || MultichatClient.CONFIG.selectionEnabled)) {
+            if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
                 int hit = ChatSelection.hitLine(panel, mouseX, mouseY,
                     visibleLines, scale, lineH, windowHeight, chatWidth, xOff);
                 if (hit >= 0) {
-                    List<LzChatLine> lines = panel.getTabLines(active);
+                    ChatTab active = panel.getActiveTab();
+                    List<LzChatLine> lines = active != null ? panel.getTabLines(active) : null;
                     if (lines != null && hit < lines.size()) {
                         float localX = Math.max(0f, mouseX / scale - 4 - xOff);
                         int textW = LzClient.mc().textRenderer.getWidth(lines.get(hit).content().mc());
