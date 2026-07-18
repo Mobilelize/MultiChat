@@ -214,7 +214,10 @@ public abstract class ChatScreenMixin {
     @Inject(method = "mouseClicked(Lnet/minecraft/client/gui/Click;Z)Z", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(Click click, boolean isDoubleClickParam,
                                  CallbackInfoReturnable<Boolean> cir) {
-        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
+        // Truncate to int to match render()'s mouseX/mouseY, which the hover-cursor hit-test
+        // (updateCursor) uses — Click gives full sub-pixel precision, so leaving it unfloored
+        // makes click land a fraction of a pixel to the right/below hover, missing at edges.
+        double mouseX = (int) click.x(); double mouseY = (int) click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
         if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
         if (button == 0 && ContextMenu.isOpen()) {
