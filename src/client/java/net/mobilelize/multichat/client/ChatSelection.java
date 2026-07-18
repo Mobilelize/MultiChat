@@ -192,6 +192,23 @@ public class ChatSelection {
         return arr;
     }
 
+    /** Style at a given local x on a line — same glyph-walk geometry as charIndexAtX/xOfChar. */
+    public static LzStyle styleAtX(LzOrderedText text, float targetX) {
+        if (targetX < 0f) return null;
+        float[]  cumX  = {0f};
+        LzStyle[] found = {null};
+        text.lzAccept((idx, style, cp) -> {
+            float w = glyphWidth(style, cp);
+            if (targetX < cumX[0] + w) {
+                found[0] = style;
+                return false;
+            }
+            cumX[0] += w;
+            return true;
+        });
+        return found[0];
+    }
+
     public static int charIndexAtX(LzOrderedText text, float targetX) {
         if (targetX <= 0f) return 0;
         int[]   count = {0};
