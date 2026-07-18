@@ -314,20 +314,21 @@ public abstract class ChatScreenMixin {
                     visibleLineCount, scale, lineH, windowHeight, chatWidth, xOff);
                 if (exactIdx < 0) continue;
 
-                boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
-                    && LzKeys.isCtrlDown();
-                if (!ctrlSkip) {
-                    var chat = LzChat.chatHud();
-                    if (chat != null) {
-                        var style = chat.getTextStyleAt(mouseX, mouseY);
-                        if (style != null && style.getClickEvent() != null) break;
-                    }
-                }
-
                 float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
                 List<LzChatLine> _sglLines = panel.getTabLines(active);
-                int charIdx  = ChatSelection.charIndexAtX(
-                    _sglLines != null ? _sglLines.get(exactIdx).content() : null, localX);
+                LzOrderedText _sglContent = _sglLines != null && exactIdx < _sglLines.size()
+                    ? _sglLines.get(exactIdx).content() : null;
+
+                // Same hit-test geometry as the hover cursor — skip starting a selection
+                // when the click lands on a clickable span, so the link click falls through.
+                boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
+                    && LzKeys.isCtrlDown();
+                if (!ctrlSkip && _sglContent != null) {
+                    LzStyle style = ChatSelection.styleAtX(_sglContent, localX);
+                    if (style != null && style.mc().getClickEvent() != null) break;
+                }
+
+                int charIdx  = ChatSelection.charIndexAtX(_sglContent, localX);
                 ChatSelection.start(panel, exactIdx, charIdx);
                 cir.setReturnValue(true);
                 return;
