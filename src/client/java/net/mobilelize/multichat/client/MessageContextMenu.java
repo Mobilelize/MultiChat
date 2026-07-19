@@ -263,6 +263,8 @@ public class MessageContextMenu {
     }
 
     private static String extractFullMessage(LzChatLine clicked, ChatPanel panel) {
+        if (clicked.entry() != null) return clicked.entry().originalContent.mc().getString();
+
         ChatTab active = panel.getActiveTab();
         if (active == null) return extractText(clicked);
 
