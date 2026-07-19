@@ -2,6 +2,7 @@ package net.mobilelize.multichat.mixin.client;
 
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.cursor.StandardCursors;
 import net.minecraft.client.gui.screen.ChatInputSuggestor;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -108,7 +109,7 @@ public abstract class ChatScreenMixin {
         ContextMenu.render(lzCtx);
         MessageContextMenu.render(lzCtx);
 
-        updateCursor(mouseX, mouseY);
+        updateCursor(context, mouseX, mouseY);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"))
@@ -443,17 +444,24 @@ public abstract class ChatScreenMixin {
     @Unique private static double lastClickY    = -1;
     @Unique private static long   lastClickTime = 0;
 
+    // Cursor is set on the same DrawContext that GameRenderer reads at the very end of the frame
+    // (context.applyCursorTo(window), called after Screen.render() returns). Setting it via
+    // MouseClient's raw glfwSetCursor instead — bypassing DrawContext/Window entirely — desyncs
+    // vanilla's own cursor tracking from what's actually on screen: the next time ANY vanilla
+    // widget (chatField, buttons...) touches the cursor, that end-of-frame apply silently stomps
+    // our hand/IBeam back to arrow one frame later. Routing through context.setCursor keeps us
+    // inside vanilla's own accumulator so there's nothing left to race.
     @Unique
-    private void updateCursor(int mouseX, int mouseY) {
+    private void updateCursor(DrawContext context, int mouseX, int mouseY) {
         if (!MultichatClient.CONFIG.cursorChangingEnabled) return;
 
         if (isMouseOverSuggestor(mouseX, mouseY)) {
-            MouseClient.resetCursor();
+            context.setCursor(StandardCursors.ARROW);
             return;
         }
 
         if (ContextMenu.containsMouse(mouseX, mouseY) || MessageContextMenu.containsMouse(mouseX, mouseY)) {
-            MouseClient.setHandCursor();
+            context.setCursor(StandardCursors.POINTING_HAND);
             return;
         }
 
@@ -505,7 +513,7 @@ public abstract class ChatScreenMixin {
                             renderX += tabWidth + 1;
                         }
                     }
-                    if (overTab) { MouseClient.setHandCursor(); return; }
+                    if (overTab) { context.setCursor(StandardCursors.POINTING_HAND); return; }
                 }
             }
 
@@ -529,13 +537,13 @@ public abstract class ChatScreenMixin {
                         if (!ctrlHeld) {
                             LzStyle style = ChatSelection.styleAtX(content, localX);
                             if (style != null && style.mc().getClickEvent() != null) {
-                                MouseClient.setHandCursor();
+                                context.setCursor(StandardCursors.POINTING_HAND);
                                 return;
                             }
                         }
                         // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
                         if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
-                            MouseClient.setIBeamCursor();
+                            context.setCursor(StandardCursors.IBEAM);
                             return;
                         }
                     }
@@ -544,11 +552,11 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
-            MouseClient.setIBeamCursor();
+            context.setCursor(StandardCursors.IBEAM);
             return;
         }
 
-        MouseClient.resetCursor();
+        context.setCursor(StandardCursors.ARROW);
     }
 
     @Unique
