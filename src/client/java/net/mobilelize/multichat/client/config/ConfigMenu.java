@@ -174,6 +174,14 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.doubleClickNameSelect = v)
                 .build());
 
+        selection.addEntry(eb.startBooleanToggle(
+                LzText.literal("Copy Uses Original Message Text").mc(),
+                MultichatClient.CONFIG.selectionUsesOriginalText)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("ON: copying a drag-selection reconstructs text from each message's original, pre-wrap content. OFF: copying stitches together the wrapped lines exactly as displayed.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.selectionUsesOriginalText = v)
+                .build());
+
         // ── Advanced ──────────────────────────────────────────────────────
         ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
 
