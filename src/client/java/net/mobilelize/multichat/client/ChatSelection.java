@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client;
 
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -104,15 +105,69 @@ public class ChatSelection {
         int[] n = norm();
         int tl = n[0], bl = n[1], tc = n[2], bc = n[3];
 
+        boolean useOriginal = MultichatClient.CONFIG.selectionUsesOriginalText;
+
         StringBuilder sb = new StringBuilder();
-        for (int s = tl; s >= bl; s--) {
-            if (s < 0 || s >= msgs.size()) continue;
+        int s = tl;
+        while (s >= bl) {
+            if (s < 0 || s >= msgs.size()) { s--; continue; }
+            LzChatLine  line  = msgs.get(s);
+            LzChatEntry entry = line.entry();
+
+            if (useOriginal && entry != null) {
+                int groupTop = s;
+                while (groupTop + 1 < msgs.size() && msgs.get(groupTop + 1).entry() == entry) groupTop++;
+                int groupBottom = s;
+                while (groupBottom - 1 >= 0 && msgs.get(groupBottom - 1).entry() == entry) groupBottom--;
+
+                appendEntryRange(sb, msgs, entry, groupTop, groupBottom, tl, tc, bl, bc);
+
+                if (bl < groupBottom) sb.append('\n');
+                s = groupBottom - 1;
+                continue;
+            }
+
             int cStart = (s == tl) ? tc : 0;
             int cEnd   = (s == bl) ? bc : Integer.MAX_VALUE;
-            appendChars(sb, msgs.get(s).content(), cStart, cEnd);
+            appendChars(sb, line.content(), cStart, cEnd);
             if (s > bl) sb.append('\n');
+            s--;
         }
         return sb.toString();
+    }
+
+    /**
+     * Appends the slice of {@code entry}'s original (pre-wrap) text that corresponds to the
+     * selection, approximating raw offsets by summing wrapped-line codepoint counts. Word-wrap
+     * drops the breaking space, so this can drift by a character per wrap point within the entry —
+     * acceptable, and far better than stitching wrapped fragments verbatim.
+     */
+    private static void appendEntryRange(StringBuilder sb, List<LzChatLine> msgs, LzChatEntry entry,
+                                          int groupTop, int groupBottom,
+                                          int tl, int tc, int bl, int bc) {
+        String raw    = entry.originalContent.mc().getString();
+        int    rawLen = raw.codePointCount(0, raw.length());
+
+        int rawStart = (tl > groupTop) ? 0 : codepointsBefore(msgs, groupTop, tl) + tc;
+        int rawEnd   = (bl < groupBottom) ? rawLen : codepointsBefore(msgs, groupTop, bl) + bc;
+
+        rawStart = Math.max(0, Math.min(rawStart, rawLen));
+        rawEnd   = Math.max(rawStart, Math.min(rawEnd, rawLen));
+
+        sb.append(raw, raw.offsetByCodePoints(0, rawStart), raw.offsetByCodePoints(0, rawEnd));
+    }
+
+    /** Sums codepoint lengths of lines with index in (boundaryIdx, groupTop]. */
+    private static int codepointsBefore(List<LzChatLine> msgs, int groupTop, int boundaryIdx) {
+        int total = 0;
+        for (int i = groupTop; i > boundaryIdx; i--) total += codepointLength(msgs.get(i).content());
+        return total;
+    }
+
+    private static int codepointLength(LzOrderedText text) {
+        int[] count = {0};
+        text.lzAccept((idx, style, cp) -> { count[0]++; return true; });
+        return count[0];
     }
 
     // -----------------------------------------------------------------------
