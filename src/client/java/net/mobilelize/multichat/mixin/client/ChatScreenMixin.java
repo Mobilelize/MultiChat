@@ -442,6 +442,32 @@ public abstract class ChatScreenMixin {
                 renderX += tabWidth + 1;
             }
         }
+
+        // Fallback: a click inside an enabled panel's message rectangle that didn't hit an
+        // actual line (panel taller than its current message count, e.g. only 1 message showing)
+        // must still be swallowed here. Left unhandled, it falls through to ChatScreen's own
+        // click handling, which — for a non-vanilla active tab — resolves against vanilla's real
+        // ChatHud layout (render-suppressed and invisible, but still there) instead of what's
+        // actually on screen.
+        for (ChatPanel panel : ChatManager.getAllPanels()) {
+            if (!panel.isEnabled()) continue;
+            ChatTab active = panel.getActiveTab();
+            if (active == null || active.type() == TabType.VANILLA) continue;
+
+            float scale           = panel.resolveScale();
+            int   chatWidth       = panel.resolveWidth();
+            int   lineH           = panel.resolveLineHeight();
+            int   visibleLineCount = panel.resolveLines();
+            int   topY            = panel.resolveTopY(windowHeight);
+            if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLineCount)) continue;
+
+            int    xOff   = panel.computeXOffset(windowWidth);
+            double localX = mouseX / (double) scale - 4.0 - xOff;
+            if (localX < -4.0 || localX > chatWidth) continue;
+
+            cir.setReturnValue(true);
+            return;
+        }
     }
 
     @Unique private static double lastClickX    = -1;
