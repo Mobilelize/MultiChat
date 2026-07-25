@@ -137,24 +137,74 @@ public class ChatSelection {
     }
 
     /**
-     * Appends the slice of {@code entry}'s original (pre-wrap) text that corresponds to the
-     * selection, approximating raw offsets by summing wrapped-line codepoint counts. Word-wrap
-     * drops the breaking space, so this can drift by a character per wrap point within the entry —
+     * Appends the slice of {@code entry}'s logical text (timestamp prefix + original pre-wrap
+     * text + collapse-counter suffix, in that order) that corresponds to the selection,
+     * approximating offsets by summing wrapped-line codepoint counts. Word-wrap drops the
+     * breaking space, so this can drift by a character per wrap point within the entry —
      * acceptable, and far better than stitching wrapped fragments verbatim.
+     * <p>
+     * The timestamp/collapse pieces aren't stored anywhere retrievable (and can't be
+     * reconstructed from current config — the format may have changed since this message was
+     * stamped, or a tab's "show timestamps" setting may have been toggled after the fact), so
+     * prefix/suffix are found structurally: {@code raw} is located inside the actual rendered
+     * group text by matching, and whatever sits before/after it is the prefix/suffix — no
+     * assumptions about their content.
      */
     private static void appendEntryRange(StringBuilder sb, List<LzChatLine> msgs, LzChatEntry entry,
                                           int groupTop, int groupBottom,
                                           int tl, int tc, int bl, int bc) {
-        String raw    = entry.originalContent.mc().getString();
-        int    rawLen = raw.codePointCount(0, raw.length());
+        int[] raw   = entry.originalContent.mc().getString().codePoints().toArray();
+        int[] group = groupCodepoints(msgs, groupTop, groupBottom);
 
-        int rawStart = (tl > groupTop) ? 0 : codepointsBefore(msgs, groupTop, tl) + tc;
-        int rawEnd   = (bl < groupBottom) ? rawLen : codepointsBefore(msgs, groupTop, bl) + bc;
+        int prefixLen = findRawStart(group, raw);
+        int suffixLen = Math.max(0, group.length - prefixLen - raw.length);
 
-        rawStart = Math.max(0, Math.min(rawStart, rawLen));
-        rawEnd   = Math.max(rawStart, Math.min(rawEnd, rawLen));
+        int fullLen = prefixLen + raw.length + suffixLen;
 
-        sb.append(raw, raw.offsetByCodePoints(0, rawStart), raw.offsetByCodePoints(0, rawEnd));
+        int start = (tl > groupTop) ? 0 : codepointsBefore(msgs, groupTop, tl) + tc;
+        int end   = (bl < groupBottom) ? fullLen : codepointsBefore(msgs, groupTop, bl) + bc;
+
+        start = Math.max(0, Math.min(start, fullLen));
+        end   = Math.max(start, Math.min(end, fullLen));
+
+        for (int i = start; i < end; i++) {
+            // prefix/suffix regions read straight from `group` (their real on-screen text);
+            // the middle region substitutes `raw` to avoid wrap-dropped-space artifacts.
+            if (i >= prefixLen && i < prefixLen + raw.length) sb.appendCodePoint(raw[i - prefixLen]);
+            else sb.appendCodePoint(group[i]);
+        }
+    }
+
+    /** Concatenates rendered codepoints of every wrapped line in the entry's group, top to bottom. */
+    private static int[] groupCodepoints(List<LzChatLine> msgs, int groupTop, int groupBottom) {
+        int[][] perLine = new int[groupTop - groupBottom + 1][];
+        int total = 0;
+        for (int i = groupTop; i >= groupBottom; i--) {
+            int[] cps = collectCodepoints(msgs.get(i).content());
+            perLine[groupTop - i] = cps;
+            total += cps.length;
+        }
+        int[] out = new int[total];
+        int pos = 0;
+        for (int[] cps : perLine) { System.arraycopy(cps, 0, out, pos, cps.length); pos += cps.length; }
+        return out;
+    }
+
+    /**
+     * Finds the offset in {@code group} where {@code raw} begins, by matching a short anchor
+     * (raw's own first codepoints) against every position. Returns 0 (no prefix) if no match is
+     * found — e.g. the message predates timestamps being enabled.
+     */
+    private static int findRawStart(int[] group, int[] raw) {
+        if (raw.length == 0) return 0;
+        int anchor = Math.min(raw.length, 8);
+        outer:
+        for (int i = 0; i <= group.length - anchor; i++) {
+            for (int k = 0; k < anchor; k++)
+                if (group[i + k] != raw[k]) continue outer;
+            return i;
+        }
+        return 0;
     }
 
     /** Sums codepoint lengths of lines with index in (boundaryIdx, groupTop]. */
