@@ -153,7 +153,7 @@ public class ChatSelection {
     private static void appendEntryRange(StringBuilder sb, List<LzChatLine> msgs, LzChatEntry entry,
                                           int groupTop, int groupBottom,
                                           int tl, int tc, int bl, int bc) {
-        int[] raw   = entry.originalContent.mc().getString().codePoints().toArray();
+        int[] raw   = stripSectionPairs(entry.originalContent.mc().getString().codePoints().toArray());
         int[] group = groupCodepoints(msgs, groupTop, groupBottom);
 
         int prefixLen = findRawStart(group, raw);
@@ -216,7 +216,7 @@ public class ChatSelection {
 
     private static int codepointLength(LzOrderedText text) {
         int[] count = {0};
-        text.lzAccept((idx, style, cp) -> { count[0]++; return true; });
+        visitVisible(text, (idx, style, cp) -> { count[0]++; return true; });
         return count[0];
     }
 
@@ -291,7 +291,7 @@ public class ChatSelection {
 
     private static int[] collectCodepoints(LzOrderedText text) {
         java.util.List<Integer> list = new java.util.ArrayList<>();
-        text.lzAccept((idx, style, cp) -> { list.add(cp); return true; });
+        visitVisible(text, (idx, style, cp) -> { list.add(cp); return true; });
         int[] arr = new int[list.size()];
         for (int i = 0; i < arr.length; i++) arr[i] = list.get(i);
         return arr;
@@ -318,7 +318,7 @@ public class ChatSelection {
         if (targetX <= 0f) return 0;
         int[]   count = {0};
         float[] cumX  = {0f};
-        text.lzAccept((idx, style, cp) -> {
+        visitVisible(text, (idx, style, cp) -> {
             float w = glyphWidth(style, cp);
             if (cumX[0] + w * 0.5f >= targetX) return false;
             cumX[0] += w;
@@ -347,7 +347,7 @@ public class ChatSelection {
         if (charIdx <= 0) return 0f;
         float[] x     = {0f};
         int[]   count = {0};
-        text.lzAccept((idx, style, cp) -> {
+        visitVisible(text, (idx, style, cp) -> {
             if (count[0] >= charIdx) return false;
             x[0] += glyphWidth(style, cp);
             count[0]++;
@@ -358,7 +358,7 @@ public class ChatSelection {
 
     private static void appendChars(StringBuilder sb, LzOrderedText text, int start, int end) {
         int[] count = {0};
-        text.lzAccept((idx, style, cp) -> {
+        visitVisible(text, (idx, style, cp) -> {
             if (count[0] >= end) return false;
             if (count[0] >= start) sb.appendCodePoint(cp);
             count[0]++;
@@ -369,5 +369,56 @@ public class ChatSelection {
     private static float glyphWidth(LzStyle style, int cp) {
         LzMutableText t = LzText.literal(new String(Character.toChars(cp))).withStyle(style);
         return LzDraw.textWidth(t);
+    }
+
+    // Legacy "§" formatting codes that leak through as literal characters (rather than real
+    // Style, e.g. a plugin-built prefix like "§b[MVP§b+]") render as nothing on screen. "§"
+    // itself NEVER renders — MC's font never draws section-sign, valid code or not — while the
+    // character right after it only ALSO disappears when it's one of MC's real format codes
+    // (an invalid one like "§y" leaves the "y" literal and visible). Our own codepoint walk
+    // doesn't know either half of that, so "§" always drifts hit-testing/selection by at least
+    // 1 index and leaks into copied text, plus 1 more when it's swallowing a valid code letter.
+    private static final int SECTION_SIGN = 0x00A7;
+
+    private static boolean isFormatCode(int cp) {
+        return (cp >= '0' && cp <= '9')
+            || (cp >= 'a' && cp <= 'f') || (cp >= 'A' && cp <= 'F')
+            || (cp >= 'k' && cp <= 'o') || (cp >= 'K' && cp <= 'O')
+            || cp == 'r' || cp == 'R'
+            || cp == 'x' || cp == 'X';
+    }
+
+    // Buffers first (needs to peek one codepoint ahead of "§" to know whether to skip it),
+    // then replays the filtered sequence through the real visitor with correct running indices.
+    private static boolean visitVisible(LzOrderedText text, LzOrderedText.LzCharacterVisitor visitor) {
+        List<Integer> cps    = new java.util.ArrayList<>();
+        List<LzStyle> styles = new java.util.ArrayList<>();
+        text.lzAccept((i, style, cp) -> { cps.add(cp); styles.add(style); return true; });
+
+        int outIdx = 0;
+        for (int i = 0; i < cps.size(); i++) {
+            int cp = cps.get(i);
+            if (cp == SECTION_SIGN) {
+                if (i + 1 < cps.size() && isFormatCode(cps.get(i + 1))) i++; // swallow the code letter too
+                continue; // "§" itself is always invisible
+            }
+            if (!visitor.accept(outIdx++, styles.get(i), cp)) return false;
+        }
+        return true;
+    }
+
+    private static int[] stripSectionPairs(int[] codepoints) {
+        java.util.List<Integer> out = new java.util.ArrayList<>(codepoints.length);
+        for (int i = 0; i < codepoints.length; i++) {
+            int cp = codepoints[i];
+            if (cp == SECTION_SIGN) {
+                if (i + 1 < codepoints.length && isFormatCode(codepoints[i + 1])) i++;
+                continue;
+            }
+            out.add(cp);
+        }
+        int[] arr = new int[out.size()];
+        for (int i = 0; i < arr.length; i++) arr[i] = out.get(i);
+        return arr;
     }
 }
