@@ -407,6 +407,12 @@ public class ChatSelection {
         return true;
     }
 
+    // raw (original source string) may carry literal '\n'/'\r' (leading, trailing, or between
+    // lines of a multi-line message). group (rendered codepoints) never has them — the wrapper
+    // consumes newlines as line breaks, not glyphs. appendEntryRange assumes raw and group are
+    // codepoint-aligned; leftover newlines break that (a leading '\n' even kills the anchor
+    // match in findRawStart outright), so they must be stripped same as section-sign pairs.
+    // Line breaks in the copied text come from sb.append('\n') between LzChatLines already.
     private static int[] stripSectionPairs(int[] codepoints) {
         java.util.List<Integer> out = new java.util.ArrayList<>(codepoints.length);
         for (int i = 0; i < codepoints.length; i++) {
@@ -415,6 +421,7 @@ public class ChatSelection {
                 if (i + 1 < codepoints.length && isFormatCode(codepoints[i + 1])) i++;
                 continue;
             }
+            if (cp == '\n' || cp == '\r') continue;
             out.add(cp);
         }
         int[] arr = new int[out.size()];
