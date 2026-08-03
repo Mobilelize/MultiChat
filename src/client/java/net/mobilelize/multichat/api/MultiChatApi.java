@@ -102,6 +102,23 @@ public final class MultiChatApi {
     }
 
     // ------------------------------------------------------------------
+    // Theme
+    // ------------------------------------------------------------------
+
+    /** Register a chat color theme. Shows up in the theme picker (Settings → Appearance) alongside the built-ins. */
+    public static void registerTheme(ChatTheme theme) {
+        ThemeRegistry.register(theme);
+    }
+
+    public static void setActiveTheme(String id) {
+        ThemeRegistry.setActive(id);
+    }
+
+    public static ChatTheme getActiveTheme() {
+        return ThemeRegistry.active();
+    }
+
+    // ------------------------------------------------------------------
     // Read-only access
     // ------------------------------------------------------------------
 

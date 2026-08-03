@@ -77,6 +77,21 @@ public final class Colors {
     public static final int TAB_BAR_NO_COLOR_ACTIVE   = 0xBB888888;
     public static final int TAB_BAR_NO_COLOR_INACTIVE = 0x88444444;
     public static final int TAB_BAR_ARROW_TEXT        = 0xFFCCCCCC;
+    // Alpha level OR'd onto a tab's own custom RGB color (tab.tabColor()) — active tabs read more opaque.
+    public static final int TAB_CUSTOM_ALPHA_ACTIVE   = 0xCC000000;
+    public static final int TAB_CUSTOM_ALPHA_INACTIVE = 0x55000000;
+
+    // === CHAT MESSAGE TEXT ===
+    // Base RGB for message text — alpha applied separately per-row (fade-out, focus opacity).
+    public static final int MESSAGE_TEXT_RGB = 0xFFFFFF;
+
+    // === CHAT SCROLLBAR (the in-chat message scrollbar — distinct from the config-screen list
+    // scrollbar in the SCROLLBAR_* section below) ===
+    public static final int CHAT_SCROLLBAR_UNREAD_RGB    = 13382451;
+    public static final int CHAT_SCROLLBAR_NO_UNREAD_RGB = 3355562;
+    public static final int CHAT_SCROLLBAR_HIGHLIGHT_RGB = 13421772;
+    public static final int CHAT_SCROLLBAR_ACTIVE_RGB    = 0xFFFFFF;
+    public static final int CHAT_SCROLLBAR_GLOW          = 0x40FFFFFF;
 
     // === CHAT HIGHLIGHTS (RGB component — alpha OR'd at runtime) ===
     public static final int HIGHLIGHT_SEARCH_RGB = 0x00FFAA00;

@@ -25,6 +25,7 @@ public class MultiChatConfig extends LzConfig {
     public double tabFgOpacity = -1;
 
     // ── General ───────────────────────────────────────────────────────────────
+    public String  activeThemeId                = "vanilla";
     public boolean modDisabled                  = false;
     public boolean normalizeFilterText          = false;
     public boolean showIndicators               = true;
@@ -131,6 +132,7 @@ public class MultiChatConfig extends LzConfig {
     // activeNoteTabId (UUID) is also skipped: null there is a valid, meaningful state (no active note tab).
     @Override
     protected void onLoad() {
+        if (activeThemeId == null) activeThemeId = "vanilla";
         if (panels == null) panels = new ArrayList<>();
         if (tabs == null) tabs = new ArrayList<>();
         if (noteTabs == null) noteTabs = new ArrayList<>();

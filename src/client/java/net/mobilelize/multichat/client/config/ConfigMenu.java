@@ -8,11 +8,15 @@ import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.input.LzInputUtil;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.ChatTheme;
 import net.mobilelize.multichat.client.HighlightEngine;
 import net.mobilelize.multichat.client.MultichatClient;
+import net.mobilelize.multichat.client.ThemeRegistry;
 import net.mobilelize.multichat.client.ping.PingPlayer;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ConfigMenu {
 
@@ -26,6 +30,26 @@ public class ConfigMenu {
 
         // ── Appearance ────────────────────────────────────────────────────
         ConfigCategory appearance = builder.getOrCreateCategory(LzText.literal("Appearance").mc());
+
+        List<ChatTheme> themes = ThemeRegistry.getAll();
+        Map<String, String> themeNameToId = new HashMap<>();
+        List<String> themeNames = new java.util.ArrayList<>();
+        for (ChatTheme t : themes) {
+            themeNameToId.put(t.displayName, t.id);
+            themeNames.add(t.displayName);
+        }
+        appearance.addEntry(eb.startDropdownMenu(
+                LzText.literal("Chat Theme").mc(),
+                DropdownMenuBuilder.TopCellElementBuilder.of(ThemeRegistry.active().displayName, s -> s),
+                DropdownMenuBuilder.CellCreatorBuilder.of())
+                .setDefaultValue("Vanilla")
+                .setSelections(themeNames)
+                .setTooltip(LzText.literal("Color palette for the chat tab bar, scrollbar, and message highlights. Other mods can add their own via the API.").mc())
+                .setSaveConsumer(v -> {
+                    String id = themeNameToId.get(v);
+                    if (id != null) ThemeRegistry.setActive(id);
+                })
+                .build());
 
         appearance.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Indicators").mc(),

@@ -143,10 +143,12 @@ public class ChatRenderer {
 
         int tabAreaEnd = chatWidth + 4 - (hasRight ? ARROW_W : 0);
 
+        ChatTheme theme = ThemeRegistry.active();
+
         int x = -4;
         if (hasLeft) {
-            LzDraw.fill(context, x, topY, x + ARROW_W, topY + TAB_HEIGHT, Colors.TAB_BAR_NO_COLOR_INACTIVE);
-            LzDraw.drawText(context, "<", x + 2, topY + 1, Colors.TAB_BAR_ARROW_TEXT);
+            LzDraw.fill(context, x, topY, x + ARROW_W, topY + TAB_HEIGHT, theme.tabBgInactive);
+            LzDraw.drawText(context, "<", x + 2, topY + 1, theme.tabArrowText);
             x += ARROW_W;
         }
 
@@ -201,8 +203,8 @@ public class ChatRenderer {
 
         if (hasRight) {
             int ax = tabAreaEnd;
-            LzDraw.fill(context, ax, topY, ax + ARROW_W, topY + TAB_HEIGHT, Colors.TAB_BAR_NO_COLOR_INACTIVE);
-            LzDraw.drawText(context, ">", ax + 2, topY + 1, Colors.TAB_BAR_ARROW_TEXT);
+            LzDraw.fill(context, ax, topY, ax + ARROW_W, topY + TAB_HEIGHT, theme.tabBgInactive);
+            LzDraw.drawText(context, ">", ax + 2, topY + 1, theme.tabArrowText);
         }
 
         LzDraw.popMatrix(context);
@@ -216,18 +218,20 @@ public class ChatRenderer {
     }
 
     private static int tabBgColor(ChatTab tab, boolean active, ChatPanel panel) {
+        ChatTheme theme = ThemeRegistry.active();
         int color = (tab.tabColor() == 0)
-            ? (active ? Colors.TAB_BAR_NO_COLOR_ACTIVE : Colors.TAB_BAR_NO_COLOR_INACTIVE)
-            : (active ? (0xCC000000 | (tab.tabColor() & 0xFFFFFF)) : (0x55000000 | (tab.tabColor() & 0xFFFFFF)));
+            ? (active ? theme.tabBgActive : theme.tabBgInactive)
+            : (active ? (theme.tabCustomAlphaActive | (tab.tabColor() & 0xFFFFFF)) : (theme.tabCustomAlphaInactive | (tab.tabColor() & 0xFFFFFF)));
         return applyTabOpacity(color, panel.tabBgOpacity(), MultichatClient.CONFIG.tabBgOpacity);
     }
 
     private static int tabFgColor(ChatTab tab, boolean active, ChatPanel panel) {
+        ChatTheme theme = ThemeRegistry.active();
         int color;
         if (tab.tabColor() == 0) {
-            color = active ? Colors.TEXT_WHITE : Colors.TEXT_INACTIVE;
+            color = active ? theme.tabTextActive : theme.tabTextInactive;
         } else if (active) {
-            color = Colors.TEXT_WHITE;
+            color = theme.tabTextActive;
         } else {
             int rgb = tab.tabColor() & 0xFFFFFF;
             int r = ((rgb >> 16) & 0xFF) * 3 / 5;
@@ -250,6 +254,8 @@ public class ChatRenderer {
         LzDraw.pushMatrix(context);
         LzDraw.scale(context, scale, scale);
         LzDraw.translate(context, 4.0F + xOffset, 0.0F);
+
+        ChatTheme theme = ThemeRegistry.active();
 
         DrawnTextConsumer hoverDrawer = null;
         DrawnTextConsumer.Transformation hoverTransform = null;
@@ -300,14 +306,14 @@ public class ChatRenderer {
                     && visibleEntry != null && ChatRenderer.highlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | Colors.HIGHLIGHT_SEARCH_RGB);
+                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightSearchRgb);
             }
             if (!ChatRenderer.copyHighlightEntries.isEmpty()
                     && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
                     && visibleEntry != null && ChatRenderer.copyHighlightEntries.contains(visibleEntry)) {
                 int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
                 int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | Colors.HIGHLIGHT_NEW_RGB);
+                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightNewRgb);
             }
 
             int flashAge = currentTick - panel.tabFlashTick();
@@ -315,13 +321,13 @@ public class ChatRenderer {
                 float t = (float) flashAge / FLASH_TICKS;
                 int flashAlpha = (int)(80 * (1f - t) * (1f - t));
                 if (flashAlpha > 0)
-                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (flashAlpha << 24) | Colors.HIGHLIGHT_FLASH_RGB);
+                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (flashAlpha << 24) | theme.highlightFlashRgb);
             }
 
             if (MultichatClient.CONFIG.selectionEnabled) {
                 int[] selRect = ChatSelection.lineHighlight(row.visible(), row.s(), panel);
                 if (selRect != null)
-                    LzDraw.fill(context, selRect[0], row.lineBot(), selRect[1], row.lineTop(), Colors.SELECTION);
+                    LzDraw.fill(context, selRect[0], row.lineBot(), selRect[1], row.lineTop(), theme.selection);
             }
         }
 
@@ -349,7 +355,7 @@ public class ChatRenderer {
             } else {
                 LzDraw.pushMatrix(context);
                 LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
-                LzDraw.drawText(context, visible.content(), 0, textY, 16777215 + (textAlpha << 24));
+                LzDraw.drawText(context, visible.content(), 0, textY, theme.messageTextRgb + (textAlpha << 24));
                 LzDraw.popMatrix(context);
             }
         }
@@ -362,7 +368,7 @@ public class ChatRenderer {
             LzDraw.translate(context, 0.0F, (float) topY);
             LzDraw.fill(context, -2, 0, chatWidth + 4, 9, queueBgAlpha << 24);
             LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
-            LzDraw.drawText(context, LzText.translatable("chat.queue", queueCount).ordered(), 0, 1, 16777215 + (queueTextAlpha << 24));
+            LzDraw.drawText(context, LzText.translatable("chat.queue", queueCount).ordered(), 0, 1, theme.messageTextRgb + (queueTextAlpha << 24));
             LzDraw.popMatrix(context);
         }
 
@@ -383,13 +389,14 @@ public class ChatRenderer {
                     // just needs to read as "this whole area is grabbable"
                     int glowPad = 1;
                     LzDraw.fill(context, scrollX - glowPad, -scrollPos + glowPad, scrollX + 2 + glowPad,
-                        -scrollPos - thumbHeight - glowPad, 99, 0x40FFFFFF);
+                        -scrollPos - thumbHeight - glowPad, 99, theme.scrollbarGlow);
                 }
 
                 int alpha    = scrollbarActive ? 230 : (scrollPos > 0 ? 170 : 96);
-                int barColor = scrollbarActive ? 16777215 : (hasUnread ? 13382451 : 3355562);
+                int barColor = scrollbarActive ? theme.scrollbarActiveRgb
+                    : (hasUnread ? theme.scrollbarUnreadRgb : theme.scrollbarNoUnreadRgb);
                 LzDraw.fill(context, scrollX,     -scrollPos, scrollX + 2, -scrollPos - thumbHeight, 100, barColor  + (alpha << 24));
-                LzDraw.fill(context, scrollX + 1, -scrollPos, scrollX + 2, -scrollPos - thumbHeight, 100, 13421772 + (alpha << 24));
+                LzDraw.fill(context, scrollX + 1, -scrollPos, scrollX + 2, -scrollPos - thumbHeight, 100, theme.scrollbarHighlightRgb + (alpha << 24));
             }
         }
 
