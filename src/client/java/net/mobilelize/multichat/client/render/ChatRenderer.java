@@ -106,7 +106,7 @@ public class ChatRenderer {
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
                     lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset, panel, lineBgRgb,
-                    focused);
+                    focused, mouseX, mouseY, windowWidth, windowHeight);
         }
 
         if (focused) {
@@ -241,7 +241,7 @@ public class ChatRenderer {
                                   double chatOpacity, double bgOpacity,
                                   int lineHeight, int textOffset, int visibleLineCount,
                                   int hoveredIndex, int xOffset, ChatPanel panel, int lineBgRgb,
-                                  boolean showScrollbar) {
+                                  boolean showScrollbar, int mouseX, int mouseY, int windowWidth, int windowHeight) {
         LzDraw.pushMatrix(context);
         LzDraw.scale(context, scale, scale);
         LzDraw.translate(context, 4.0F + xOffset, 0.0F);
@@ -368,8 +368,21 @@ public class ChatRenderer {
                 int scrollPos   = scrolledLines * drawnHeight / totalMessages - topY;
                 int thumbHeight = Math.max(4, drawnHeight * drawnHeight / totalHeight);
                 int scrollX     = chatWidth + 4;
-                int alpha       = scrollPos > 0 ? 170 : 96;
-                int barColor    = hasUnread ? 13382451 : 3355562;
+
+                boolean scrollbarActive = MultichatClient.CONFIG.scrollbarGlowEnabled
+                    && ((ChatScrollbarDrag.isDragging() && ChatScrollbarDrag.panel() == panel)
+                        || ChatScrollbarDrag.isMouseOverRegion(panel, mouseX, mouseY, windowWidth, windowHeight));
+
+                if (scrollbarActive) {
+                    // soft halo a hair wider than the thumb itself — doesn't need to be pixel-precise,
+                    // just needs to read as "this whole area is grabbable"
+                    int glowPad = 1;
+                    LzDraw.fill(context, scrollX - glowPad, -scrollPos + glowPad, scrollX + 2 + glowPad,
+                        -scrollPos - thumbHeight - glowPad, 99, 0x40FFFFFF);
+                }
+
+                int alpha    = scrollbarActive ? 230 : (scrollPos > 0 ? 170 : 96);
+                int barColor = scrollbarActive ? 16777215 : (hasUnread ? 13382451 : 3355562);
                 LzDraw.fill(context, scrollX,     -scrollPos, scrollX + 2, -scrollPos - thumbHeight, 100, barColor  + (alpha << 24));
                 LzDraw.fill(context, scrollX + 1, -scrollPos, scrollX + 2, -scrollPos - thumbHeight, 100, 13421772 + (alpha << 24));
             }

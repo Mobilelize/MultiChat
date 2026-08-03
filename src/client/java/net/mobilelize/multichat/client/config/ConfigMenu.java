@@ -52,6 +52,14 @@ public class ConfigMenu {
                 .build());
 
         appearance.addEntry(eb.startBooleanToggle(
+                LzText.literal("Scrollbar Hover Glow").mc(),
+                MultichatClient.CONFIG.scrollbarGlowEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Glow the scrollbar when your mouse is near it, so it's clear it can be dragged.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.scrollbarGlowEnabled = v)
+                .build());
+
+        appearance.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Context Display").mc(),
                 MultichatClient.CONFIG.showContextDisplay)
                 .setDefaultValue(true)
