@@ -144,6 +144,7 @@ public class ContextMenu {
             list.add("Move Right");
 
         if (t.type() != TabType.SEARCH && t.type() != TabType.NOTES
+                && t.type() != TabType.VANILLA && t.type() != TabType.INFO
                 && (panel == null || !panel.popout()) && shown(ID_POPOUT_TAB))
             list.add("Pop Out");
 
