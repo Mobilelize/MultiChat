@@ -106,7 +106,10 @@ public class ChatRenderer {
 
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
-            int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panel.bgColor()) & 0xFFFFFF;
+            int panelBg   = panel.bgColor() != 0 ? panel.bgColor()
+                    : MultichatClient.CONFIG.defaultPanelBgColor != 0 ? MultichatClient.CONFIG.defaultPanelBgColor
+                    : ThemeRegistry.active().defaultPanelBg;
+            int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panelBg) & 0xFFFFFF;
             renderAt(context, currentTick, effectiveFocused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,

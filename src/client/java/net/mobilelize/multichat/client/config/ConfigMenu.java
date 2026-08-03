@@ -51,6 +51,14 @@ public class ConfigMenu {
                 })
                 .build());
 
+        appearance.addEntry(eb.startColorField(
+                LzText.literal("Default Panel BG Color").mc(),
+                MultichatClient.CONFIG.defaultPanelBgColor)
+                .setDefaultValue(0)
+                .setTooltip(LzText.literal("Message background color for any panel that hasn't set its own BG Color. 0/black = inherit the active theme's default instead.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.defaultPanelBgColor = v & 0xFFFFFF)
+                .build());
+
         appearance.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Indicators").mc(),
                 MultichatClient.CONFIG.showIndicators)

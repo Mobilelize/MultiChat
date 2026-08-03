@@ -63,6 +63,7 @@ public final class ThemeRegistry {
         vanilla.highlightNewRgb        = Colors.HIGHLIGHT_NEW_RGB;
         vanilla.highlightFlashRgb      = Colors.HIGHLIGHT_FLASH_RGB;
         vanilla.selection              = Colors.SELECTION;
+        vanilla.defaultPanelBg         = 0; // unset — keeps the original black/no-override look
         register(vanilla);
 
         ChatTheme simpleDark = new ChatTheme("simple_dark", "Simple Dark");
@@ -83,6 +84,7 @@ public final class ThemeRegistry {
         simpleDark.highlightNewRgb        = Colors.HIGHLIGHT_NEW_RGB;
         simpleDark.highlightFlashRgb      = Colors.HIGHLIGHT_FLASH_RGB;
         simpleDark.selection              = 0x773388CC;
+        simpleDark.defaultPanelBg         = 0;
         register(simpleDark);
 
 
@@ -111,6 +113,7 @@ public final class ThemeRegistry {
         bold.highlightNewRgb        = Colors.HIGHLIGHT_NEW_RGB;
         bold.highlightFlashRgb      = Colors.HIGHLIGHT_FLASH_RGB;
         bold.selection              = Colors.SELECTION;
+        bold.defaultPanelBg         = 0;
         register(bold);
 
         // Pastel trio — spread the "rainbow" across separate themes (pink/mint/lavender) rather than
@@ -136,6 +139,7 @@ public final class ThemeRegistry {
         pink.highlightNewRgb      = Colors.HIGHLIGHT_NEW_RGB;
         pink.highlightFlashRgb    = Colors.HIGHLIGHT_FLASH_RGB;
         pink.selection            = 0x77FF99C2;
+        pink.defaultPanelBg       = 0x2A1620;
         register(pink);
 
         ChatTheme mint = new ChatTheme("mint", "Mint");
@@ -156,6 +160,7 @@ public final class ThemeRegistry {
         mint.highlightNewRgb      = Colors.HIGHLIGHT_NEW_RGB;
         mint.highlightFlashRgb    = Colors.HIGHLIGHT_FLASH_RGB;
         mint.selection            = 0x7799FFC2;
+        mint.defaultPanelBg       = 0x14301F;
         register(mint);
 
         ChatTheme lavender = new ChatTheme("lavender", "Lavender");
@@ -176,6 +181,7 @@ public final class ThemeRegistry {
         lavender.highlightNewRgb      = Colors.HIGHLIGHT_NEW_RGB;
         lavender.highlightFlashRgb    = Colors.HIGHLIGHT_FLASH_RGB;
         lavender.selection            = 0x77B399FF;
+        lavender.defaultPanelBg       = 0x281C3D;
         register(lavender);
 
         if (MultichatClient.CONFIG != null) {

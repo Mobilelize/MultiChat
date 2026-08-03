@@ -26,6 +26,7 @@ public class MultiChatConfig extends LzConfig {
 
     // ── General ───────────────────────────────────────────────────────────────
     public String  activeThemeId                = "vanilla";
+    public int     defaultPanelBgColor          = 0; // 0 = unset, inherit the active theme's defaultPanelBg
     public boolean modDisabled                  = false;
     public boolean normalizeFilterText          = false;
     public boolean showIndicators               = true;
