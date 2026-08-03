@@ -15,6 +15,7 @@ public class ChatPanel {
     private boolean primary            = false;
     private int     id                 = 0;
     private String  name               = "";
+    private boolean popout             = false; // created via "Pop Out" on a tab — tags it for the "Close Popout" cleanup action
 
     private transient Map<UUID, List<LzChatLine>> tabMessages;
     private transient Map<UUID, List<LzChatLine>> customTabLines;
@@ -63,6 +64,8 @@ public class ChatPanel {
     public void    setId(int v)         { id = v; }
     public String  name()               { return name; }
     public void    setName(String v)    { name = v != null ? v : ""; }
+    public boolean popout()             { return popout; }
+    public void    setPopout(boolean v) { popout = v; }
     public int     margin()             { return margin; }
     public void    setMargin(int v)     { margin = v; }
 

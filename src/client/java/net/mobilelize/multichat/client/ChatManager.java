@@ -426,6 +426,46 @@ public class ChatManager {
     public static List<ChatPanel> getAllPanels() { return panels; }
     public static List<ChatTab>   getTabs()      { return tabs; }
 
+    /** Removes a panel and cleans up every tab's reference to it. Shared by PanelListScreen's Del button and ContextMenu's "Close Popout". */
+    public static void removePanel(ChatPanel panel) {
+        int id = panel.id();
+        for (ChatTab t : tabs) t.visibleOnPanels().remove(id);
+        panels.remove(panel);
+        MultichatClient.saveTabsToConfig();
+    }
+
+    /**
+     * Creates a new panel showing only the given tab, positioned centered — the "Pop Out" action.
+     * Same creation recipe as PanelListScreen's Add button (enabled, CUSTOM anchor, centered),
+     * just scoped to one tab instead of every tab, and flagged popout() for later cleanup.
+     */
+    public static ChatPanel createPopoutPanel(ChatTab tab) {
+        Set<Integer> ids = new HashSet<>();
+        for (ChatPanel p : panels) ids.add(p.id());
+        int id = 0;
+        while (ids.contains(id)) id++;
+
+        ChatPanel panel = new ChatPanel();
+        panel.setId(id);
+        Set<String> usedNames = new HashSet<>();
+        for (ChatPanel p : panels) usedNames.add(p.name());
+        String baseName = tab.name() + " Popout";
+        String uniqueName = baseName;
+        int suffix = 2;
+        while (usedNames.contains(uniqueName)) uniqueName = baseName + " (" + suffix++ + ")";
+        panel.setName(uniqueName);
+        panel.setEnabled(true);
+        panel.setAnchor(ChatPanel.Anchor.CUSTOM);
+        panel.setCustomX(0.5f);
+        panel.setCustomY(0.5f);
+        panel.setPopout(true);
+
+        tab.visibleOnPanels().add(id);
+        panels.add(panel);
+        MultichatClient.saveTabsToConfig();
+        return panel;
+    }
+
     public static UUID getNextTabId() { return UUID.randomUUID(); }
 
     public static int getIndicatorWidth(@Nullable LzMessageIndicator indicator) {

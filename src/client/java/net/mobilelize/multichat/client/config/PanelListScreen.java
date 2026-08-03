@@ -275,10 +275,7 @@ public class PanelListScreen extends ConfigScreen {
     }
 
     private void doRemovePanel(ChatPanel panel) {
-        int id = panel.id();
-        ChatManager.getTabs().forEach(t -> t.visibleOnPanels().remove(id));
-        ChatManager.getAllPanels().remove(panel);
-        MultichatClient.saveTabsToConfig();
+        ChatManager.removePanel(panel);
         clearAndInit();
     }
 

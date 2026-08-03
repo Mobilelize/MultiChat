@@ -31,6 +31,7 @@ public class ContextMenu {
     public static final String ID_EXPORT_ALL        = "export_all";
     public static final String ID_MOVE_LEFT         = "move_left";
     public static final String ID_MOVE_RIGHT        = "move_right";
+    public static final String ID_POPOUT_TAB        = "popout_tab";
 
     private static final int ITEM_H  = 11;
     private static final int PADDING = 4;
@@ -81,6 +82,7 @@ public class ContextMenu {
         { ID_EXPORT_ALL,        "Export All"          },
         { ID_MOVE_LEFT,         "Move Left"           },
         { ID_MOVE_RIGHT,        "Move Right"          },
+        { ID_POPOUT_TAB,        "Pop Out"             },
     };
 
     private static boolean shown(String id) {
@@ -140,6 +142,13 @@ public class ContextMenu {
             list.add("Move Left");
         if (isMoveable(t) && tabIndex < ChatManager.getTabs().size() - 1 && shown(ID_MOVE_RIGHT))
             list.add("Move Right");
+
+        if (t.type() != TabType.SEARCH && t.type() != TabType.NOTES
+                && (panel == null || !panel.popout()) && shown(ID_POPOUT_TAB))
+            list.add("Pop Out");
+
+        // Not toggleable — always available on a popout panel, regardless of which tab you right-click
+        if (panel != null && panel.popout()) list.add("Close Popout");
 
         // Close Search is never toggleable — it's the only way to close a search tab
         if (t.type() == TabType.SEARCH) list.add("Close Search");
@@ -276,6 +285,13 @@ public class ContextMenu {
                     Collections.swap(ChatManager.getTabs(), tabIndex, tabIndex + 1);
                     MultichatClient.saveTabsToConfig();
                 }
+            }
+            case "Pop Out" -> {
+                ChatManager.createPopoutPanel(tab);
+                LzClient.mc().setScreen(new net.mobilelize.multichat.client.config.PanelLayoutScreen(LzClient.currentScreen()));
+            }
+            case "Close Popout" -> {
+                if (panel != null && panel.popout()) ChatManager.removePanel(panel);
             }
             case "Close Search" -> {
                 if (tab instanceof SearchTab st) {
