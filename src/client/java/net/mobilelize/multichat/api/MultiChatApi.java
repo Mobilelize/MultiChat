@@ -75,6 +75,33 @@ public final class MultiChatApi {
         PanelFocusedCallback.EVENT;
 
     // ------------------------------------------------------------------
+    // Highlight Words
+    // ------------------------------------------------------------------
+
+    /**
+     * Register a keyword this mod wants highlighted. Applies to every incoming message, in every tab,
+     * using the "Mod Keywords" color pair from Settings → Highlight Words — independent from the
+     * player's own keyword list, and the player can mute all mod-registered rules at once from there.
+     */
+    public static void addHighlightRule(String pattern, String sourceModId) {
+        HighlightEngine.addApiRule(pattern, sourceModId);
+    }
+
+    public static void removeHighlightRule(String pattern, String sourceModId) {
+        HighlightEngine.removeApiRule(pattern, sourceModId);
+    }
+
+    /**
+     * True only the very first time this modId has ever called this — persisted across restarts,
+     * not just this session. Call this before seeding your default keyword list so you only ever
+     * add your defaults once; re-adding them on every client start would silently undo any word
+     * the player removed.
+     */
+    public static boolean isFirstHighlightRegistration(String sourceModId) {
+        return HighlightEngine.isFirstRegistration(sourceModId);
+    }
+
+    // ------------------------------------------------------------------
     // Read-only access
     // ------------------------------------------------------------------
 

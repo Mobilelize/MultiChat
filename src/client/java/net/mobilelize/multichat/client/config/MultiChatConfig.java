@@ -46,6 +46,32 @@ public class MultiChatConfig extends LzConfig {
     public boolean panelContextEnabled          = true;
     public boolean logApiMessages               = true;
 
+    // ── Highlight Words ──────────────────────────────────────────────────────
+    // One shared style pair — both Your Keywords and API Words render with the same colors/formatting.
+    public HighlightStyle  keywordStyle          = new HighlightStyle(0xFFFF55, true);  // yellow, bold
+    public HighlightStyle  neutralStyle          = new HighlightStyle(0xFF5555, false); // red
+
+    public boolean         userHighlightEnabled  = true;
+    public List<String>    userHighlightKeywords = new ArrayList<>();
+
+    public boolean         apiHighlightEnabled   = true; // player-side mute for mod-registered rules
+
+    /** Full per-span text formatting, not just color — mirrors every LzStyle.with* toggle. */
+    public static class HighlightStyle {
+        public int     color;
+        public boolean bold;
+        public boolean italic;
+        public boolean underline;
+        public boolean strikethrough;
+        public boolean obfuscated;
+
+        public HighlightStyle() {}
+        public HighlightStyle(int color, boolean bold) {
+            this.color = color;
+            this.bold  = bold;
+        }
+    }
+
     // ── Quick Actions ─────────────────────────────────────────────────────────
     public boolean quickActionPasteToChat        = false;
     public boolean quickActionKeybindEnabled     = true;
@@ -89,6 +115,34 @@ public class MultiChatConfig extends LzConfig {
     public int     pingAfkThresholdSec     = 120;
 
     public Set<String> hiddenContextMenuItems = new HashSet<>();
+
+    // Persisted across restarts — every modId that has ever called MultiChatApi.addHighlightRule,
+    // in any past session. Lets a mod ask "have I registered before?" so it can seed its default
+    // keyword list exactly once instead of re-adding it (and silently undoing a user's removal)
+    // on every single client start.
+    public Set<String> registeredHighlightMods = new HashSet<>();
+
+    // ── Null-safety ──────────────────────────────────────────────────────────
+    // Guards every reference-type field (List/Set/String/enum) against a saved config file
+    // missing a value — e.g. an older config.json from before a field existed. Primitives
+    // (boolean/int/float/double) are skipped: they can't be null, so there's nothing to guard.
+    // activeNoteTabId (UUID) is also skipped: null there is a valid, meaningful state (no active note tab).
+    @Override
+    protected void onLoad() {
+        if (panels == null) panels = new ArrayList<>();
+        if (tabs == null) tabs = new ArrayList<>();
+        if (noteTabs == null) noteTabs = new ArrayList<>();
+        if (timestampFormat == null) timestampFormat = "&d[&6HH&d:&6mm&d:&6ss&d]";
+        if (collapseCounterFormat == null) collapseCounterFormat = "&e(x{count})";
+        if (userHighlightKeywords == null) userHighlightKeywords = new ArrayList<>();
+        if (keywordStyle == null) keywordStyle = new HighlightStyle(0xFFFF55, true);
+        if (neutralStyle == null) neutralStyle = new HighlightStyle(0xFF5555, false);
+        if (quickActions == null) quickActions = newDefaultQuickActions();
+        if (searchDefaultMode == null) searchDefaultMode = SearchMode.CONTAINS;
+        if (pingSound == null) pingSound = "minecraft:entity.experience_orb.pickup";
+        if (hiddenContextMenuItems == null) hiddenContextMenuItems = new HashSet<>();
+        if (registeredHighlightMods == null) registeredHighlightMods = new HashSet<>();
+    }
 
     // ── Inner classes that have no natural home in a domain object ────────────
     public static class QuickActionConfig {

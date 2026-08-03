@@ -8,8 +8,11 @@ import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.input.LzInputUtil;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.HighlightEngine;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.ping.PingPlayer;
+
+import java.util.List;
 
 public class ConfigMenu {
 
@@ -208,6 +211,44 @@ public class ConfigMenu {
                 .setTooltip(LzText.literal("Disables passive features: custom chat rendering, tab routing, keybinds, and mouse hooks. Commands and the settings GUI still work.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.modDisabled = v)
                 .build());
+
+        // ── Highlight Words ──────────────────────────────────────────────────
+        ConfigCategory highlight = builder.getOrCreateCategory(LzText.literal("Highlight Words").mc());
+
+        highlight.addEntry(eb.startTextDescription(LzText.literal(
+                "On a keyword match, the entire message is reformatted: the keyword span uses the Keyword " +
+                "style below, everything else uses the Neutral style. Your Keywords and API Words (added by " +
+                "other mods) share the same style, but can be muted independently."
+        ).mc()).build());
+
+        highlight.addEntry(eb.startStrList(LzText.literal("Your Keywords").mc(), MultichatClient.CONFIG.userHighlightKeywords)
+                .setSaveConsumer(v -> MultichatClient.CONFIG.userHighlightKeywords = v)
+                .build());
+
+        // Not persisted to config — these come from other mods calling MultiChatApi.addHighlightRule
+        // at runtime, so this list is a live snapshot, not player-owned data. Edits here don't stick;
+        // the actual source of truth is whatever mods currently have registered.
+        highlight.addEntry(eb.startStrList(LzText.literal("API Words").mc(), HighlightEngine.getApiKeywords())
+                .setSaveConsumer(v -> {})
+                .build());
+
+        highlight.addEntry(eb.startBooleanToggle(
+                LzText.literal("Enable Your Keywords").mc(),
+                MultichatClient.CONFIG.userHighlightEnabled)
+                .setDefaultValue(true)
+                .setSaveConsumer(v -> MultichatClient.CONFIG.userHighlightEnabled = v)
+                .build());
+
+        highlight.addEntry(eb.startBooleanToggle(
+                LzText.literal("Enable API Words").mc(),
+                MultichatClient.CONFIG.apiHighlightEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Mute all highlight rules registered by other mods via the API.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.apiHighlightEnabled = v)
+                .build());
+
+        addHighlightStyleEntries(highlight, eb, "Keyword", MultichatClient.CONFIG.keywordStyle, 0xFFFF55, true);
+        addHighlightStyleEntries(highlight, eb, "Neutral", MultichatClient.CONFIG.neutralStyle, 0xFF5555, false);
 
         // ── Search ────────────────────────────────────────────────────────
         ConfigCategory search = builder.getOrCreateCategory(LzText.literal("Search").mc());
@@ -478,6 +519,34 @@ public class ConfigMenu {
         HelpScreen.helpCategory(builder, eb);
 
         return builder.build();
+    }
+
+    private static void addHighlightStyleEntries(ConfigCategory cat, ConfigEntryBuilder eb, String label,
+                                                  MultiChatConfig.HighlightStyle style, int defaultColor, boolean defaultBold) {
+        cat.addEntry(eb.startColorField(LzText.literal(label + " Color").mc(), style.color)
+            .setDefaultValue(defaultColor)
+            .setSaveConsumer(v -> style.color = v)
+            .build());
+        cat.addEntry(eb.startBooleanToggle(LzText.literal(label + " Bold").mc(), style.bold)
+            .setDefaultValue(defaultBold)
+            .setSaveConsumer(v -> style.bold = v)
+            .build());
+        cat.addEntry(eb.startBooleanToggle(LzText.literal(label + " Italic").mc(), style.italic)
+            .setDefaultValue(false)
+            .setSaveConsumer(v -> style.italic = v)
+            .build());
+        cat.addEntry(eb.startBooleanToggle(LzText.literal(label + " Underline").mc(), style.underline)
+            .setDefaultValue(false)
+            .setSaveConsumer(v -> style.underline = v)
+            .build());
+        cat.addEntry(eb.startBooleanToggle(LzText.literal(label + " Strikethrough").mc(), style.strikethrough)
+            .setDefaultValue(false)
+            .setSaveConsumer(v -> style.strikethrough = v)
+            .build());
+        cat.addEntry(eb.startBooleanToggle(LzText.literal(label + " Obfuscated").mc(), style.obfuscated)
+            .setDefaultValue(false)
+            .setSaveConsumer(v -> style.obfuscated = v)
+            .build());
     }
 
     private static void applyAndSave() {

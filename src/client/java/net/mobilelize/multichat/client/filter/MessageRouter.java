@@ -7,6 +7,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.MessageReceivedCallback;
 import net.mobilelize.multichat.client.ChatManager;
 import net.mobilelize.multichat.client.ChatTab;
+import net.mobilelize.multichat.client.HighlightEngine;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
@@ -48,63 +49,86 @@ public class MessageRouter {
 
         final LzChatEntry sharedEntry = new LzChatEntry(tick, rawLzText, indicator);
 
+        // Highlight Words applies after filter/routing decisions (which stay based on the untouched
+        // originals above) so recoloring a message can never change which tab it lands in. ALL tab
+        // renders from `content`, every other tab type renders from `rawLzText` (see ChatManager.processMessage)
+        // so both need their own highlighted copy for the highlight to actually show up everywhere.
+        final HighlightEngine.HighlightResult highlighted = HighlightEngine.apply(content, rawLzText, sharedEntry);
+        final LzText highlightedContent = highlighted.content;
+        final LzText highlightedRaw     = highlighted.raw;
+
+        // Tabs that actually end up storing this message — recorded so a later Highlight Words
+        // revert click only has to touch these tabs instead of scanning every tab in the mod.
+        final List<ChatTab> touchedTabs = new ArrayList<>();
+
         for (ChatTab tab : ChatManager.getTabs()) {
             switch (tab.type()) {
                 case NOTES, INFO -> { /* never receive routed messages */ }
                 case VANILLA -> { /* vanilla handles via its own addVisibleMessage */ }
-                case ALL     -> ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
+                case ALL     -> {
+                    ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
+                    touchedTabs.add(tab);
+                }
                 case FILTERED -> {
                     if (tab.differenceMode() && !tab.differenceException()) break;
-                    if (tab.filterRules().matches(filterText, indicator))
-                        ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
+                    if (tab.filterRules().matches(filterText, indicator)) {
+                        ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
+                        touchedTabs.add(tab);
+                    }
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
-                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator))
-                        ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
+                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator)) {
+                        ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
+                        touchedTabs.add(tab);
+                    }
                 }
                 case SEARCH -> {
                     final SearchTab st = (SearchTab) tab;
                     if (!st.matches(fullText, indicator, tick)) break;
                     if (st.collapseIdentical()) {
-                        ChatManager.addSearchMessageWithCollapse(st, tick, content, indicator, rawLzText, sharedEntry);
+                        ChatManager.addSearchMessageWithCollapse(st, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                     } else {
-                        ChatManager.processMessage(st, tick, content, indicator, rawLzText, sharedEntry);
+                        ChatManager.processMessage(st, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                     }
+                    touchedTabs.add(tab);
                 }
             }
         }
 
-        if (diffByLayer.isEmpty()) return;
-
-        boolean activeNonDiffMatched = false;
-        for (ChatTab tab : ChatManager.getAllActivePanelsTabs()) {
-            if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
-                    && tab.filterRules().matches(filterText, indicator)) {
-                activeNonDiffMatched = true; break;
-            }
-        }
-        if (!activeNonDiffMatched) {
-            for (ChatTab tab : ChatManager.getTabs()) {
+        if (!diffByLayer.isEmpty()) {
+            boolean activeNonDiffMatched = false;
+            for (ChatTab tab : ChatManager.getAllActivePanelsTabs()) {
                 if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
-                        && tab.differenceInclusion() && ChatManager.isTabInAnyEnabledPanel(tab)
                         && tab.filterRules().matches(filterText, indicator)) {
                     activeNonDiffMatched = true; break;
                 }
             }
-        }
-
-        if (!activeNonDiffMatched) {
-            for (List<ChatTab> layerTabs : diffByLayer.values()) {
-                boolean anyMatched = false;
-                for (ChatTab tab : layerTabs) {
-                    if (tab.filterRules().matches(filterText, indicator)) {
-                        ChatManager.processMessage(tab, tick, content, indicator, rawLzText, sharedEntry);
-                        anyMatched = true;
+            if (!activeNonDiffMatched) {
+                for (ChatTab tab : ChatManager.getTabs()) {
+                    if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
+                            && tab.differenceInclusion() && ChatManager.isTabInAnyEnabledPanel(tab)
+                            && tab.filterRules().matches(filterText, indicator)) {
+                        activeNonDiffMatched = true; break;
                     }
                 }
-                if (anyMatched) break;
+            }
+
+            if (!activeNonDiffMatched) {
+                for (List<ChatTab> layerTabs : diffByLayer.values()) {
+                    boolean anyMatched = false;
+                    for (ChatTab tab : layerTabs) {
+                        if (tab.filterRules().matches(filterText, indicator)) {
+                            ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
+                            touchedTabs.add(tab);
+                            anyMatched = true;
+                        }
+                    }
+                    if (anyMatched) break;
+                }
             }
         }
+
+        if (highlighted.actionId != null) HighlightEngine.registerRevert(highlighted.actionId, sharedEntry, content, touchedTabs);
     }
 }
