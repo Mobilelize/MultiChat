@@ -44,6 +44,14 @@ public class ConfigMenu {
                 .build());
 
         appearance.addEntry(eb.startBooleanToggle(
+                LzText.literal("Draggable Scrollbar").mc(),
+                MultichatClient.CONFIG.scrollbarDragEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Click and drag the scrollbar on the right edge of chat to scroll.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.scrollbarDragEnabled = v)
+                .build());
+
+        appearance.addEntry(eb.startBooleanToggle(
                 LzText.literal("Show Context Display").mc(),
                 MultichatClient.CONFIG.showContextDisplay)
                 .setDefaultValue(true)

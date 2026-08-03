@@ -96,6 +96,20 @@ public abstract class ChatScreenMixin {
             }
         }
 
+        if (ChatScrollbarDrag.isDragging()) {
+            long handle = LzClient.windowHandle();
+            boolean held = org.lwjgl.glfw.GLFW.glfwGetMouseButton(handle,
+                org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            if (held) {
+                ChatPanel dragPanel = ChatScrollbarDrag.panel();
+                if (dragPanel != null && dragPanel.isEnabled()) {
+                    ChatScrollbarDrag.updateFromMouse(dragPanel, mouseY, LzClient.scaledWindowHeight());
+                }
+            } else {
+                ChatScrollbarDrag.end();
+            }
+        }
+
         ChatTab ctxTab = ChatManager.contextTab;
         if (ctxTab != null && !ctxTab.contextPrefix().isEmpty()
                 && MultichatClient.CONFIG.showContextDisplay) {
@@ -258,6 +272,27 @@ public abstract class ChatScreenMixin {
                 if (_clickLines == null || hIdx >= _clickLines.size()) continue;
                 LzChatLine clicked = _clickLines.get(hIdx);
                 MessageContextMenu.open(clicked, panel, (int) mouseX, (int) mouseY);
+                cir.setReturnValue(true);
+                return;
+            }
+        }
+
+        if (button == 0 && MultichatClient.CONFIG.scrollbarDragEnabled) {
+            for (ChatPanel panel : ChatManager.getAllPanels()) {
+                if (!panel.isEnabled()) continue;
+                float scale = panel.resolveScale();
+                int chatWidth = panel.resolveWidth();
+                int lineH = panel.resolveLineHeight();
+                int visibleLineCount = panel.resolveLines();
+                int topY = panel.resolveTopY(windowHeight);
+                if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLineCount)) continue;
+                if (panel.getActiveTab() == null) continue;
+
+                int xOff = panel.computeXOffset(windowWidth);
+                double localChatX = mouseX / (double) scale - 4.0 - xOff;
+                if (localChatX < chatWidth + 2 || localChatX > chatWidth + 8) continue;
+
+                ChatScrollbarDrag.start(panel, mouseY, windowHeight);
                 cir.setReturnValue(true);
                 return;
             }

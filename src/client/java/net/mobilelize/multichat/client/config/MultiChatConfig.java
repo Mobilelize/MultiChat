@@ -30,6 +30,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean showIndicators               = true;
     public boolean cursorChangingEnabled         = true;
     public boolean selectionEnabled             = true;
+    public boolean scrollbarDragEnabled         = true;
     public boolean selectionFreezeChat          = true;
     public boolean selectionCtrlSkipsClicks     = true;
     public boolean doubleClickSelectEnabled     = true;
