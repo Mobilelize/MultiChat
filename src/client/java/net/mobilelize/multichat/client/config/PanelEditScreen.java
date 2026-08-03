@@ -50,6 +50,12 @@ public class PanelEditScreen {
             .setSaveConsumer(panel::setShowOnlyWhenFocused)
             .build());
 
+        settings.addEntry(eb.startBooleanToggle(LzText.literal("Always Focused").mc(), panel.alwaysFocused())
+            .setDefaultValue(false)
+            .setTooltip(LzText.literal("Render this panel at full opacity and full line count permanently, as if chat were always open — not just briefly after a new message.").mc())
+            .setSaveConsumer(panel::setAlwaysFocused)
+            .build());
+
         settings.addEntry(eb.startBooleanToggle(LzText.literal("Show Tabs").mc(), panel.showTabs())
             .setDefaultValue(true)
             .setTooltip(LzText.literal("Show the tab bar on this panel.").mc())

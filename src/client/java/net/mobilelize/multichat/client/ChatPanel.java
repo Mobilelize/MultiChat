@@ -24,6 +24,7 @@ public class ChatPanel {
     private transient ChatTab activeTab = null;
     private boolean enabled            = false;
     private boolean showOnlyWhenFocused = false;
+    private boolean alwaysFocused      = false;
     private boolean showBadges         = true;
     private boolean showTabs           = true;
     private boolean tabsAtTop          = false;
@@ -143,6 +144,8 @@ public class ChatPanel {
 
     public boolean showOnlyWhenFocused()        { return showOnlyWhenFocused; }
     public void    setShowOnlyWhenFocused(boolean v) { showOnlyWhenFocused = v; }
+    public boolean alwaysFocused()              { return alwaysFocused; }
+    public void    setAlwaysFocused(boolean v)  { alwaysFocused = v; }
     public boolean showBadges()                 { return showBadges; }
     public void    setShowBadges(boolean v)     { showBadges = v; }
     public boolean showTabs()                   { return showTabs; }

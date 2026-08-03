@@ -79,13 +79,19 @@ public class ChatRenderer {
             ChatTab activeTab = panel.getActiveTab();
             if (activeTab == null) continue;
 
+            // "Always Focused" panels render at full opacity/full line-count permanently, same as
+            // NoteTab.renderOutOfFocus() already does for note tabs — folds into the same flag so
+            // resolveLines() (line count) and the fade/opacity pass below both pick it up.
+            boolean effectiveFocused = focused || panel.alwaysFocused()
+                || (activeTab instanceof NoteTab nt && nt.renderOutOfFocus());
+
             float scale          = panel.resolveScale();
             int chatWidth        = panel.resolveWidth();
             double chatOpacity   = panel.resolveChatOpacity();
             double bgOpacity     = panel.resolveBgOpacity();
             int lineHeight       = panel.resolveLineHeight();
             int textOffset       = (int) Math.round(-8.0 * (lineSpacing + 1.0) + 4.0 * lineSpacing);
-            int visibleLineCount = panel.resolveLines(focused);
+            int visibleLineCount = panel.resolveLines(effectiveFocused);
             int topY             = panel.resolveTopY(windowHeight);
             int xOffset          = panel.computeXOffset(windowWidth);
 
@@ -101,7 +107,6 @@ public class ChatRenderer {
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
                     visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
             int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panel.bgColor()) & 0xFFFFFF;
-            boolean effectiveFocused = focused || (activeTab instanceof NoteTab nt && nt.renderOutOfFocus());
             renderAt(context, currentTick, effectiveFocused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
                     chatWidth, topY, scale, chatOpacity, bgOpacity,
