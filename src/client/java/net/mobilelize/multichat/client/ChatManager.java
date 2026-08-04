@@ -454,11 +454,12 @@ public class ChatManager {
     }
 
     /**
-     * Creates a new panel showing only the given tab, positioned centered — the "Pop Out" action.
-     * Same creation recipe as PanelListScreen's Add button (enabled, CUSTOM anchor, centered),
-     * just scoped to one tab instead of every tab, and flagged popout() for later cleanup.
+     * Creates a blank panel — enabled, CUSTOM-anchored, centered — with a unique id and a name made
+     * unique by appending " (2)", " (3)", etc. if it clashes with an existing panel. No tabs attached;
+     * the caller assigns those afterward via tab.visibleOnPanels().add(id). Shared recipe behind both
+     * PanelListScreen's Add button and the API's createPanel/createPopoutPanel.
      */
-    public static ChatPanel createPopoutPanel(ChatTab tab) {
+    public static ChatPanel createPanel(String name) {
         Set<Integer> ids = new HashSet<>();
         for (ChatPanel p : panels) ids.add(p.id());
         int id = 0;
@@ -468,21 +469,63 @@ public class ChatManager {
         panel.setId(id);
         Set<String> usedNames = new HashSet<>();
         for (ChatPanel p : panels) usedNames.add(p.name());
-        String baseName = tab.name() + " Popout";
-        String uniqueName = baseName;
+        String uniqueName = name;
         int suffix = 2;
-        while (usedNames.contains(uniqueName)) uniqueName = baseName + " (" + suffix++ + ")";
+        while (usedNames.contains(uniqueName)) uniqueName = name + " (" + suffix++ + ")";
         panel.setName(uniqueName);
         panel.setEnabled(true);
         panel.setAnchor(ChatPanel.Anchor.CUSTOM);
         panel.setCustomX(0.5f);
         panel.setCustomY(0.5f);
-        panel.setPopout(true);
 
-        tab.visibleOnPanels().add(id);
         panels.add(panel);
         MultichatClient.saveTabsToConfig();
         return panel;
+    }
+
+    /** Creates a new panel showing only the given tab, positioned centered — the "Pop Out" action. */
+    public static ChatPanel createPopoutPanel(ChatTab tab) {
+        ChatPanel panel = createPanel(tab.name() + " Popout");
+        panel.setPopout(true);
+        tab.visibleOnPanels().add(panel.id());
+        MultichatClient.saveTabsToConfig();
+        return panel;
+    }
+
+    /** Deletes a message (by its LzChatEntry identity) from every tab that has it, including multi-tab
+     *  sub-tabs — the "Delete from All" context-menu action, and the API equivalent. Adjusts each
+     *  affected panel's scroll so the visible view doesn't jump. */
+    public static void deleteMessageEverywhere(LzChatEntry targetEntry) {
+        if (targetEntry == null) return;
+        List<ChatTab> allTabs = new ArrayList<>(tabs);
+        for (ChatTab t : tabs) if (t.isMultiTab()) allTabs.addAll(t.subTabs());
+
+        for (ChatTab tab : allTabs) {
+            List<ChatTab.MessageEntry> messages = tab.messages();
+            int idx = -1;
+            for (int i = 0; i < messages.size(); i++) {
+                if (messages.get(i).entry() == targetEntry) { idx = i; break; }
+            }
+            if (idx < 0) continue;
+
+            Map<ChatPanel, Integer> preSizes = new HashMap<>();
+            for (ChatPanel p : getAllPanels()) {
+                if (p.getScrolledLines(tab) > 0) {
+                    List<LzChatLine> l = p.getTabLines(tab);
+                    preSizes.put(p, l != null ? l.size() : 0);
+                }
+            }
+            messages.remove(idx);
+            for (ChatPanel p : getAllActivePanels()) p.rebuildTabLines(tab);
+            for (ChatPanel p : getAllPanels()) {
+                int scrolled = p.getScrolledLines(tab);
+                if (scrolled <= 0 || !preSizes.containsKey(p)) continue;
+                List<LzChatLine> l = p.getTabLines(tab);
+                int removed = preSizes.get(p) - (l != null ? l.size() : 0);
+                if (removed > 0) p.setScrolledLines(tab, Math.max(0, scrolled - removed));
+            }
+            ChatSelection.clampOrClear(tab);
+        }
     }
 
     public static UUID getNextTabId() { return UUID.randomUUID(); }

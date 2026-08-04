@@ -116,6 +116,11 @@ public class MultiChatMod {
         return java.util.Collections.unmodifiableList(ChatManager.getAllPanels());
     }
 
+    /** Creates a new blank, centered panel and returns a handle to configure it. */
+    public PanelHandle createPanel(String name) {
+        return new PanelHandle(ChatManager.createPanel(name));
+    }
+
     public ChatPanel getPanel(int panelId) {
         return ChatManager.getAllPanels().stream().filter(p -> p.id() == panelId).findFirst().orElse(null);
     }

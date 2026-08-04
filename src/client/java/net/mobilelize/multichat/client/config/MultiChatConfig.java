@@ -126,6 +126,12 @@ public class MultiChatConfig extends LzConfig {
     // on every single client start.
     public Set<String> registeredHighlightMods = new HashSet<>();
 
+    // Persisted across restarts — every modId that has ever called MultiChatApi.register(modId), in any
+    // past session. Same idea as registeredHighlightMods but general-purpose: lets a mod ask "have I ever
+    // contacted MultiChat before?" so it only seeds default tabs/settings once instead of recreating them
+    // (e.g. a deleted default tab) on every single client start. See MultiChatApi.isFirstEverRegistration.
+    public Set<String> registeredMods = new HashSet<>();
+
     // ── Null-safety ──────────────────────────────────────────────────────────
     // Guards every reference-type field (List/Set/String/enum) against a saved config file
     // missing a value — e.g. an older config.json from before a field existed. Primitives
@@ -147,6 +153,7 @@ public class MultiChatConfig extends LzConfig {
         if (pingSound == null) pingSound = "minecraft:entity.experience_orb.pickup";
         if (hiddenContextMenuItems == null) hiddenContextMenuItems = new HashSet<>();
         if (registeredHighlightMods == null) registeredHighlightMods = new HashSet<>();
+        if (registeredMods == null) registeredMods = new HashSet<>();
 
         // expandedParent is transient (always null right after load) but activeTabId is persisted —
         // without this, a panel left drilled into a multi-tab's subs when the client closed would read

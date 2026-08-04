@@ -3,9 +3,15 @@ package net.mobilelize.multichat.api;
 import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
+import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.*;
+import net.mobilelize.multichat.client.filter.BlacklistMode;
+import net.mobilelize.multichat.client.filter.FilterRule;
+import net.mobilelize.multichat.client.filter.FilterType;
+import net.mobilelize.multichat.client.filter.IndicatorFilter;
 import net.mobilelize.multichat.client.filter.MessageRouter;
+import net.mobilelize.multichat.client.filter.WhitelistMode;
 
 import java.util.Collections;
 import java.util.List;
@@ -100,6 +106,171 @@ public class TabHandle {
         return this;
     }
 
+    public TabHandle setShowTimestamps(boolean show) {
+        tab.setShowTimestamps(show);
+        return this;
+    }
+    public boolean getShowTimestamps() { return tab.showTimestamps(); }
+
+    /** Custom message background color for this tab specifically. 0 = inherit the panel/theme default. */
+    public TabHandle setMsgBgColor(int argbOrRgb) {
+        tab.setMsgBgColor(argbOrRgb);
+        return this;
+    }
+
+    public TabHandle setCollapseRepeating(boolean enabled) {
+        tab.setCollapseRepeating(enabled);
+        return this;
+    }
+
+    /** Only take effect together with setCollapseRepeating(true): also require identical formatting. */
+    public TabHandle setCollapseMatchFormatting(boolean enabled) {
+        tab.setCollapseMatchFormatting(enabled);
+        return this;
+    }
+
+    public boolean getCollapseRepeating()       { return tab.collapseRepeating(); }
+    public boolean getCollapseMatchFormatting() { return tab.collapseMatchFormatting(); }
+
+    // ------------------------------------------------------------------
+    // Difference mode
+    // ------------------------------------------------------------------
+    // Routes messages through a layered pipeline: lower-index layers claim messages first, higher
+    // layers only see what wasn't already claimed. See ConfigMenu → Difference Mode for the player-facing
+    // explanation of the same mechanic.
+
+    public TabHandle setDifferenceMode(boolean enabled) {
+        tab.setDifferenceMode(enabled);
+        return this;
+    }
+
+    /** Higher = higher priority. All matching tabs at the same index receive the message together. */
+    public TabHandle setDifferenceLayerIndex(int index) {
+        tab.setDifferenceLayerIndex(index);
+        return this;
+    }
+
+    /** This tab receives messages normally but never blocks the difference pipeline for other tabs. */
+    public TabHandle setDifferenceException(boolean enabled) {
+        tab.setDifferenceException(enabled);
+        return this;
+    }
+
+    /** When enabled, this tab blocks the difference pipeline even when it isn't the active tab, as long
+     *  as it's assigned to any enabled panel. */
+    public TabHandle setDifferenceInclusion(boolean enabled) {
+        tab.setDifferenceInclusion(enabled);
+        return this;
+    }
+
+    public boolean getDifferenceMode()      { return tab.differenceMode(); }
+    public int     getDifferenceLayerIndex(){ return tab.differenceLayerIndex(); }
+    public boolean getDifferenceException() { return tab.differenceException(); }
+    public boolean getDifferenceInclusion() { return tab.differenceInclusion(); }
+
+    // ------------------------------------------------------------------
+    // Filtering
+    // ------------------------------------------------------------------
+    // Lets a mod configure its own tab's whitelist/blacklist entirely in code — no player setup required.
+    // Same FilterRuleSet/FilterRule mechanics as the player-facing Whitelist/Blacklist screens.
+
+    public TabHandle addWhitelistRule(FilterType type, String value, IndicatorFilter indicator) {
+        tab.filterRules().whitelist().add(new FilterRule(type, value, indicator));
+        return this;
+    }
+
+    /** Shorthand for a plain CONTAINS rule matching any message indicator. */
+    public TabHandle addWhitelistRule(String containsValue) {
+        return addWhitelistRule(FilterType.CONTAINS, containsValue, IndicatorFilter.ANY);
+    }
+
+    public TabHandle addBlacklistRule(FilterType type, String value, IndicatorFilter indicator) {
+        tab.filterRules().blacklist().add(new FilterRule(type, value, indicator));
+        return this;
+    }
+
+    /** Shorthand for a plain CONTAINS rule matching any message indicator. */
+    public TabHandle addBlacklistRule(String containsValue) {
+        return addBlacklistRule(FilterType.CONTAINS, containsValue, IndicatorFilter.ANY);
+    }
+
+    public TabHandle clearWhitelistRules() { tab.filterRules().whitelist().clear(); return this; }
+    public TabHandle clearBlacklistRules() { tab.filterRules().blacklist().clear(); return this; }
+
+    /** ANY: match any rule. ALL: must match every rule. */
+    public TabHandle setWhitelistMode(WhitelistMode mode) {
+        tab.filterRules().setWhitelistMode(mode);
+        return this;
+    }
+
+    /** ANY: exclude if any rule matches. ALL: exclude only if all rules match. */
+    public TabHandle setBlacklistMode(BlacklistMode mode) {
+        tab.filterRules().setBlacklistMode(mode);
+        return this;
+    }
+
+    public List<FilterRule> getWhitelistRules() { return Collections.unmodifiableList(tab.filterRules().whitelist()); }
+    public List<FilterRule> getBlacklistRules() { return Collections.unmodifiableList(tab.filterRules().blacklist()); }
+
+    /** Rescans the All tab's full message history against this tab's current rules and rebuilds it —
+     *  call after changing rules if you want existing messages to reflect the new configuration
+     *  instead of only applying to messages that arrive from now on. */
+    public TabHandle refilter() {
+        ChatManager.refilterTab(tab);
+        return this;
+    }
+
+    // ------------------------------------------------------------------
+    // Multi-tab (nested sub-tabs)
+    // ------------------------------------------------------------------
+    // Sub-tabs are real tabs, filtered within whatever this tab's own rules already let through — same
+    // layered gate as the player-facing "Multi Tab" toggle. There's always an implicit "All" sub-tab
+    // (index 0) catching everything this tab lets through unfiltered; extra sub-tabs narrow further.
+
+    /** Turns this tab into a multi-tab. Safe to call repeatedly — a no-op once already on, and turning
+     *  it on for the first time auto-creates the protected "All" sub-tab. */
+    public TabHandle setMultiTab(boolean enabled) {
+        tab.setMultiTab(enabled);
+        return this;
+    }
+
+    public boolean isMultiTab() { return tab.isMultiTab(); }
+
+    /**
+     * Adds a sub-tab under this multi-tab (turning it into one first if needed) and returns a handle to
+     * it — same TabHandle type as a top-level tab, so every other method here (filter rules, pings,
+     * messages…) works on it identically. The name only needs to be unique among this tab's own subs.
+     */
+    public TabHandle addSubTab(String name) {
+        tab.setMultiTab(true);
+        ChatTab sub = new ChatTab(name, TabType.FILTERED, java.util.Collections.emptyList());
+        tab.subTabs().add(sub);
+        return new TabHandle(fullId + ":" + name, sub);
+    }
+
+    /** The always-present "All" sub-tab (index 0), or null if this tab isn't a multi-tab. Catches
+     *  everything this tab's own filter lets through, regardless of its own rules. */
+    public TabHandle getAllSubTab() {
+        if (!tab.isMultiTab() || tab.subTabs().isEmpty()) return null;
+        ChatTab all = tab.subTabs().get(0);
+        return new TabHandle(fullId + ":" + all.name(), all);
+    }
+
+    /** All sub-tabs of this multi-tab (including the "All" sub at index 0), or empty if not a multi-tab. */
+    public List<TabHandle> getSubTabs() {
+        if (!tab.isMultiTab()) return List.of();
+        return tab.subTabs().stream().map(sub -> new TabHandle(fullId + ":" + sub.name(), sub)).toList();
+    }
+
+    /** Removes a sub-tab by name. The protected "All" sub-tab (index 0) can't be removed this way. */
+    public TabHandle removeSubTab(String name) {
+        if (!tab.isMultiTab()) return this;
+        List<ChatTab> subs = tab.subTabs();
+        if (!subs.isEmpty() && subs.get(0).name().equals(name)) return this; // protect "All"
+        subs.removeIf(s -> s.name().equals(name));
+        return this;
+    }
+
     /** Replace the full set of panels this tab is visible on by panel IDs. */
     public TabHandle setVisibleOnPanels(int... panelIds) {
         tab.visibleOnPanels().clear();
@@ -171,6 +342,12 @@ public class TabHandle {
         return this;
     }
 
+    /** Ping even while this tab is currently visible/active on a panel. */
+    public TabHandle setPingCondActiveTab(boolean enabled) {
+        tab.setPingCondActiveTab(enabled);
+        return this;
+    }
+
     public TabHandle setPingCondUnfocusedTab(boolean enabled) {
         tab.setPingCondUnfocusedTab(enabled);
         return this;
@@ -200,6 +377,12 @@ public class TabHandle {
     public int     getPingSilenceThresholdSec()  { return tab.pingSilenceThresholdSec(); }
     public int     getPingAfkThresholdSec()      { return tab.pingAfkThresholdSec(); }
     public boolean getPingUseGlobalConditions()  { return tab.pingUseGlobalConditions(); }
+    public boolean getPingCondAlways()           { return tab.pingCondAlways(); }
+    public boolean getPingCondActiveTab()        { return tab.pingCondActiveTab(); }
+    public boolean getPingCondUnfocusedTab()     { return tab.pingCondUnfocusedTab(); }
+    public boolean getPingCondGameUnfocused()    { return tab.pingCondGameUnfocused(); }
+    public boolean getPingCondAfk()              { return tab.pingCondAfk(); }
+    public boolean getPingCondRequireSilence()   { return tab.pingCondRequireSilence(); }
 
     // ------------------------------------------------------------------
     // Message access & control
@@ -305,6 +488,23 @@ public class TabHandle {
     /** Generate a new UUID string to use as a click-event action id. Pass it to /multichat execute. */
     public String newActionId() {
         return UUID.randomUUID().toString();
+    }
+
+    /**
+     * One-call version of the click-to-run-a-callback pattern: generates an action id, registers
+     * {@code onClicked} to fire when it's triggered, and returns a ready-to-use click style — no need
+     * to know the "/multichat execute &lt;id&gt;" format or wire up {@link MultiChatApi#TAB_ACTION}
+     * yourself:
+     * <pre>{@code
+     * LzText shown = original.withStyle(tab.newAction(() -> restoreOriginal(entry)));
+     * }</pre>
+     */
+    public LzStyle newAction(Runnable onClicked) {
+        String id = newActionId();
+        MultiChatApi.TAB_ACTION.register(actionId -> {
+            if (actionId.equals(id)) onClicked.run();
+        });
+        return LzStyle.EMPTY.withClickRunCommand("/multichat execute " + id);
     }
 
     // ------------------------------------------------------------------

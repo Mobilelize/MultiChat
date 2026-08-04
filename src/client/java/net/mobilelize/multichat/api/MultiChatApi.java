@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.api;
 
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
 
@@ -41,6 +42,22 @@ public final class MultiChatApi {
     /** Returns an already-registered mod handle, or {@code null} if not registered. */
     public static MultiChatMod getMod(String modId) {
         return MODS.get(modId);
+    }
+
+    /**
+     * True only the very first time this modId has ever called this — persisted across restarts, not
+     * just this session. Call once right after {@link #register(String)} to decide whether to seed
+     * default tabs/settings: {@code register()}/{@code registerTab()} are always safe to call again on
+     * every later launch (they restore/reuse what's already there), but without this check a mod has no
+     * way to know whether it should recreate a tab the player deliberately deleted.
+     */
+    public static boolean isFirstEverRegistration(String modId) {
+        if (MultichatClient.CONFIG == null) return true;
+        java.util.Set<String> seen = MultichatClient.CONFIG.registeredMods;
+        if (seen.contains(modId)) return false;
+        seen.add(modId);
+        MultichatClient.saveTabsToConfig();
+        return true;
     }
 
     // ------------------------------------------------------------------
@@ -187,5 +204,22 @@ public final class MultiChatApi {
         return ChatManager.getTabs().stream()
             .filter(t -> t.visibleOnPanels().contains(panelId))
             .toList();
+    }
+
+    /** Deletes a message (by its LzChatEntry identity, from TabHandle.getMessageEntries()) from every
+     *  tab that has it, including multi-tab sub-tabs — same as the player-facing "Delete from All"
+     *  context menu item. */
+    public static void deleteMessageEverywhere(LzChatEntry entry) {
+        ChatManager.deleteMessageEverywhere(entry);
+    }
+
+    // ------------------------------------------------------------------
+    // Panels
+    // ------------------------------------------------------------------
+
+    /** Creates a new blank, centered panel and returns a handle to configure it. No tabs attached —
+     *  add them via {@link PanelHandle#addTab(TabHandle)}. */
+    public static PanelHandle createPanel(String name) {
+        return new PanelHandle(ChatManager.createPanel(name));
     }
 }

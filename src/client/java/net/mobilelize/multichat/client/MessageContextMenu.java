@@ -55,6 +55,7 @@ public class MessageContextMenu {
         ChatTab active = panel.getActiveTab();
         if (active != null && active.type() != TabType.ALL && active.type() != TabType.NOTES) list.add("Jump to All");
         if (active != null && active.type() != TabType.ALL && active.type() != TabType.NOTES) list.add("Delete message");
+        if (active != null && active.type() != TabType.NOTES) list.add("Delete from All");
         return list;
     }
 
@@ -134,6 +135,7 @@ public class MessageContextMenu {
             case "Add to Notes" -> addToNotes();
             case "Jump to All" -> jumpToAll();
             case "Delete message" -> deleteMessage(sourcePanel);
+            case "Delete from All" -> ChatManager.deleteMessageEverywhere(line.entry());
         }
         return true;
     }
