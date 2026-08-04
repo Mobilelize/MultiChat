@@ -73,6 +73,8 @@ Licensed under [GPL-3.0](LICENSE.txt).
 
 MultiChat is a **client-side** mod. `mobilelize-fabric-lib` is no longer a separate nested jar — its code now lives directly inside MultiChat, so there is nothing to extract. Just grab the MultiChat jar.
 
+> **Cloth Config is a hard dependency.** MultiChat's own `fabric.mod.json` requires `cloth-config` (`"depends": {"cloth-config": "*"}`) and does **not** bundle it (`modApi`, not `include`/JiJ — see MultiChat's own `build.gradle`). This means Cloth Config Fabric API must be present wherever MultiChat runs, including **your own dev environment** — Fabric Loader will refuse to load MultiChat (and therefore your mod) without it. Either add it as your own dependency the same way (`modApi "me.shedaniel.cloth:cloth-config-fabric:<version>"`, currently `21.11.153`), or just drop its jar in your `run/mods/` folder alongside MultiChat's. ModMenu is *not* a hard dependency — MultiChat's ModMenu entrypoint is only invoked if ModMenu happens to be present, so it's fine to skip.
+
 ---
 
 #### Set up your `libs/` folder
@@ -82,6 +84,7 @@ Create a `libs/` folder at the root of your project and place the jar inside:
 ```
 libs/
   multichat-1.0.0.jar
+  cloth-config-fabric-21.11.153.jar
 ```
 
 ---
@@ -324,9 +327,9 @@ Separate from filter rules (section 7) — these check how part of a message act
 tab.addWhitelistStyleCondition(StyleTarget.WORD, "", WordLocation.START,
     List.of(StyleFlag.ITALIC), List.of(StyleColor.GRAY), List.of());
 
-// Pin to an exact word position instead of first/last
-tab.addWhitelistStyleCondition(StyleTarget.WORD, "Jack", WordLocation.INDEX, 2,
-    List.of(StyleFlag.BOLD), List.of(), List.of());
+// Pin to an exact word position instead of first/last — addWhitelistWordAt is shorthand for
+// StyleTarget.WORD + WordLocation.INDEX, since picking an index already implies both
+tab.addWhitelistWordAt(2, "Jack", List.of(StyleFlag.BOLD), List.of(), List.of());
 
 // START_OF_MESSAGE / END_OF_MESSAGE check the first/last word's style, Word field ignored
 tab.addBlacklistStyleCondition(StyleTarget.END_OF_MESSAGE, "", WordLocation.ANYWHERE,
@@ -339,8 +342,7 @@ tab.addWhitelistStyleCondition(StyleTarget.WORD, "alert", WordLocation.ANYWHERE,
 
 // HAS_CLICK: does word 2 have a click event at all? Only part of a tokenized word needs it — e.g.
 // "<Steve>" where only "Steve" carries the ClickEvent, not the brackets. See flags note below.
-tab.addWhitelistStyleCondition(StyleTarget.WORD, "", WordLocation.INDEX, 2,
-    List.of(StyleFlag.HAS_CLICK), List.of(), List.of());
+tab.addWhitelistWordAt(2, "", List.of(StyleFlag.HAS_CLICK), List.of(), List.of());
 
 tab.setStyleWhitelistMode(WhitelistMode.ANY);
 tab.setStyleBlacklistMode(BlacklistMode.ANY);
@@ -352,6 +354,8 @@ tab.clearBlacklistStyleConditions();
 ```
 
 `word` left blank skips content matching and just checks formatting at that location — for `WordLocation.ANYWHERE` this becomes an **existence** check instead (does this style appear anywhere in the message, at least one character), rather than pinning to one word.
+
+`addWhitelistWordAt`/`addBlacklistWordAt` are shorthand for the `StyleTarget.WORD` + `WordLocation.INDEX` combination — pass just the index (1 = first word, 2 = second, etc.) and a word (blank = don't care what it says) instead of specifying target and word location yourself, since choosing an index already implies both.
 
 `flags` (empty allowed) requires every listed flag at once. Formatting flags (`BOLD`/`ITALIC`/`UNDERLINE`/`STRIKETHROUGH`/`OBFUSCATED`) must hold **uniformly** across every character in the checked range/word — that's what makes the spoof-guard example above work (the whole prefix must genuinely be italic). Interaction flags (`HAS_CLICK`, `HAS_HOVER`, `CLICK_RUN_COMMAND`, `CLICK_SUGGEST_COMMAND`, `CLICK_OPEN_URL`, `CLICK_COPY_TO_CLIPBOARD`, `HOVER_SHOW_TEXT`) instead only need **at least one** character in range to satisfy them — a clickable name is usually a substring of the tokenized word (brackets/punctuation around it typically aren't clickable), so requiring uniformity there would almost never match. `colors`/`hexColors` (both empty allowed, but at least one of flags/colors/hexColors must be set) require every character in range to be one of the listed colors, not necessarily the same one throughout.
 

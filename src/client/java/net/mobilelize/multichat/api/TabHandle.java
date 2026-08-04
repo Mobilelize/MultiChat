@@ -254,6 +254,15 @@ public class TabHandle {
         return addWhitelistStyleCondition(target, word, wordLocation, 0, flags, colors, hexColors);
     }
 
+    /** Shorthand for checking the Nth word specifically (1 = first word, 2 = second, etc.) — skips having
+     *  to pass StyleTarget.WORD + WordLocation.INDEX yourself, since picking an index already implies both.
+     *  word: leave blank to check whatever word is at that position without caring what it says, or set it
+     *  to require that specific word be there too. */
+    public TabHandle addWhitelistWordAt(int wordIndex, String word,
+                                         List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
+        return addWhitelistStyleCondition(StyleTarget.WORD, word, WordLocation.INDEX, wordIndex, flags, colors, hexColors);
+    }
+
     /** Adds a condition to the style blacklist — if it matches, the message is excluded. Same parameters
      *  as {@link #addWhitelistStyleCondition}. */
     public TabHandle addBlacklistStyleCondition(StyleTarget target, String word, WordLocation wordLocation, int wordIndex,
@@ -266,6 +275,13 @@ public class TabHandle {
     public TabHandle addBlacklistStyleCondition(StyleTarget target, String word, WordLocation wordLocation,
                                                  List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
         return addBlacklistStyleCondition(target, word, wordLocation, 0, flags, colors, hexColors);
+    }
+
+    /** Blacklist counterpart to {@link #addWhitelistWordAt} — checking the Nth word specifically, without
+     *  having to pass StyleTarget.WORD + WordLocation.INDEX yourself. */
+    public TabHandle addBlacklistWordAt(int wordIndex, String word,
+                                         List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
+        return addBlacklistStyleCondition(StyleTarget.WORD, word, WordLocation.INDEX, wordIndex, flags, colors, hexColors);
     }
 
     public TabHandle clearWhitelistStyleConditions() { tab.styleRules().whitelist().clear(); return this; }
