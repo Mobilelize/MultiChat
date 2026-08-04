@@ -75,6 +75,9 @@ public class InfoTab extends ChatTab {
         lines.add(tip("Cursor changes based on what's under it.", "Hand over tabs and links. Text beam over selectable chat."));
         lines.add(tip("Hold Ctrl to force text-select mode.", "Cursor switches to IBeam even over clickable links."));
         lines.add(tip("Cursor changing can be disabled in settings.", ""));
+        lines.add(tip("Highlighted messages can be reverted.", "Click a highlighted message to undo its formatting."));
+        lines.add(tip("A multi-tab's \"All\" sub-tab can't be deleted.", "It always catches everything the parent lets through."));
+        lines.add(tip("Popped-out tabs can be closed again.", "Right-click it → Close Popout."));
         lines.add(blank());
 
         // ── Commands ──────────────────────────────────────────────────────────
@@ -113,7 +116,9 @@ public class InfoTab extends ChatTab {
         lines.add(nav("Arrow keys",  "Switch tabs within focused panel"));
         lines.add(nav("Ctrl+F",      "Open search overlay"));
         lines.add(nav("Scroll",      "Scroll chat in hovered panel"));
-        lines.add(nav("Right-click", "Copy  ·  Search  ·  Delete message"));
+        lines.add(nav("Right-click", "Copy  ·  Search  ·  Delete  ·  Delete from All"));
+        lines.add(nav("Click a multi-tab", "Drill into its sub-tabs"));
+        lines.add(nav("Red X / right-click sub-tab", "Collapse Sub-tabs (back out)"));
         lines.add(nav("Ctrl+Q",      "Open quick actions menu"));
         lines.add(blank());
 
@@ -131,6 +136,12 @@ public class InfoTab extends ChatTab {
         lines.add(feat("Selection & Copy",   "&7Select and copy chat text like a browser"));
         lines.add(feat("Tab Colors",         "&7Color-code tabs and message backgrounds"));
         lines.add(feat("Multi-panel",        "&7Two independent chat windows side by side"));
+        lines.add(feat("Multi-Tab",          "&7Nested sub-tabs, each with their own filter rules"));
+        lines.add(feat("Highlight Words",    "&7Keyword messages reformatted into two colors"));
+        lines.add(feat("Chat Themes",        "&7Vanilla, Simple Dark, Bold, Pink, Mint, Lavender"));
+        lines.add(feat("Draggable Scrollbar", "&7Click and drag to scroll, glows on hover"));
+        lines.add(feat("Always Focused Panel", "&7Keep a panel fully visible permanently"));
+        lines.add(feat("Pop Out Tabs",       "&7Turn a tab into its own floating panel"));
         lines.add(blank());
 
         // ── Tab Types ─────────────────────────────────────────────────────────
@@ -138,7 +149,7 @@ public class InfoTab extends ChatTab {
         lines.add(blank());
         lines.add(tabType("ALL",      "&f",  "Receives every message. Read-only."));
         lines.add(tabType("VANILLA",  "&7",  "Standard Minecraft chat, full vanilla behavior."));
-        lines.add(tabType("FILTERED", "&b",  "Filter by keyword, regex, or indicator type."));
+        lines.add(tabType("FILTERED", "&b",  "Filter by keyword, regex, or indicator type. Can have sub-tabs."));
         lines.add(tabType("API",      "&5",  "Controlled by other mods via the MultiChat API."));
         lines.add(tabType("SEARCH",   "&e",  "Live-search through any tab's message history."));
         lines.add(tabType("NOTES",    "&a",  "A personal scratchpad — write and save notes."));

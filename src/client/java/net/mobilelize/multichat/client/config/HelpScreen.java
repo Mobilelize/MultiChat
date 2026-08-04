@@ -70,7 +70,8 @@ public class HelpScreen {
                           &fT&r&7 — timestamps on   &fC&r&7 — collapse repeating on
                           &fD&r&7 — difference mode on (layer 0)   &fD5&r&7 / &fD-2&r&7 — difference mode, non-zero layer
                           &fE&r&7 — difference exception on   &fI&r&7 — difference inclusion on
-                          &fB&r&7 — badge hidden   &fP&r&7 — context prefix set   &fS&r&7 — sound ping on"""
+                          &fB&r&7 — badge hidden   &fP&r&7 — context prefix set   &fS&r&7 — sound ping on
+                          &f[multi]&r&7 — this tab has sub-tabs, listed indented (&f↳&r&7) directly under it"""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
@@ -130,7 +131,9 @@ public class HelpScreen {
                         &e&lText Selection & Search&r
                         &7Click and drag in chat to select text. &fCtrl+C&r&7 copies the selection.
                         &fCtrl+F&r&7 (or your configured key) opens Search. With text selected, it pre-fills the query.
-                        Right-click any message for: &fCopy, Search for this, Jump to All, Delete.&r
+                        Right-click any message for: &fCopy, Search for this, Jump to All, Delete, Delete from All.&r
+                          &7&fDelete&r&7 removes it from the tab you clicked in. &fDelete from All&r&7 removes it
+                          everywhere it appears — every tab, including multi-tab sub-tabs.
                         &7Search supports &fCONTAINS, STARTS_WITH, WORD, FUZZY, REGEX&r&7 modes and live updates as new messages arrive.
                         Hold &fCtrl&r&7 to force text-select mode — cursor switches to IBeam even over clickable links.
 
@@ -138,6 +141,50 @@ public class HelpScreen {
                         &7The cursor changes based on what's under it (can be disabled in settings).
                           &fHand&r&7 — over tabs, clickable text, or context menus.
                           &fIBeam&r&7 — over selectable message text, or any text when Ctrl is held."""
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+                """
+                        &e&lMulti-Tab (Sub-Tabs)&r
+                        &7Any filtered tab can become a container for nested sub-tabs.
+                          &fEnable&r&7 — Tab Edit → &fMulti Tab&r&7 toggle. Auto-creates a protected &fAll&r&7 sub-tab.
+                          &fAdd more&r&7 — Tab Edit → &fSub-Tabs&r&7 list. One name per line; drag to reorder.
+                          &fDrill in&r&7 — click the parent tab (marked with a symbol) in the tab bar to swap the
+                            tab row to its sub-tabs. Clicking a sub-tab shows only its own messages.
+                          &fBack out&r&7 — click the red &fX&r&7 at the left of the sub-tab row, or right-click any
+                            sub-tab → &fCollapse Sub-tabs&r&7.
+                        &7Filtering is layered: a sub-tab only ever sees messages its parent's own filter already
+                        let through. The &fAll&r&7 sub-tab catches everything the parent lets through, unfiltered;
+                        other sub-tabs narrow further from there using their own whitelist/blacklist rules —
+                        edit a sub-tab's rules the same way as any tab: right-click it → &fEdit Tab&r&7."""
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+                """
+                        &e&lHighlight Words&r
+                        &7Settings → &fHighlight Words&r&7. When a keyword matches, the &fentire message&r&7 is
+                        reformatted into two colors — one for the matched keyword(s), one for the rest.
+                          &fYour Keywords&r&7 — your own list, edited directly in settings.
+                          &fAPI Words&r&7 — keywords other installed mods have registered (read-only list, shown
+                            for visibility). Mute all of them at once with the &fEnable API Words&r&7 toggle.
+                        Hover a highlighted message to see which keyword(s) matched. Click it to revert that one
+                        message back to its original formatting."""
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+                """
+                        &e&lThemes & Appearance&r
+                        &7Settings → &fAppearance&r&7.
+                          &fChat Theme&r&7 — color palette for tabs, scrollbar, and message highlights. Built-in:
+                            Vanilla, Simple Dark, Bold, Pink, Mint, Lavender. Other mods can register their own.
+                          &fDefault Panel BG Color&r&7 — message background for any panel that hasn't set its own.
+                          &fDraggable Scrollbar&r&7 — click and drag the scrollbar on the right edge to scroll;
+                            it glows when your mouse is near it if &fScrollbar Hover Glow&r&7 is on.
+                          &fAlways Focused&r&7 (Panel Edit) — that panel stays at full opacity/line-count
+                            permanently, instead of only briefly after a new message arrives.
+                          &fPop Out&r&7 — right-click a tab → &fPop Out&r&7 turns it into its own floating panel,
+                            then drops you into the layout editor to position it. Right-click it → &fClose Popout&r&7
+                            to remove it again. Not available for Vanilla/Info/Search/Notes tabs."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
