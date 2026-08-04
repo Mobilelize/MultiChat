@@ -10,9 +10,13 @@ Licensed under [GPL-3.0](LICENSE.txt).
 
 - Unlimited panels — **left panel** always visible by default, **right panel** optional (enable in Settings), add more via `/multichat panels`
 - Tab types: `ALL` (all messages), `VANILLA` (vanilla HUD passthrough), `FILTERED` (user-defined rules), `NOTES` (personal note-taking), `INFO` (mod guide), `SEARCH` (session-only query tabs), `API` (created by other mods)
-- Right-click any message → Copy / Search / Jump to All / Delete message
+- **Multi-Tab** — any filtered tab can have nested sub-tabs. Enable via Tab Edit → `Multi Tab`; click the tab in the bar to drill into its sub-tabs, click the red `X` (or right-click → `Collapse Sub-tabs`) to back out. A sub-tab only ever sees what its parent's own filter already let through — the auto-created `All` sub-tab catches everything unfiltered, other sub-tabs narrow further with their own rules.
+- **Highlight Words** — Settings → Highlight Words. Matching a keyword reformats the whole message into a two-color scheme (matched word / rest of message). Hover a highlighted message to see what matched; click it to revert.
+- **Chat Themes** — Settings → Appearance → Chat Theme. Built-in: Vanilla, Simple Dark, Bold, Pink, Mint, Lavender. Mods can register their own via the API.
+- Right-click any message → Copy / Search / Jump to All / Delete message / **Delete from All** (removes it from every tab that has it, including sub-tabs)
+- Draggable scrollbar (glows on hover), **Always Focused** panel setting (stay fully visible permanently), **Pop Out** a tab into its own floating panel (right-click → Pop Out / Close Popout)
 - `Ctrl+F` → open search overlay
-- Right-click any tab → context menu (rename, search in tab, set context, etc.)
+- Right-click any tab → context menu (rename, search in tab, set context, pop out, etc.)
 - Tab list and settings accessible via ModMenu or in-game config button
 - `Ctrl+Arrow` → cycle focused panel; `Arrow` → switch tabs on focused panel
 - Text cursor changes shape based on what it's hovering (message, tab, scrollbar, etc.)
@@ -50,10 +54,16 @@ Licensed under [GPL-3.0](LICENSE.txt).
 
 ### What the API provides
 
-- Register named tabs owned by your mod
+- Register named tabs owned by your mod — and know if it's your very first time ever registering, so you only seed defaults once
 - Send messages into those tabs programmatically (with or without pings)
 - Add messages silently, clear messages, or replace the full message list
+- Fully configure a tab in code — whitelist/blacklist filter rules, ping conditions, timestamps, collapse, difference mode, message background color — no player setup required
+- Give a tab **nested sub-tabs** (Multi-Tab), each with their own filter rules layered under the parent
+- **Create and configure your own panels** — position, size, scale, opacity, always-focused, tabs-at-top — not just read existing ones
 - Set/clear the active **context** (prefix applied to all outgoing player chat)
+- One-call click-to-run-a-callback helper — no need to hand-build the `/multichat execute` command yourself
+- Delete a message from every tab it appears in (moderation use cases)
+- Register your own chat theme (color palette)
 - Subscribe to events: message received, message added to tab, tab changed, message sent, panel focused, tab action
 - Query panels, focused panel, context tab, tabs by panel, and MultiChat config
 
@@ -154,6 +164,15 @@ tab.setVisibleOnPanel(2, true);  // add panel 2 without changing others
 The full internal ID is `modid:name` (e.g. `mymod:alerts`). If you call `registerTab` with the same name and the tab still exists, the existing handle is returned. If the tab was removed (by the player or your code), `registerTab` creates a fresh one — so it is safe to call on every server join or reconnect.
 
 User customizations (visibility, color, filter rules, context prefix) made via the in-game tab editor are automatically restored from config on the next `registerTab` call.
+
+**First-ever registration.** `register()`/`registerTab()` are always safe to call again on every launch — but if the player deliberately deleted a tab you created, calling `registerTab` for it again would recreate it. Check `isFirstEverRegistration` (persisted across restarts) to decide whether to seed default tabs at all:
+
+```java
+MultiChatMod api = MultiChatApi.register("mymod");
+if (MultiChatApi.isFirstEverRegistration("mymod")) {
+    api.registerTab("alerts", "Alerts");   // only ever created once
+}
+```
 
 ---
 
@@ -271,9 +290,96 @@ Handles become invalid when their tab is removed. After removal, `isReady()` ret
 
 ---
 
-### 7. Panel access
+### 7. Filter rules
+
+A tab can be fully self-configured in code — same `FilterRuleSet`/`FilterRule` mechanics as the player-facing Whitelist/Blacklist screens, no player setup required:
 
 ```java
+tab.addWhitelistRule("reported");                       // shorthand: CONTAINS, any indicator
+tab.addWhitelistRule(FilterType.REGEX, "^\\[S\\]");      // shorthand: any indicator (the common case)
+tab.addWhitelistRule(FilterType.REGEX, "^\\[S\\]", IndicatorFilter.SYSTEM); // full form when it matters
+tab.addBlacklistRule("spam keyword");
+tab.setWhitelistMode(WhitelistMode.ANY);   // ANY: match any rule. ALL: must match every rule.
+tab.setBlacklistMode(BlacklistMode.ANY);   // ANY: exclude if any rule matches. ALL: exclude only if all match.
+
+List<FilterRule> wl = tab.getWhitelistRules();
+List<FilterRule> bl = tab.getBlacklistRules();
+tab.clearWhitelistRules();
+tab.clearBlacklistRules();
+
+// Rescan the All tab's full history against the current rules and rebuild — otherwise new rules
+// only apply to messages that arrive from now on.
+tab.refilter();
+```
+
+---
+
+### 8. Multi-Tab (nested sub-tabs)
+
+Turn a tab into a container for its own filtered sub-tabs — same layered-filter mechanic as the player-facing `Multi Tab` toggle. A sub-tab only ever sees what its parent's own filter already let through.
+
+```java
+tab.setMultiTab(true);               // auto-creates the protected "All" sub-tab (index 0)
+boolean multi = tab.isMultiTab();
+
+// addSubTab turns multi-tab on automatically if it wasn't already, and returns a full TabHandle —
+// every other method here (filter rules, pings, messages, sendMessage...) works on it identically.
+TabHandle reports = api.registerTab("reports", "Reports");
+TabHandle regionA = reports.addSubTab("Region A");
+regionA.addWhitelistRule("region: A");
+
+TabHandle all = reports.getAllSubTab();       // the always-present catch-all sub
+List<TabHandle> subs = reports.getSubTabs();  // includes the "All" sub at index 0
+reports.removeSubTab("Region A");             // the protected "All" sub can't be removed this way
+```
+
+---
+
+### 9. More tab settings
+
+Everything the player-facing Tab Edit screen can set is available on `TabHandle`:
+
+```java
+tab.setShowTimestamps(true);
+tab.setMsgBgColor(0x1A1A1A);            // 0 = inherit panel/theme default
+tab.setCollapseRepeating(true);
+tab.setCollapseMatchFormatting(true);   // only matters if collapseRepeating is also on
+
+// Difference mode — layered pipeline, lower-index layers claim messages first
+tab.setDifferenceMode(true);
+tab.setDifferenceLayerIndex(2);
+tab.setDifferenceException(true);   // receives messages normally, never blocks the pipeline
+tab.setDifferenceInclusion(true);   // blocks the pipeline even when not the active tab
+
+// Every setter above has a matching getter, e.g.:
+boolean ts = tab.getShowTimestamps();
+```
+
+---
+
+### 10. Panels
+
+Panels are no longer read-only — create and fully configure your own via `PanelHandle`:
+
+```java
+PanelHandle panel = MultiChatApi.createPanel("My Panel");   // blank, enabled, centered — same as api.createPanel(name)
+
+panel.setPosition(0.5f, 0.5f);        // fraction of screen width/height, CUSTOM anchor
+panel.setWidth(300);
+panel.setFocusedHeightLines(10);
+panel.setScale(1.0f);
+panel.setBgColor(0x1A1A1A);
+panel.setBgOpacity(0.8);
+panel.setChatOpacity(1.0);
+panel.setAlwaysFocused(true);         // stays fully visible permanently
+panel.setTabsAtTop(false);
+panel.setShowTabs(true);
+
+panel.addTab(tab);                    // attach a TabHandle to this panel
+panel.removeTab(tab);
+panel.remove();                       // delete the panel entirely
+
+// Read-only access to every panel in the system
 ChatPanel left  = MultiChatApi.getLeftPanel();
 ChatPanel right = MultiChatApi.getRightPanel();
 ChatPanel byId  = MultiChatApi.getPanel(0);                   // 0 = left, 1 = right
@@ -297,9 +403,19 @@ MultiChatConfig config = MultiChatApi.getConfig();
 
 ---
 
-### 8. Click events via TAB_ACTION
+### 11. Click events
 
-Generate a UUID, attach it to a click event in a message, and listen for it via `TAB_ACTION`:
+One call generates the action id, registers the callback, and returns a ready-to-use click style:
+
+```java
+LzText shown = original.withStyle(tab.newAction(() -> {
+    // handle click
+}));
+
+tab.sendMessage(shown);
+```
+
+Or build it by hand if you need the raw command string (e.g. to attach it yourself with `.withClickRunCommand(...)`, or via vanilla `ClickEvent`):
 
 ```java
 String actionId = tab.newActionId();
@@ -319,7 +435,35 @@ MultiChatApi.TAB_ACTION.register(id -> {
 
 ---
 
-### 9. Events
+### 12. Delete a message everywhere
+
+Deletes a message (by its `LzChatEntry` identity, from `tab.getMessageEntries()`) from every tab that has it, including multi-tab sub-tabs — same as the player-facing "Delete from All" context menu item:
+
+```java
+ChatTab.MessageEntry entry = tab.getMessageEntries().get(0);
+MultiChatApi.deleteMessageEverywhere(entry.entry());
+```
+
+---
+
+### 13. Chat themes
+
+Register a color palette — shows up in the theme picker (Settings → Appearance) alongside the built-ins:
+
+```java
+ChatTheme theme = new ChatTheme("mymod_theme", "My Theme");
+theme.tabBgActive = 0xCC2A2A34;
+theme.tabTextActive = 0xFFFFFFFF;
+// ... set every field on ChatTheme (see the class for the full slot list)
+
+MultiChatApi.registerTheme(theme);
+MultiChatApi.setActiveTheme("mymod_theme");
+ChatTheme active = MultiChatApi.getActiveTheme();
+```
+
+---
+
+### 14. Events
 
 All events use the standard Fabric Event API — call `.register()` on the event field.
 
@@ -388,7 +532,7 @@ MultiChatApi.TAB_ACTION.register(actionId -> {
 
 ---
 
-### 10. Tab visibility
+### 15. Tab visibility
 
 Tabs track which panels they appear on as a set of panel IDs. Panel IDs are integers assigned per panel (0 = left by default, 1 = right, and so on for any additional panels).
 
@@ -403,13 +547,13 @@ Set<Integer> ids = tab.getVisiblePanels();
 
 ---
 
-### 11. API tab filter rules
+### 16. API tab filter rules — how matching works
 
-API tabs support the same whitelist/blacklist filter rules as FILTERED tabs. Users can configure these via the in-game tab editor (Edit button in Tab List). Rules apply to **incoming routed messages** (i.e. messages that arrive via MultiChat's routing pipeline). Messages sent via `tab.sendMessage()` or `tab.addMessageSilent()` are not filtered — they always appear.
+Whether set via `tab.addWhitelistRule(...)` (section 7) or by the player through the in-game tab editor, rules apply to **incoming routed messages** (i.e. messages that arrive via MultiChat's routing pipeline). Messages sent via `tab.sendMessage()` or `tab.addMessageSilent()` are not filtered — they always appear.
 
 ---
 
-### 12. Soft dependency pattern
+### 17. Soft dependency pattern
 
 If MultiChat is optional in your mod:
 
@@ -437,9 +581,10 @@ All classes under `net.mobilelize.multichat.api` unless noted.
 
 | Class / Interface            | Package   | Purpose |
 |-----------------------------|-----------|---------|
-| `MultiChatApi`              | `.api`    | Static entry point — register, events, read-only access |
-| `MultiChatMod`              | `.api`    | Per-mod handle — create/remove tabs, list tab IDs |
-| `TabHandle`                 | `.api`    | Per-tab handle — send messages, manage content, set context |
+| `MultiChatApi`              | `.api`    | Static entry point — register, events, panels, themes, read-only access |
+| `MultiChatMod`              | `.api`    | Per-mod handle — create/remove tabs, create panels, list tab IDs |
+| `TabHandle`                 | `.api`    | Per-tab handle — messages, content, filter rules, multi-tab, ping/timestamp/collapse/diff settings, context, click actions |
+| `PanelHandle`                | `.api`    | Per-panel handle — position, size, scale, opacity, always-focused, attach/detach tabs, remove |
 | `MessageReceivedCallback`   | `.api`    | Event: incoming `LzText` message, before routing (cancellable) |
 | `MessageAddedToTabCallback` | `.api`    | Event: `ChatTab.MessageEntry` added to any tab |
 | `TabChangedCallback`        | `.api`    | Event: active tab switched on a panel |
@@ -452,7 +597,8 @@ All classes under `net.mobilelize.multichat.api` unless noted.
 ## Notes
 
 - MultiChat is **client-side only**. None of the API crosses the network.
-- API tabs are **session-only** for messages — messages are not persisted to disk. Tab configuration (name, visibility, color, filter rules, context prefix) is saved and restored across sessions.
+- API tabs are **session-only** for messages — messages are not persisted to disk. Tab configuration (name, visibility, color, filter rules, context prefix, multi-tab/sub-tabs) is saved and restored across sessions.
 - SEARCH tabs are fully session-only and cannot be created via the API.
-- `ChatTab` fields are public by design for read access. Prefer `TabHandle` methods for mutation to ensure config is saved correctly.
+- `ChatTab` fields are public by design for read access. Prefer `TabHandle` methods for mutation to ensure config is saved correctly. Same goes for `ChatPanel` and `PanelHandle`.
 - `addMessageSilent` and `setMessages` bypass pings and `MESSAGE_ADDED_TO_TAB`. Use them when populating a tab from your own stored data to avoid false notifications.
+- Sub-tabs (Multi-Tab) are never in `MultiChatApi.getTabs()` — they're only reachable via `TabHandle.getSubTabs()`/`getAllSubTab()`, since they're logically owned by their parent, not the global tab list.

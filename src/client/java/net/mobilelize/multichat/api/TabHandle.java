@@ -179,6 +179,12 @@ public class TabHandle {
         return this;
     }
 
+    /** Shorthand for any message indicator — the common case, since most rules don't care where the
+     *  message came from. */
+    public TabHandle addWhitelistRule(FilterType type, String value) {
+        return addWhitelistRule(type, value, IndicatorFilter.ANY);
+    }
+
     /** Shorthand for a plain CONTAINS rule matching any message indicator. */
     public TabHandle addWhitelistRule(String containsValue) {
         return addWhitelistRule(FilterType.CONTAINS, containsValue, IndicatorFilter.ANY);
@@ -187,6 +193,12 @@ public class TabHandle {
     public TabHandle addBlacklistRule(FilterType type, String value, IndicatorFilter indicator) {
         tab.filterRules().blacklist().add(new FilterRule(type, value, indicator));
         return this;
+    }
+
+    /** Shorthand for any message indicator — the common case, since most rules don't care where the
+     *  message came from. */
+    public TabHandle addBlacklistRule(FilterType type, String value) {
+        return addBlacklistRule(type, value, IndicatorFilter.ANY);
     }
 
     /** Shorthand for a plain CONTAINS rule matching any message indicator. */
