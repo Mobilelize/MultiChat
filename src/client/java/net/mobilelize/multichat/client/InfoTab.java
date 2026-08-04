@@ -78,6 +78,8 @@ public class InfoTab extends ChatTab {
         lines.add(tip("Highlighted messages can be reverted.", "Click a highlighted message to undo its formatting."));
         lines.add(tip("A multi-tab's \"All\" sub-tab can't be deleted.", "It always catches everything the parent lets through."));
         lines.add(tip("Popped-out tabs can be closed again.", "Right-click it → Close Popout."));
+        lines.add(tip("Style Rules check rendering, not text.", "Bold/italic/underline/strikethrough/color — separate from normal filter rules."));
+        lines.add(tip("Leave a Style Rule's Word field blank to skip content matching.", "Checks just the formatting at that location instead of a specific word."));
         lines.add(blank());
 
         // ── Commands ──────────────────────────────────────────────────────────
@@ -142,6 +144,7 @@ public class InfoTab extends ChatTab {
         lines.add(feat("Draggable Scrollbar", "&7Click and drag to scroll, glows on hover"));
         lines.add(feat("Always Focused Panel", "&7Keep a panel fully visible permanently"));
         lines.add(feat("Pop Out Tabs",       "&7Turn a tab into its own floating panel"));
+        lines.add(feat("Style Rules",        "&7Whitelist/blacklist by actual rendered formatting, not text"));
         lines.add(blank());
 
         // ── Tab Types ─────────────────────────────────────────────────────────
@@ -151,7 +154,7 @@ public class InfoTab extends ChatTab {
         lines.add(tabType("VANILLA",  "&7",  "Standard Minecraft chat, full vanilla behavior."));
         lines.add(tabType("FILTERED", "&b",  "Filter by keyword, regex, or indicator type. Can have sub-tabs."));
         lines.add(tabType("API",      "&5",  "Controlled by other mods via the MultiChat API."));
-        lines.add(tabType("SEARCH",   "&e",  "Live-search through any tab's message history."));
+        lines.add(tabType("SEARCH",   "&e",  "Live-search through any tab's message history. Modes: CONTAINS, STARTS_WITH, WORD, FUZZY, REGEX. Updates live as new messages arrive; opening a new search replaces this tab."));
         lines.add(tabType("NOTES",    "&a",  "A personal scratchpad — write and save notes."));
         lines.add(tabType("INFO",     "&d",  "This tab. Quick-reference guide."));
         lines.add(blank());

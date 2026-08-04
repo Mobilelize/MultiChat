@@ -11,7 +11,13 @@ import net.mobilelize.multichat.client.filter.FilterRule;
 import net.mobilelize.multichat.client.filter.FilterType;
 import net.mobilelize.multichat.client.filter.IndicatorFilter;
 import net.mobilelize.multichat.client.filter.MessageRouter;
+import net.mobilelize.multichat.client.filter.StyleCondition;
+import net.mobilelize.multichat.client.filter.StyleColor;
+import net.mobilelize.multichat.client.filter.StyleFilterSet;
+import net.mobilelize.multichat.client.filter.StyleFlag;
+import net.mobilelize.multichat.client.filter.StyleTarget;
 import net.mobilelize.multichat.client.filter.WhitelistMode;
+import net.mobilelize.multichat.client.filter.WordLocation;
 
 import java.util.Collections;
 import java.util.List;
@@ -223,6 +229,62 @@ public class TabHandle {
 
     public List<FilterRule> getWhitelistRules() { return Collections.unmodifiableList(tab.filterRules().whitelist()); }
     public List<FilterRule> getBlacklistRules() { return Collections.unmodifiableList(tab.filterRules().blacklist()); }
+
+    // ------------------------------------------------------------------
+    // Style conditions
+    // ------------------------------------------------------------------
+    // Separate from filter rules — these check actual rendering style (bold/italic/color/etc.), not text.
+    // Structured as its own whitelist/blacklist, mirroring FilterRuleSet exactly. A message must satisfy
+    // filter rules AND style rules (if any are set) to be routed here.
+
+    /** Adds a condition to the style whitelist. wordLocation/wordIndex only matter when target == WORD.
+     *  flags: every one listed must be present at once (empty if only color matters). colors/hexColors:
+     *  each character in range must be one of these (not necessarily the same one throughout — lets a
+     *  multi-colored word still match, as long as every color it uses is in one of the two lists). Both
+     *  empty = don't check color at all. hexColors is for colors outside the 16 named ones. */
+    public TabHandle addWhitelistStyleCondition(StyleTarget target, String word, WordLocation wordLocation, int wordIndex,
+                                                 List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
+        tab.styleRules().whitelist().add(new StyleCondition(target, word, wordLocation, wordIndex, flags, colors, hexColors));
+        return this;
+    }
+
+    /** Shorthand for target != WORD or wordLocation != INDEX, where wordIndex doesn't matter. */
+    public TabHandle addWhitelistStyleCondition(StyleTarget target, String word, WordLocation wordLocation,
+                                                 List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
+        return addWhitelistStyleCondition(target, word, wordLocation, 0, flags, colors, hexColors);
+    }
+
+    /** Adds a condition to the style blacklist — if it matches, the message is excluded. Same parameters
+     *  as {@link #addWhitelistStyleCondition}. */
+    public TabHandle addBlacklistStyleCondition(StyleTarget target, String word, WordLocation wordLocation, int wordIndex,
+                                                 List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
+        tab.styleRules().blacklist().add(new StyleCondition(target, word, wordLocation, wordIndex, flags, colors, hexColors));
+        return this;
+    }
+
+    /** Shorthand for target != WORD or wordLocation != INDEX, where wordIndex doesn't matter. */
+    public TabHandle addBlacklistStyleCondition(StyleTarget target, String word, WordLocation wordLocation,
+                                                 List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
+        return addBlacklistStyleCondition(target, word, wordLocation, 0, flags, colors, hexColors);
+    }
+
+    public TabHandle clearWhitelistStyleConditions() { tab.styleRules().whitelist().clear(); return this; }
+    public TabHandle clearBlacklistStyleConditions() { tab.styleRules().blacklist().clear(); return this; }
+
+    /** ANY: match any condition. ALL: must match every condition. */
+    public TabHandle setStyleWhitelistMode(WhitelistMode mode) {
+        tab.styleRules().setWhitelistMode(mode);
+        return this;
+    }
+
+    /** ANY: exclude if any condition matches. ALL: exclude only if all conditions match. */
+    public TabHandle setStyleBlacklistMode(BlacklistMode mode) {
+        tab.styleRules().setBlacklistMode(mode);
+        return this;
+    }
+
+    public List<StyleCondition> getWhitelistStyleConditions() { return Collections.unmodifiableList(tab.styleRules().whitelist()); }
+    public List<StyleCondition> getBlacklistStyleConditions() { return Collections.unmodifiableList(tab.styleRules().blacklist()); }
 
     /** Rescans the All tab's full message history against this tab's current rules and rebuilds it —
      *  call after changing rules if you want existing messages to reflect the new configuration

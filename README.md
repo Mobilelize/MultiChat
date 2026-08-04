@@ -314,7 +314,50 @@ tab.refilter();
 
 ---
 
-### 8. Multi-Tab (nested sub-tabs)
+### 8. Style rules
+
+Separate from filter rules (section 7) — these check how part of a message actually **renders** (bold, italic, underline, strikethrough, color, and whether it has a click/hover event), not its text. A message must satisfy both filter rules and style rules (if either is set) to be routed there. Same whitelist/blacklist shape as filter rules.
+
+```java
+// Require the first word to be italic AND colored gray — e.g. verifying a "[S]" sender prefix
+// actually renders styled, so plain text alone can't spoof it.
+tab.addWhitelistStyleCondition(StyleTarget.WORD, "", WordLocation.START,
+    List.of(StyleFlag.ITALIC), List.of(StyleColor.GRAY), List.of());
+
+// Pin to an exact word position instead of first/last
+tab.addWhitelistStyleCondition(StyleTarget.WORD, "Jack", WordLocation.INDEX, 2,
+    List.of(StyleFlag.BOLD), List.of(), List.of());
+
+// START_OF_MESSAGE / END_OF_MESSAGE check the first/last word's style, Word field ignored
+tab.addBlacklistStyleCondition(StyleTarget.END_OF_MESSAGE, "", WordLocation.ANYWHERE,
+    List.of(StyleFlag.OBFUSCATED), List.of(), List.of());
+
+// hexColors is for colors outside the 16 named StyleColor values — a character matches if its
+// color is in colors OR hexColors, so a multi-colored word can still match as a whole
+tab.addWhitelistStyleCondition(StyleTarget.WORD, "alert", WordLocation.ANYWHERE,
+    List.of(), List.of(), List.of(0xFF8800));
+
+// HAS_CLICK: does word 2 have a click event at all? Only part of a tokenized word needs it — e.g.
+// "<Steve>" where only "Steve" carries the ClickEvent, not the brackets. See flags note below.
+tab.addWhitelistStyleCondition(StyleTarget.WORD, "", WordLocation.INDEX, 2,
+    List.of(StyleFlag.HAS_CLICK), List.of(), List.of());
+
+tab.setStyleWhitelistMode(WhitelistMode.ANY);
+tab.setStyleBlacklistMode(BlacklistMode.ANY);
+
+List<StyleCondition> swl = tab.getWhitelistStyleConditions();
+List<StyleCondition> sbl = tab.getBlacklistStyleConditions();
+tab.clearWhitelistStyleConditions();
+tab.clearBlacklistStyleConditions();
+```
+
+`word` left blank skips content matching and just checks formatting at that location — for `WordLocation.ANYWHERE` this becomes an **existence** check instead (does this style appear anywhere in the message, at least one character), rather than pinning to one word.
+
+`flags` (empty allowed) requires every listed flag at once. Formatting flags (`BOLD`/`ITALIC`/`UNDERLINE`/`STRIKETHROUGH`/`OBFUSCATED`) must hold **uniformly** across every character in the checked range/word — that's what makes the spoof-guard example above work (the whole prefix must genuinely be italic). Interaction flags (`HAS_CLICK`, `HAS_HOVER`, `CLICK_RUN_COMMAND`, `CLICK_SUGGEST_COMMAND`, `CLICK_OPEN_URL`, `CLICK_COPY_TO_CLIPBOARD`, `HOVER_SHOW_TEXT`) instead only need **at least one** character in range to satisfy them — a clickable name is usually a substring of the tokenized word (brackets/punctuation around it typically aren't clickable), so requiring uniformity there would almost never match. `colors`/`hexColors` (both empty allowed, but at least one of flags/colors/hexColors must be set) require every character in range to be one of the listed colors, not necessarily the same one throughout.
+
+---
+
+### 9. Multi-Tab (nested sub-tabs)
 
 Turn a tab into a container for its own filtered sub-tabs — same layered-filter mechanic as the player-facing `Multi Tab` toggle. A sub-tab only ever sees what its parent's own filter already let through.
 
@@ -335,7 +378,7 @@ reports.removeSubTab("Region A");             // the protected "All" sub can't b
 
 ---
 
-### 9. More tab settings
+### 10. More tab settings
 
 Everything the player-facing Tab Edit screen can set is available on `TabHandle`:
 
@@ -357,7 +400,7 @@ boolean ts = tab.getShowTimestamps();
 
 ---
 
-### 10. Panels
+### 11. Panels
 
 Panels are no longer read-only — create and fully configure your own via `PanelHandle`:
 
@@ -403,7 +446,7 @@ MultiChatConfig config = MultiChatApi.getConfig();
 
 ---
 
-### 11. Click events
+### 12. Click events
 
 One call generates the action id, registers the callback, and returns a ready-to-use click style:
 
@@ -435,7 +478,7 @@ MultiChatApi.TAB_ACTION.register(id -> {
 
 ---
 
-### 12. Delete a message everywhere
+### 13. Delete a message everywhere
 
 Deletes a message (by its `LzChatEntry` identity, from `tab.getMessageEntries()`) from every tab that has it, including multi-tab sub-tabs — same as the player-facing "Delete from All" context menu item:
 
@@ -446,7 +489,7 @@ MultiChatApi.deleteMessageEverywhere(entry.entry());
 
 ---
 
-### 13. Chat themes
+### 14. Chat themes
 
 Register a color palette — shows up in the theme picker (Settings → Appearance) alongside the built-ins:
 
@@ -463,7 +506,7 @@ ChatTheme active = MultiChatApi.getActiveTheme();
 
 ---
 
-### 14. Events
+### 15. Events
 
 All events use the standard Fabric Event API — call `.register()` on the event field.
 
@@ -532,7 +575,7 @@ MultiChatApi.TAB_ACTION.register(actionId -> {
 
 ---
 
-### 15. Tab visibility
+### 16. Tab visibility
 
 Tabs track which panels they appear on as a set of panel IDs. Panel IDs are integers assigned per panel (0 = left by default, 1 = right, and so on for any additional panels).
 
@@ -547,13 +590,13 @@ Set<Integer> ids = tab.getVisiblePanels();
 
 ---
 
-### 16. API tab filter rules — how matching works
+### 17. API tab filter rules — how matching works
 
 Whether set via `tab.addWhitelistRule(...)` (section 7) or by the player through the in-game tab editor, rules apply to **incoming routed messages** (i.e. messages that arrive via MultiChat's routing pipeline). Messages sent via `tab.sendMessage()` or `tab.addMessageSilent()` are not filtered — they always appear.
 
 ---
 
-### 17. Soft dependency pattern
+### 18. Soft dependency pattern
 
 If MultiChat is optional in your mod:
 
@@ -602,3 +645,4 @@ All classes under `net.mobilelize.multichat.api` unless noted.
 - `ChatTab` fields are public by design for read access. Prefer `TabHandle` methods for mutation to ensure config is saved correctly. Same goes for `ChatPanel` and `PanelHandle`.
 - `addMessageSilent` and `setMessages` bypass pings and `MESSAGE_ADDED_TO_TAB`. Use them when populating a tab from your own stored data to avoid false notifications.
 - Sub-tabs (Multi-Tab) are never in `MultiChatApi.getTabs()` — they're only reachable via `TabHandle.getSubTabs()`/`getAllSubTab()`, since they're logically owned by their parent, not the global tab list.
+- Style rules (section 8) are a separate whitelist/blacklist from filter rules (section 7) — a message must satisfy both, if either has rules set. Style conditions live in `net.mobilelize.multichat.client.filter` (`StyleCondition`, `StyleTarget`, `WordLocation`, `StyleFlag`, `StyleColor`), not the `.api` package.

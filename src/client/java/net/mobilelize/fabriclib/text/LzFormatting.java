@@ -60,6 +60,14 @@ public enum LzFormatting {
         };
     }
 
+    /** RGB for a legacy color code (0-9/a-f, case-insensitive), or null if the code isn't a color
+     *  (e.g. style codes k-o/r have no RGB). */
+    @Nullable
+    public static Integer colorRgbForCode(char code) {
+        Formatting f = fromColorCode(Character.toLowerCase(code));
+        return f != null ? f.getColorValue() : null;
+    }
+
     // 1.21: Formatting.XXX   26.1: ChatFormatting.XXX
     @Nullable
     private static Formatting fromColorCode(char code) {

@@ -3,6 +3,7 @@ package net.mobilelize.multichat.client;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.filter.FilterRuleSet;
+import net.mobilelize.multichat.client.filter.StyleFilterSet;
 
 import java.util.*;
 
@@ -77,6 +78,7 @@ public class ChatTab {
     private List<ChatTab> subTabs;    // lazy-init below, NOT final — Gson uses Unsafe allocation for ChatTab
                                        // (no no-arg constructor), which skips field initializers, so any tab
                                        // saved before this field existed deserializes with subTabs == null.
+    private StyleFilterSet styleRules; // same reasoning — lazy-init, not final
 
     // ── Runtime fields (not serialized) — lazy-init because Gson uses Unsafe ──
     private transient List<MessageEntry> messages;
@@ -110,6 +112,12 @@ public class ChatTab {
 
     // ── Filtering ──────────────────────────────────────────────────────────────
     public FilterRuleSet filterRules() { return filterRules; }
+
+    /** Style-aware conditions, separate from filterRules — see StyleFilterSet. Empty = no restriction. */
+    public StyleFilterSet styleRules() {
+        if (styleRules == null) styleRules = new StyleFilterSet();
+        return styleRules;
+    }
 
     // ── Multi-tab (nested sub-tabs) ───────────────────────────────────────────
     // Sub-tabs are real ChatTab objects, never added to ChatManager's global tab list — they're only

@@ -1,11 +1,13 @@
 package net.mobilelize.multichat.client.config;
 
+import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.gui.entries.MultiElementListEntry;
 import me.shedaniel.clothconfig2.gui.entries.NestedListListEntry;
 import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
+import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder;
 import net.minecraft.client.gui.screen.Screen;
 import net.mobilelize.fabriclib.client.LzSound;
 import net.mobilelize.fabriclib.text.LzText;
@@ -37,6 +39,31 @@ public class TabEditScreen {
         }
 
         FilterRule toFilterRule() { return new FilterRule(type, value, indicator); }
+    }
+
+    private static class MutableStyleCondition {
+        StyleTarget        target;
+        String             word;
+        WordLocation       wordLocation;
+        int                wordIndex;
+        List<StyleFlag>    flags;
+        List<StyleColor>   colors;
+        List<Integer>      hexColors;
+
+        MutableStyleCondition(StyleTarget target, String word, WordLocation wordLocation, int wordIndex,
+                               List<StyleFlag> flags, List<StyleColor> colors, List<Integer> hexColors) {
+            this.target       = target;
+            this.word         = word;
+            this.wordLocation = wordLocation;
+            this.wordIndex    = wordIndex;
+            this.flags        = new ArrayList<>(flags);
+            this.colors       = new ArrayList<>(colors);
+            this.hexColors    = new ArrayList<>(hexColors);
+        }
+
+        StyleCondition toStyleCondition() {
+            return new StyleCondition(target, word, wordLocation, wordIndex, flags, colors, hexColors);
+        }
     }
 
     public static Screen create(Screen parent, ChatTab tab) {
@@ -393,6 +420,69 @@ public class TabEditScreen {
             list.forEach(mr -> tab.filterRules().blacklist().add(mr.toFilterRule()));
         }));
 
+        // ── Style Whitelist / Blacklist ──────────────────────────────────
+        // Separate from the text Whitelist/Blacklist above — these check actual rendering style
+        // (bold/italic/color), not text. A message must satisfy both to be routed here. Same
+        // whitelist/blacklist shape as the text rules, just style-based instead of text-based.
+        ConfigCategory styleWlCat = builder.getOrCreateCategory(LzText.literal("Style Whitelist").mc());
+
+        styleWlCat.addEntry(eb.startTextDescription(LzText.format(
+                """
+                        &e&lStyle Whitelist&r
+                        &7Checks how part of the message actually &frenders&r&7, not its text. &fEmpty list
+                        = no restriction.&r Each condition has three small sections:
+                          &fFormatting&r&7 — toggle on every style that must be present at once (e.g. bold
+                            AND italic).
+                          &fColors&r&7 — toggle on the named colors allowed; &fHex Colors&r&7 — add raw RGB
+                            values for colors outside the 16 named ones. Every character checked must be ONE
+                            of the toggled/added colors, not necessarily the SAME one throughout — so a
+                            multi-colored word (different color per letter) can still match, as long as each
+                            color it uses is toggled on or listed.
+                        Leave Formatting/Colors/Hex Colors empty to not check them. At least one must be set.
+                          &fWORD&r&7 — find a specific word and check its style. &fWord Location&r&7 decides
+                            where: &fANYWHERE&r&7 searches for the word anywhere in the message, &fSTART&r&7/
+                            &fEND&r&7 pin it to the first/last word, &fINDEX&r&7 pins it to an exact position
+                            via &fWord Index&r&7 (1 = first word, 2 = second, etc.) — e.g. word &f"Jack"&r&7 +
+                            &fSTART&r&7 requires the first word to be "Jack" AND colored red.
+                          &fSTART_OF_MESSAGE&r&7 / &fEND_OF_MESSAGE&r&7 — does the message's first/last word
+                            have this formatting? Simple boundary check, &fWord&r&7 field is ignored.
+                          &7Leave &fWord&r&7 blank to skip content matching and just check formatting at that
+                            location instead, without caring what it says (e.g. "is the sender's name italic,"
+                            regardless of the actual name). For &fANYWHERE&r&7, blank instead checks if this
+                            formatting appears &fanywhere at all&r&7 in the message (at least one character) —
+                            useful for click/hover checks, where only a small part (a link, a name) is styled."""
+        ).mc()).build());
+
+        styleWlCat.addEntry(eb.startEnumSelector(LzText.literal("Style Whitelist Mode").mc(), WhitelistMode.class,
+                tab.styleRules().whitelistMode())
+            .setDefaultValue(WhitelistMode.ANY)
+            .setTooltip(LzText.literal("ANY: match any condition. ALL: must match every condition.").mc())
+            .setSaveConsumer(tab.styleRules()::setWhitelistMode)
+            .build());
+
+        styleWlCat.addEntry(buildStyleConditionList(eb, LzText.literal("Style Whitelist"), tab.styleRules().whitelist(), list -> {
+            tab.styleRules().whitelist().clear();
+            list.forEach(mc -> tab.styleRules().whitelist().add(mc.toStyleCondition()));
+        }));
+
+        // ── Style Blacklist ───────────────────────────────────────────────
+        ConfigCategory styleBlCat = builder.getOrCreateCategory(LzText.literal("Style Blacklist").mc());
+
+        styleBlCat.addEntry(eb.startTextDescription(LzText.literal(
+                "Same shape as Style Whitelist, but excludes a match instead of requiring one.").mc()).build());
+
+        styleBlCat.addEntry(eb.startEnumSelector(LzText.literal("Style Blacklist Mode").mc(), BlacklistMode.class,
+                tab.styleRules().blacklistMode())
+            .setDefaultValue(BlacklistMode.ANY)
+            .setTooltip(LzText.literal("ANY: exclude if any condition matches. ALL: exclude only if all conditions match.").mc())
+            .setSaveConsumer(tab.styleRules()::setBlacklistMode)
+            .build());
+
+        styleBlCat.addEntry(buildStyleConditionList(eb, LzText.literal("Style Blacklist"), tab.styleRules().blacklist(), list -> {
+            tab.styleRules().blacklist().clear();
+            list.forEach(mc -> tab.styleRules().blacklist().add(mc.toStyleCondition()));
+        }));
+
         return builder.build();
     }
 
@@ -430,6 +520,136 @@ public class TabEditScreen {
                         eb.startEnumSelector(LzText.literal("Indicator").mc(), IndicatorFilter.class, rule.indicator)
                             .setDefaultValue(IndicatorFilter.ANY)
                             .setSaveConsumer(v -> rule.indicator = v)
+                            .build()
+                    ),
+                    true
+                );
+            }
+        );
+    }
+
+    private static NestedListListEntry<MutableStyleCondition, MultiElementListEntry<MutableStyleCondition>> buildStyleConditionList(
+            ConfigEntryBuilder eb, LzText label, List<StyleCondition> source, Consumer<List<MutableStyleCondition>> saveConsumer) {
+
+        List<MutableStyleCondition> conditions = source.stream()
+            .map(c -> new MutableStyleCondition(c.target(), c.word(), c.wordLocation(), c.wordIndex(), c.flags(), c.colors(), c.hexColors()))
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        return new NestedListListEntry<>(
+            label.mc(),
+            conditions,
+            true,
+            Optional::empty,
+            saveConsumer,
+            ArrayList::new,
+            eb.getResetButtonKey(),
+            true,
+            true,
+            (elem, nestedList) -> {
+                MutableStyleCondition cond = elem != null
+                    ? elem : new MutableStyleCondition(StyleTarget.WORD, "", WordLocation.ANYWHERE, 1, List.of(), List.of(), List.of());
+                return new MultiElementListEntry<>(
+                    LzText.literal("Condition").mc(),
+                    cond,
+                    List.of(
+                        eb.startEnumSelector(LzText.literal("Target").mc(), StyleTarget.class, cond.target)
+                            .setDefaultValue(StyleTarget.WORD)
+                            .setSaveConsumer(v -> cond.target = v)
+                            .build(),
+                        eb.startStrField(LzText.literal("Word").mc(), cond.word)
+                            .setDefaultValue("")
+                            .setTooltip(LzText.literal("Only used when Target = WORD. Blank + START/END/INDEX = check that word's style without caring what it says.").mc())
+                            .setSaveConsumer(v -> cond.word = v)
+                            .build(),
+                        eb.startEnumSelector(LzText.literal("Word Location").mc(), WordLocation.class, cond.wordLocation)
+                            .setDefaultValue(WordLocation.ANYWHERE)
+                            .setTooltip(LzText.literal("Only used when Target = WORD. Where the word is allowed to be found.").mc())
+                            .setSaveConsumer(v -> cond.wordLocation = v)
+                            .build(),
+                        eb.startIntField(LzText.literal("Word Index").mc(), cond.wordIndex)
+                            .setDefaultValue(1)
+                            .setMin(1)
+                            .setTooltip(LzText.literal("Only used when Word Location = INDEX. 1 = first word, 2 = second word, etc.").mc())
+                            .setSaveConsumer(v -> cond.wordIndex = v)
+                            .build(),
+                        buildFlagCategory(eb, cond),
+                        buildColorCategory(eb, cond),
+                        buildHexColorList(eb, LzText.literal("Hex Colors"), cond.hexColors, list -> cond.hexColors = list)
+                    ),
+                    true
+                );
+            }
+        );
+    }
+
+    /** All 5 flags pre-populated as toggles — every one turned on must be present at once (AND). */
+    private static AbstractConfigListEntry<?> buildFlagCategory(ConfigEntryBuilder eb, MutableStyleCondition cond) {
+        SubCategoryBuilder cat = eb.startSubCategory(LzText.literal("Formatting").mc()).setExpanded(false);
+        for (StyleFlag f : StyleFlag.values()) {
+            cat.add(eb.startBooleanToggle(LzText.literal(capitalize(f.name())).mc(), cond.flags.contains(f))
+                .setDefaultValue(false)
+                .setSaveConsumer(v -> {
+                    if (v) { if (!cond.flags.contains(f)) cond.flags.add(f); }
+                    else cond.flags.remove(f);
+                })
+                .build());
+        }
+        return cat.build();
+    }
+
+    /** All 16 named colors pre-populated as toggles (NONE excluded — meaningless as a toggle). Each
+     *  character in range must be one of the toggled-on colors or hex colors below (not necessarily the
+     *  same one throughout) — a multi-colored word can still match as long as every color it uses is
+     *  somewhere in one of the two lists. */
+    private static AbstractConfigListEntry<?> buildColorCategory(ConfigEntryBuilder eb, MutableStyleCondition cond) {
+        SubCategoryBuilder cat = eb.startSubCategory(LzText.literal("Colors").mc()).setExpanded(false);
+        for (StyleColor c : StyleColor.values()) {
+            if (c == StyleColor.NONE) continue;
+            cat.add(eb.startBooleanToggle(LzText.literal(capitalize(c.name())).mc(), cond.colors.contains(c))
+                .setDefaultValue(false)
+                .setSaveConsumer(v -> {
+                    if (v) { if (!cond.colors.contains(c)) cond.colors.add(c); }
+                    else cond.colors.remove(c);
+                })
+                .build());
+        }
+        return cat.build();
+    }
+
+    private static String capitalize(String enumName) {
+        String lower = enumName.toLowerCase().replace('_', ' ');
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+    }
+
+    private static class MutableHexRow { int value; MutableHexRow(int v) { value = v; } }
+
+    /** Raw RGB values, for colors outside the 16 named ones — open-ended, so unlike Formatting/Colors this
+     *  genuinely needs an add/remove list rather than pre-populated toggles. Combined with the Colors
+     *  category above (a character matches if it's in either list). */
+    private static NestedListListEntry<MutableHexRow, MultiElementListEntry<MutableHexRow>> buildHexColorList(
+            ConfigEntryBuilder eb, LzText label, List<Integer> source, Consumer<List<Integer>> saveConsumer) {
+
+        List<MutableHexRow> rows = source.stream().map(MutableHexRow::new).collect(Collectors.toCollection(ArrayList::new));
+
+        return new NestedListListEntry<>(
+            label.mc(),
+            rows,
+            true,
+            Optional::empty,
+            list -> saveConsumer.accept(list.stream().map(r -> r.value).collect(Collectors.toList())),
+            ArrayList::new,
+            eb.getResetButtonKey(),
+            true,
+            true,
+            (elem, nestedList) -> {
+                MutableHexRow row = elem != null ? elem : new MutableHexRow(0xFFFFFF);
+                return new MultiElementListEntry<>(
+                    LzText.literal("Hex Color").mc(),
+                    row,
+                    List.of(
+                        eb.startColorField(LzText.literal("Color").mc(), row.value)
+                            .setDefaultValue(0xFFFFFF)
+                            .setSaveConsumer(v -> row.value = v)
                             .build()
                     ),
                     true

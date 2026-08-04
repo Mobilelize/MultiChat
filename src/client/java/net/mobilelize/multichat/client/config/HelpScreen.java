@@ -98,6 +98,27 @@ public class HelpScreen {
 
         help.addEntry(eb.startTextDescription(LzText.format(
                 """
+                        &e&lStyle Rules (Whitelist / Blacklist)&r
+                        &7Tab Edit → &fStyle Whitelist&r&7 / &fStyle Blacklist&r&7. Checks how part of a message
+                        actually &frenders&r&7 — bold, italic, underline, strikethrough, color — not its text.
+                        Separate from the text Filters above; a message must satisfy both (if either has rules).
+                          &fTarget&r&7 — &fWORD&r&7 checks a specific word's style. &fSTART_OF_MESSAGE&r&7 /
+                            &fEND_OF_MESSAGE&r&7 check the first/last word's style.
+                          &fWord Location&r&7 (WORD only) — &fANYWHERE&r&7 searches for the word anywhere in the
+                            message. &fSTART/END/INDEX&r&7 pin it to the first/last/Nth word instead.
+                          &7Leave &fWord&r&7 blank to skip content matching and just check formatting at that
+                            location — for &fANYWHERE&r&7 this checks the whole message's style instead of a
+                            specific word.
+                          &fFormatting&r&7 — toggle every style that must be present at once (bold AND italic).
+                          &fColors&r&7 / &fHex Colors&r&7 — every character in range must be one of the toggled
+                            or added colors, not necessarily the same one throughout, so a multi-colored word
+                            can still match as long as every color it uses is in one of the two lists.
+                        &7Example: require a &f[S]&r&7 sender prefix to actually render italic before treating
+                        it as genuine staff chat — plain text alone can be spoofed by anyone typing it."""
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+                """
                         &e&lDifference Mode&r
                         &7Routes messages through a priority pipeline based on the active tab on each enabled panel.
                           &fLayer index&r&7 — higher number = higher priority. Tabs at the same index share a layer.

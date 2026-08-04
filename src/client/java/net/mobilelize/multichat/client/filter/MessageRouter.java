@@ -68,22 +68,22 @@ public class MessageRouter {
                 case ALL     -> {
                     ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                     touchedTabs.add(tab);
-                    routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
+                    routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, rawLzText, touchedTabs);
                 }
                 case FILTERED -> {
                     if (tab.differenceMode() && !tab.differenceException()) break;
-                    if (tab.filterRules().matches(filterText, indicator)) {
+                    if (tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText)) {
                         ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                         touchedTabs.add(tab);
-                        routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
+                        routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, rawLzText, touchedTabs);
                     }
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
-                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator)) {
+                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText)) {
                         ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                         touchedTabs.add(tab);
-                        routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
+                        routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, rawLzText, touchedTabs);
                     }
                 }
                 case SEARCH -> {
@@ -103,7 +103,7 @@ public class MessageRouter {
             boolean activeNonDiffMatched = false;
             for (ChatTab tab : ChatManager.getAllActivePanelsTabs()) {
                 if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
-                        && tab.filterRules().matches(filterText, indicator)) {
+                        && tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText)) {
                     activeNonDiffMatched = true; break;
                 }
             }
@@ -111,7 +111,7 @@ public class MessageRouter {
                 for (ChatTab tab : ChatManager.getTabs()) {
                     if (tab.type() == TabType.FILTERED && !tab.differenceMode() && !tab.differenceException()
                             && tab.differenceInclusion() && ChatManager.isTabInAnyEnabledPanel(tab)
-                            && tab.filterRules().matches(filterText, indicator)) {
+                            && tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText)) {
                         activeNonDiffMatched = true; break;
                     }
                 }
@@ -121,10 +121,10 @@ public class MessageRouter {
                 for (List<ChatTab> layerTabs : diffByLayer.values()) {
                     boolean anyMatched = false;
                     for (ChatTab tab : layerTabs) {
-                        if (tab.filterRules().matches(filterText, indicator)) {
+                        if (tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText)) {
                             ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                             touchedTabs.add(tab);
-                            routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
+                            routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, rawLzText, touchedTabs);
                             anyMatched = true;
                         }
                     }
@@ -138,13 +138,13 @@ public class MessageRouter {
 
     // Layered fan-out for multi-tab sub-tabs: only called once the parent's own gate already passed
     // (parent's processMessage already ran above), so a sub-tab can only ever see what its parent let
-    // through — never called independently. The auto-created "All" sub-tab has empty filterRules, which
-    // FilterRuleSet.matches already treats as "match everything", so it needs no special-case here.
+    // through — never called independently. The auto-created "All" sub-tab has empty filterRules/styleRules,
+    // which both already treat "empty" as "match everything", so it needs no special-case here.
     private static void routeToSubTabs(ChatTab parent, int tick, LzText content, LzMessageIndicator indicator,
-                                        LzText raw, LzChatEntry entry, String filterText, List<ChatTab> touchedTabs) {
+                                        LzText raw, LzChatEntry entry, String filterText, LzText rawLzText, List<ChatTab> touchedTabs) {
         if (!parent.isMultiTab()) return;
         for (ChatTab sub : parent.subTabs()) {
-            if (sub.filterRules().matches(filterText, indicator)) {
+            if (sub.filterRules().matches(filterText, indicator) && sub.styleRules().matches(rawLzText)) {
                 ChatManager.processMessage(sub, tick, content, indicator, raw, entry);
                 touchedTabs.add(sub);
             }
