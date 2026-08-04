@@ -183,6 +183,10 @@ public class ChatManager {
 
     public static void refilterTab(ChatTab tab) {
         if (tab.type() != TabType.FILTERED) return;
+        // If this is a multi-tab's sub-tab, live routing only ever lets it see what the parent's own
+        // filter already let through (MessageRouter.routeToSubTabs) — refilter needs the same gate,
+        // otherwise it'd show messages the parent would have blocked live.
+        ChatTab parentGate = findParentOf(tab);
         tab.clearMessages();
         for (ChatPanel panel : getAllActivePanels()) {
             panel.clearTabLines(tab);
@@ -219,6 +223,8 @@ public class ChatManager {
                 ? higherDiffTabs.stream().noneMatch(t -> t.filterRules().matches(filterText, indicator))
                   && tab.filterRules().matches(filterText, indicator)
                 : tab.filterRules().matches(filterText, indicator);
+            if (include && parentGate != null && !parentGate.filterRules().matches(filterText, indicator))
+                include = false;
             if (!include) continue;
 
             boolean doCollapse = tab.collapseRepeating()
@@ -426,10 +432,23 @@ public class ChatManager {
     public static List<ChatPanel> getAllPanels() { return panels; }
     public static List<ChatTab>   getTabs()      { return tabs; }
 
+    /** The multi-tab that owns the given sub-tab, or null if it isn't anyone's sub (including if it's
+     *  a regular top-level tab). Sub-tabs aren't in the global tabs list, so this is the only way to
+     *  find "who owns this" — used for sibling-scoped name clashes and gate-aware refiltering. */
+    public static @Nullable ChatTab findParentOf(ChatTab sub) {
+        for (ChatTab t : tabs) {
+            if (t.isMultiTab() && t.subTabs().contains(sub)) return t;
+        }
+        return null;
+    }
+
     /** Removes a panel and cleans up every tab's reference to it. Shared by PanelListScreen's Del button and ContextMenu's "Close Popout". */
     public static void removePanel(ChatPanel panel) {
         int id = panel.id();
-        for (ChatTab t : tabs) t.visibleOnPanels().remove(id);
+        for (ChatTab t : tabs) {
+            t.visibleOnPanels().remove(id);
+            if (t.isMultiTab()) for (ChatTab sub : t.subTabs()) sub.visibleOnPanels().remove(id);
+        }
         panels.remove(panel);
         MultichatClient.saveTabsToConfig();
     }

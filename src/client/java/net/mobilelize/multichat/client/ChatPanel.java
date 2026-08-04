@@ -22,6 +22,11 @@ public class ChatPanel {
 
     private int     margin             = 0;
     private int activeTabId = 0;
+    // Mirrors activeTabId whenever it's a genuine top-level index (i.e. not drilled into a multi-tab's
+    // subs). expandedParent is transient and always null right after a restart, but activeTabId is
+    // persisted — without this, restarting while drilled in would leave activeTabId pointing at a raw
+    // sub-list position that means something else entirely once read back as a top-level index.
+    private int topLevelActiveTabId = 0;
     private transient ChatTab activeTab = null;
     private boolean enabled            = false;
     private boolean showOnlyWhenFocused = false;
@@ -52,6 +57,7 @@ public class ChatPanel {
     private boolean useActiveTabContext = false;
 
     private transient Map<ChatTab, Integer> scrollPositions;
+    private transient ChatTab               expandedParent; // multi-tab currently drilled into on this panel, or null
 
     public ChatPanel() {}
 
@@ -82,6 +88,36 @@ public class ChatPanel {
     private Map<ChatTab, Integer> scrollPositions() {
         if (scrollPositions == null) scrollPositions = new HashMap<>();
         return scrollPositions;
+    }
+
+    /** Drills into a multi-tab: getVisibleTabs() substitutes its sub-tabs for the normal top-level list,
+     *  so the existing tab-bar rendering/click/arrow-cycling code works on sub-tabs with zero new code. */
+    public void expandMultiTab(ChatTab parent) {
+        // Capture the parent's own top-level position before swapping getVisibleTabs() over to its subs.
+        int idx = getVisibleTabs().indexOf(parent);
+        if (idx >= 0) topLevelActiveTabId = idx;
+        expandedParent = parent;
+        setActiveTabId(0); // lands on the parent's first sub-tab ("All")
+    }
+
+    /** Backs out of the currently-expanded multi-tab, landing back on the parent itself. */
+    public void collapseMultiTab() {
+        ChatTab parent = expandedParent;
+        if (parent == null) return;
+        expandedParent = null;
+        int idx = getVisibleTabs().indexOf(parent);
+        setActiveTabId(Math.max(0, idx));
+    }
+
+    public boolean isExpanded() { return expandedParent != null; }
+
+    /** Called once after loading from disk: expandedParent is transient and always null at this point,
+     *  but activeTabId may still hold a raw sub-list index left over from before the client closed —
+     *  meaningless (or pointing at the wrong tab entirely) once read back as a top-level index. Reset to
+     *  the last known top-level tab (the parent, if the panel was drilled in) instead. */
+    public void normalizeActiveTabAfterLoad() {
+        activeTabId = topLevelActiveTabId;
+        activeTab   = null;
     }
 
     private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
@@ -136,7 +172,10 @@ public class ChatPanel {
     }
 
     public void rebuildAllTabLines() {
-        for (ChatTab tab : ChatManager.getTabs()) rebuildTabLines(tab);
+        for (ChatTab tab : ChatManager.getTabs()) {
+            rebuildTabLines(tab);
+            if (tab.isMultiTab()) for (ChatTab sub : tab.subTabs()) rebuildTabLines(sub);
+        }
     }
 
 
@@ -259,9 +298,20 @@ public class ChatPanel {
     // ── Tab helpers ────────────────────────────────────────────────────────────
 
     public List<ChatTab> getVisibleTabs() {
-        return ChatManager.getTabs().stream()
+        if (expandedParent != null) return expandedParent.subTabs();
+        // Sub-tabs aren't in ChatManager.getTabs() (only reachable via their parent's subTabs()), so a
+        // sub popped out onto its own dedicated panel (visibleOnPanels() naming that panel directly,
+        // not via drill-in) needs its own explicit lookup here too, not just the top-level stream below.
+        List<ChatTab> result = ChatManager.getTabs().stream()
             .filter(t -> t.visibleOnPanels().contains(this.id))
-            .toList();
+            .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+        for (ChatTab t : ChatManager.getTabs()) {
+            if (!t.isMultiTab()) continue;
+            for (ChatTab sub : t.subTabs()) {
+                if (sub.visibleOnPanels().contains(this.id)) result.add(sub);
+            }
+        }
+        return result;
     }
 
     public ChatTab getActiveTab() {
@@ -269,10 +319,15 @@ public class ChatPanel {
         if (visible.isEmpty()) { activeTab = null; return null; }
         if (activeTab != null) {
             int idx = visible.indexOf(activeTab);
-            if (idx >= 0) { activeTabId = idx; return activeTab; }
+            if (idx >= 0) {
+                activeTabId = idx;
+                if (expandedParent == null) topLevelActiveTabId = idx;
+                return activeTab;
+            }
         }
         if (activeTabId >= visible.size()) activeTabId = 0;
         activeTab = visible.get(activeTabId);
+        if (expandedParent == null) topLevelActiveTabId = activeTabId;
         return activeTab;
     }
 
@@ -284,6 +339,7 @@ public class ChatPanel {
         if (visible.isEmpty()) { activeTabId = 0; activeTab = null; return; }
         activeTabId = Math.max(0, Math.min(index, visible.size() - 1));
         activeTab = visible.get(activeTabId);
+        if (expandedParent == null) topLevelActiveTabId = activeTabId;
     }
 
     /** Scroll position in visual line index (0 = no scroll, newest at bottom — mirrors vanilla). */

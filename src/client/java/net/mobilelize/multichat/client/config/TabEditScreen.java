@@ -17,6 +17,7 @@ import net.mobilelize.multichat.client.filter.*;
 import net.mobilelize.multichat.client.ping.PingPlayer;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -65,9 +66,13 @@ public class TabEditScreen {
                 .setErrorSupplier(v -> {
                     if (v.trim().isEmpty()) return Optional.of(LzText.literal("Name cannot be empty.").mc());
                     if (tab.apiId() == null) {
-                        boolean clash = ChatManager.getTabs().stream()
-                            .filter(t -> t != tab && t.type() == TabType.FILTERED)
-                            .anyMatch(t -> t.name().equalsIgnoreCase(v.trim()));
+                        // Sub-tabs aren't in the global tab list — only need to be unique among siblings.
+                        ChatTab owner = ChatManager.findParentOf(tab);
+                        boolean clash = owner != null
+                            ? owner.subTabs().stream().anyMatch(t -> t != tab && t.name().equalsIgnoreCase(v.trim()))
+                            : ChatManager.getTabs().stream()
+                                .filter(t -> t != tab && t.type() == TabType.FILTERED)
+                                .anyMatch(t -> t.name().equalsIgnoreCase(v.trim()));
                         if (clash) return Optional.of(LzText.literal("A tab with that name already exists.").mc());
                     }
                     return Optional.empty();
@@ -133,6 +138,36 @@ public class TabEditScreen {
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
                 .setSaveConsumer(v -> { if (v) ChatManager.refilterTab(tab); })
+                .build());
+
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Multi Tab").mc(), tab.isMultiTab())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Gives this tab sub-tabs. Messages that pass this tab's own filter are further split across its sub-tabs by their own rules. Click this tab in chat to drill into its sub-tabs; right-click any sub-tab → Collapse Sub-tabs to back out.").mc())
+                .setSaveConsumer(tab::setMultiTab)
+                .build());
+
+            settings.addEntry(eb.startStrList(
+                    LzText.literal("Sub-Tabs").mc(),
+                    tab.subTabs().stream().skip(1).map(ChatTab::name).collect(Collectors.toList()))
+                .setDefaultValue(List.of())
+                .setTooltip(LzText.literal("Extra sub-tabs for this Multi Tab, besides the built-in \"All\". Enable Multi Tab above first. Each sub-tab's own whitelist/blacklist rules are edited by opening it here as its own tab (Edit Tab), same as any other tab.").mc())
+                .setSaveConsumer(names -> {
+                    if (!tab.isMultiTab()) return;
+                    List<ChatTab> subs = tab.subTabs();
+                    ChatTab all = subs.isEmpty() ? null : subs.get(0);
+                    List<ChatTab> rest = subs.size() > 1 ? new ArrayList<>(subs.subList(1, subs.size())) : new ArrayList<>();
+                    List<ChatTab> newRest = new ArrayList<>();
+                    for (String name : names) {
+                        String trimmed = name.trim();
+                        if (trimmed.isEmpty()) continue;
+                        ChatTab existing = rest.stream().filter(s -> s.name().equals(trimmed)).findFirst().orElse(null);
+                        if (existing != null) { rest.remove(existing); newRest.add(existing); }
+                        else newRest.add(new ChatTab(trimmed, TabType.FILTERED, Collections.emptyList()));
+                    }
+                    subs.clear();
+                    if (all != null) subs.add(all);
+                    subs.addAll(newRest);
+                })
                 .build());
         }
 

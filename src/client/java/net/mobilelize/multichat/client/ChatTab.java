@@ -73,6 +73,10 @@ public class ChatTab {
     private int              pingCooldownSec         = -1;
     private int              pingSilenceThresholdSec = -1;
     private int              pingAfkThresholdSec     = -1;
+    private boolean       isMultiTab = false;
+    private List<ChatTab> subTabs;    // lazy-init below, NOT final — Gson uses Unsafe allocation for ChatTab
+                                       // (no no-arg constructor), which skips field initializers, so any tab
+                                       // saved before this field existed deserializes with subTabs == null.
 
     // ── Runtime fields (not serialized) — lazy-init because Gson uses Unsafe ──
     private transient List<MessageEntry> messages;
@@ -106,6 +110,24 @@ public class ChatTab {
 
     // ── Filtering ──────────────────────────────────────────────────────────────
     public FilterRuleSet filterRules() { return filterRules; }
+
+    // ── Multi-tab (nested sub-tabs) ───────────────────────────────────────────
+    // Sub-tabs are real ChatTab objects, never added to ChatManager's global tab list — they're only
+    // reachable via parent.subTabs(), so they never show up in normal tab-bar cycling/arrow-key logic,
+    // and routing (MessageRouter) fans out to them manually instead of the normal top-level loop.
+    public boolean isMultiTab() { return isMultiTab; }
+    public void setMultiTab(boolean v) {
+        isMultiTab = v;
+        if (v && subTabs().isEmpty()) {
+            ChatTab all = new ChatTab("All", TabType.FILTERED, Collections.emptyList());
+            all.setPlayerDeletable(false); // mirrors the top-level All tab being a protected system tab
+            subTabs().add(all);
+        }
+    }
+    public List<ChatTab> subTabs() {
+        if (subTabs == null) subTabs = new ArrayList<>();
+        return subTabs;
+    }
 
     // ── Collapse tracking ──────────────────────────────────────────────────────
     public CollapseState collapseState() {

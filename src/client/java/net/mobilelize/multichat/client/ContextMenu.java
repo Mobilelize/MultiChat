@@ -32,6 +32,7 @@ public class ContextMenu {
     public static final String ID_MOVE_LEFT         = "move_left";
     public static final String ID_MOVE_RIGHT        = "move_right";
     public static final String ID_POPOUT_TAB        = "popout_tab";
+    public static final String ID_COLLAPSE_SUBTABS  = "collapse_subtabs";
 
     private static final int ITEM_H  = 11;
     private static final int PADDING = 4;
@@ -83,6 +84,7 @@ public class ContextMenu {
         { ID_MOVE_LEFT,         "Move Left"           },
         { ID_MOVE_RIGHT,        "Move Right"          },
         { ID_POPOUT_TAB,        "Pop Out"             },
+        { ID_COLLAPSE_SUBTABS,  "Collapse Sub-tabs"   },
     };
 
     private static boolean shown(String id) {
@@ -138,9 +140,11 @@ public class ContextMenu {
         if (shown(ID_SCROLL_BOTTOM)) list.add("Scroll to Bottom");
         if (shown(ID_EXPORT_ALL))    list.add("Export All");
 
-        if (isMoveable(t) && tabIndex > firstMoveableIdx() && shown(ID_MOVE_LEFT))
+        // tabIndex is -1 for sub-tabs (never in the global tab list) — guard explicitly rather than
+        // relying on the sign of -1 happening to fail the "< size - 1" comparison for Move Left only.
+        if (isMoveable(t) && tabIndex >= 0 && tabIndex > firstMoveableIdx() && shown(ID_MOVE_LEFT))
             list.add("Move Left");
-        if (isMoveable(t) && tabIndex < ChatManager.getTabs().size() - 1 && shown(ID_MOVE_RIGHT))
+        if (isMoveable(t) && tabIndex >= 0 && tabIndex < ChatManager.getTabs().size() - 1 && shown(ID_MOVE_RIGHT))
             list.add("Move Right");
 
         if (t.type() != TabType.SEARCH && t.type() != TabType.NOTES
@@ -150,6 +154,9 @@ public class ContextMenu {
 
         // Not toggleable — always available on a popout panel, regardless of which tab you right-click
         if (panel != null && panel.popout()) list.add("Close Popout");
+
+        // Not toggleable — the only way back out of a drilled-into multi-tab's sub-tab list
+        if (panel != null && panel.isExpanded()) list.add("Collapse Sub-tabs");
 
         // Close Search is never toggleable — it's the only way to close a search tab
         if (t.type() == TabType.SEARCH) list.add("Close Search");
@@ -293,6 +300,9 @@ public class ContextMenu {
             }
             case "Close Popout" -> {
                 if (panel != null && panel.popout()) ChatManager.removePanel(panel);
+            }
+            case "Collapse Sub-tabs" -> {
+                if (panel != null) panel.collapseMultiTab();
             }
             case "Close Search" -> {
                 if (tab instanceof SearchTab st) {

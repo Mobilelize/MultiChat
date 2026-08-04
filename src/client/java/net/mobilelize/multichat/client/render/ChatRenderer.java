@@ -45,10 +45,16 @@ public class ChatRenderer {
         return panel.tabsAtTop() ? topY - visibleLineCount * lineHeight - TAB_HEIGHT : topY;
     }
 
+    /** Width of the red "X" back button shown first in the tab bar while drilled into a multi-tab's
+     *  sub-tabs. Shared by ChatRenderer (draw) and ChatScreenMixin (click) so they can't drift apart. */
+    public static int backButtonWidth() { return LzDraw.textWidth("X") + 6; }
+
     public static String getTabLabel(ChatPanel panel, ChatTab tab) {
-        if (panel.showBadges() && tab.showBadge() && tab.hasUnread())
-            return tab.name() + " [" + tab.unreadCount() + "]";
-        return tab.name();
+        String label = (panel.showBadges() && tab.showBadge() && tab.hasUnread())
+            ? tab.name() + " [" + tab.unreadCount() + "]"
+            : tab.name();
+        if (tab.isMultiTab()) label = "✻" + label;
+        return label;
     }
 
     public static void render(ChatHud chat, LzDrawContext context, int currentTick,
@@ -134,8 +140,9 @@ public class ChatRenderer {
         panel.setTabScrollOffset(LzMath.clamp(panel.tabScrollOffset(), 0, Math.max(0, visibleTabs.size() - 1)));
 
         boolean hasLeft = panel.tabScrollOffset() > 0;
+        int backW = panel.isExpanded() ? backButtonWidth() : 0;
 
-        int simX = hasLeft ? -4 + ARROW_W : -4;
+        int simX = -4 + backW + (hasLeft ? ARROW_W : 0);
         int simEnd = chatWidth + 4 - ARROW_W;
         boolean hasRight = false;
         for (int i = panel.tabScrollOffset(); i < visibleTabs.size(); i++) {
@@ -149,6 +156,10 @@ public class ChatRenderer {
         ChatTheme theme = ThemeRegistry.active();
 
         int x = -4;
+        if (panel.isExpanded()) {
+            LzDraw.drawText(context, "X", x + 3, topY + 1, 0xFFFF5555);
+            x += backW;
+        }
         if (hasLeft) {
             LzDraw.fill(context, x, topY, x + ARROW_W, topY + TAB_HEIGHT, theme.tabBgInactive);
             LzDraw.drawText(context, "<", x + 2, topY + 1, theme.tabArrowText);

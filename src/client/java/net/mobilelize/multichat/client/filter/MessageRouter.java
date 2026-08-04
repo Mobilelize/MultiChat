@@ -68,12 +68,14 @@ public class MessageRouter {
                 case ALL     -> {
                     ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                     touchedTabs.add(tab);
+                    routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
                 }
                 case FILTERED -> {
                     if (tab.differenceMode() && !tab.differenceException()) break;
                     if (tab.filterRules().matches(filterText, indicator)) {
                         ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                         touchedTabs.add(tab);
+                        routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
                     }
                 }
                 case API -> {
@@ -81,6 +83,7 @@ public class MessageRouter {
                     if (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator)) {
                         ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                         touchedTabs.add(tab);
+                        routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
                     }
                 }
                 case SEARCH -> {
@@ -121,6 +124,7 @@ public class MessageRouter {
                         if (tab.filterRules().matches(filterText, indicator)) {
                             ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                             touchedTabs.add(tab);
+                            routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, touchedTabs);
                             anyMatched = true;
                         }
                     }
@@ -130,5 +134,20 @@ public class MessageRouter {
         }
 
         if (highlighted.actionId != null) HighlightEngine.registerRevert(highlighted.actionId, sharedEntry, content, touchedTabs);
+    }
+
+    // Layered fan-out for multi-tab sub-tabs: only called once the parent's own gate already passed
+    // (parent's processMessage already ran above), so a sub-tab can only ever see what its parent let
+    // through — never called independently. The auto-created "All" sub-tab has empty filterRules, which
+    // FilterRuleSet.matches already treats as "match everything", so it needs no special-case here.
+    private static void routeToSubTabs(ChatTab parent, int tick, LzText content, LzMessageIndicator indicator,
+                                        LzText raw, LzChatEntry entry, String filterText, List<ChatTab> touchedTabs) {
+        if (!parent.isMultiTab()) return;
+        for (ChatTab sub : parent.subTabs()) {
+            if (sub.filterRules().matches(filterText, indicator)) {
+                ChatManager.processMessage(sub, tick, content, indicator, raw, entry);
+                touchedTabs.add(sub);
+            }
+        }
     }
 }

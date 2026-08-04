@@ -388,6 +388,16 @@ public abstract class ChatScreenMixin {
 
             if (mouseX < panelLeftScreen || mouseX >= panelRightScreen) continue;
 
+            int backW = panel.isExpanded() ? ChatRenderer.backButtonWidth() : 0;
+            if (backW > 0) {
+                double backEnd = (backW + xOffset) * (double) scale;
+                if (button == 0 && mouseX < backEnd) {
+                    panel.collapseMultiTab();
+                    cir.setReturnValue(true);
+                    return;
+                }
+            }
+
             if (button == 0) {
                 if (hasLeft) {
                     double leftArrowEnd = (ChatRenderer.ARROW_W + xOffset) * (double) scale;
@@ -407,7 +417,7 @@ public abstract class ChatScreenMixin {
                 }
             }
 
-            int renderX    = hasLeft ? ChatRenderer.ARROW_W - 4 : -4;
+            int renderX    = -4 + backW + (hasLeft ? ChatRenderer.ARROW_W : 0);
             int tabAreaEnd = chatWidth + 4 - (hasRight ? ChatRenderer.ARROW_W : 0);
 
             for (int i = panel.tabScrollOffset(); i < visibleTabs.size(); i++) {
@@ -427,7 +437,7 @@ public abstract class ChatScreenMixin {
                     if (button == 0) {
                         boolean wasSameTab  = (i == panel.activeTabIndex());
                         boolean wasFocused  = (ChatManager.focusedPanel == panel);
-                        panel.setActiveTabId(i);
+                        if (tab.isMultiTab()) panel.expandMultiTab(tab); else panel.setActiveTabId(i);
                         panel.scrollActiveTabIntoView();
                         tab.clearUnread();
                         if (MultichatClient.CONFIG.switchFocusedPanelOnTabClick) {
@@ -540,13 +550,16 @@ public abstract class ChatScreenMixin {
                     boolean hasLeft  = panel.tabScrollOffset() > 0;
                     boolean hasRight = panel.tabLastRendered() >= 0
                                     && panel.tabLastRendered() < visibleTabs.size() - 1;
+                    int backWHover = panel.isExpanded() ? ChatRenderer.backButtonWidth() : 0;
                     boolean overTab  = false;
-                    if (hasLeft && mouseX < (ChatRenderer.ARROW_W + xOff) * (double) scale) {
+                    if (backWHover > 0 && mouseX < (backWHover + xOff) * (double) scale) {
+                        overTab = true;
+                    } else if (hasLeft && mouseX < (backWHover + ChatRenderer.ARROW_W + xOff) * (double) scale) {
                         overTab = true;
                     } else if (hasRight && mouseX >= (chatWidth + 4 - ChatRenderer.ARROW_W + 4 + xOff) * (double) scale) {
                         overTab = true;
                     } else {
-                        int renderX    = hasLeft ? ChatRenderer.ARROW_W - 4 : -4;
+                        int renderX    = -4 + backWHover + (hasLeft ? ChatRenderer.ARROW_W : 0);
                         int tabAreaEnd = chatWidth + 4 - (hasRight ? ChatRenderer.ARROW_W : 0);
                         for (int i = panel.tabScrollOffset(); i < visibleTabs.size(); i++) {
                             ChatTab tab = visibleTabs.get(i);

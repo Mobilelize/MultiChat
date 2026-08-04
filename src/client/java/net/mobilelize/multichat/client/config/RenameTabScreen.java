@@ -50,9 +50,14 @@ public class RenameTabScreen extends LzScreen {
     private void save() {
         String name = field.getText().trim();
         if (name.isEmpty()) return;
-        boolean nameConflict = ChatManager.getTabs().stream()
-            .filter(t -> t != tab && t.type() == tab.type())
-            .anyMatch(t -> t.name().equalsIgnoreCase(name));
+        // Sub-tabs aren't in the global tab list — their names only need to be unique among their own
+        // siblings (checked against the parent's other subs), not the whole registry.
+        ChatTab parent = ChatManager.findParentOf(tab);
+        boolean nameConflict = parent != null
+            ? parent.subTabs().stream().anyMatch(t -> t != tab && t.name().equalsIgnoreCase(name))
+            : ChatManager.getTabs().stream()
+                .filter(t -> t != tab && t.type() == tab.type())
+                .anyMatch(t -> t.name().equalsIgnoreCase(name));
         if (nameConflict) return;
         tab.setName(name);
         MultichatClient.saveTabsToConfig();

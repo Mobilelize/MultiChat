@@ -26,6 +26,10 @@ public class TabListScreen extends ConfigScreen {
     private static final int BTN_H      = 18;
     private static final int BTN_GAP    = 3;
 
+    /** One rendered row. parent == null for a normal top-level tab; otherwise this is one of
+     *  parent's sub-tabs, rendered indented directly under it. */
+    private record Row(ChatTab tab, ChatTab parent) {}
+
     private LzTextField nameField;
     private int     scrollOffset       = 0;
     private boolean scrollDragging     = false;
@@ -40,8 +44,40 @@ public class TabListScreen extends ConfigScreen {
     }
 
     private List<ChatTab> allTabs() { return ChatManager.getTabs(); }
-    private int listBottom()        { return height - 80; }
-    private int maxScroll()         { return Math.max(0, allTabs().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
+
+    // Sub-tabs aren't in ChatManager.getTabs() — they're only reachable via their parent's subTabs()
+    // (same reasoning as the chat tab bar: reuse the existing selected/moveable/edit machinery for
+    // top-level tabs completely unchanged, and layer sub-tab rows on top purely for display + Edit).
+    private List<Row> displayRows() {
+        List<Row> rows = new java.util.ArrayList<>();
+        for (ChatTab t : allTabs()) {
+            rows.add(new Row(t, null));
+            if (t.isMultiTab()) {
+                for (ChatTab sub : t.subTabs()) rows.add(new Row(sub, t));
+            }
+        }
+        return rows;
+    }
+
+    private int listBottom() { return height - 80; }
+    private int maxScroll()  { return Math.max(0, displayRows().size() * ROW_HEIGHT - (listBottom() - LIST_TOP)); }
+
+    /** Flat row index (accounting for interleaved sub-tab rows) of the given top-level tab. */
+    private int flatIndexOf(ChatTab tab) {
+        List<Row> rows = displayRows();
+        for (int i = 0; i < rows.size(); i++) if (rows.get(i).tab() == tab) return i;
+        return -1;
+    }
+
+    /** Multiplies an ARGB color's RGB channels by factor (alpha untouched) — a darker shade of the
+     *  same hue, used to tint sub-tab rows a shade of their parent's tabColor without matching it exactly. */
+    private static int darken(int argb, float factor) {
+        int a = (argb >>> 24) & 0xFF;
+        int r = (int) (((argb >> 16) & 0xFF) * factor);
+        int g = (int) (((argb >> 8)  & 0xFF) * factor);
+        int b = (int) (( argb        & 0xFF) * factor);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
 
     private boolean isMoveable(ChatTab tab) {
         return tab.type() == TabType.FILTERED || tab.type() == TabType.API
@@ -119,8 +155,10 @@ public class TabListScreen extends ConfigScreen {
     }
 
     private void scrollToSelected() {
-        if (selectedIdx < 0) return;
-        int rowTop = LIST_TOP + selectedIdx * ROW_HEIGHT;
+        if (selectedIdx < 0 || selectedIdx >= allTabs().size()) return;
+        int flatIdx = flatIndexOf(allTabs().get(selectedIdx));
+        if (flatIdx < 0) return;
+        int rowTop = LIST_TOP + flatIdx * ROW_HEIGHT;
         int rowBot = rowTop + ROW_HEIGHT;
         if (rowTop - scrollOffset < LIST_TOP)
             scrollOffset = rowTop - LIST_TOP;
@@ -191,8 +229,15 @@ public class TabListScreen extends ConfigScreen {
         // --- Tab rows ---
         LzDraw.enableScissor(ctx, 0, LIST_TOP, width, listBottom());
 
-        for (int i = 0; i < tabs.size(); i++) {
-            ChatTab tab = tabs.get(i);
+        List<Row> rows = displayRows();
+        ChatTab selectedTab = (selectedIdx >= 0 && selectedIdx < tabs.size()) ? tabs.get(selectedIdx) : null;
+
+        for (int i = 0; i < rows.size(); i++) {
+            Row row = rows.get(i);
+            ChatTab tab = row.tab();
+            boolean isSub = row.parent() != null;
+            int indent = isSub ? 16 : 0;
+            int rowX2  = lx + 400;
             int y = LIST_TOP + i * ROW_HEIGHT - scrollOffset;
             if (y + ROW_HEIGHT <= LIST_TOP || y >= listBottom()) continue;
 
@@ -214,15 +259,21 @@ public class TabListScreen extends ConfigScreen {
                 case NOTES    -> Colors.TAB_NOTES_BORDER;
                 default       -> Colors.TAB_DEFAULT_BORDER;
             };
-            LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, rowBg);
-            LzDraw.drawBorder(ctx, lx, rowY1, lx + 400, rowY2, rowBdr);
+            if (isSub) {
+                // Darker shade of the parent's own tab color (or the default row bg if the parent has none)
+                int base = row.parent().tabColor() != 0 ? (0xFF000000 | row.parent().tabColor()) : rowBg;
+                rowBg = darken(base, 0.55f);
+                rowBdr = darken(rowBdr, 0.7f);
+            }
+            LzDraw.fill(ctx, lx + indent, rowY1, rowX2, rowY2, rowBg);
+            LzDraw.drawBorder(ctx, lx + indent, rowY1, rowX2, rowY2, rowBdr);
 
-            // Selection / hover highlight
-            boolean hoverRow = mouseX >= lx && mouseX < lx + 400 && mouseY >= y && mouseY < y + ROW_HEIGHT;
-            if (i == selectedIdx) {
-                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, swapPending ? Colors.ROW_SWAP_SEL : Colors.ROW_SELECTED);
-            } else if (swapPending && isMoveable(tab) && hoverRow) {
-                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, Colors.ROW_SWAP_HOVER);
+            // Selection / hover highlight (sub-rows are never selectable via the up/down/swap controls)
+            boolean hoverRow = mouseX >= lx + indent && mouseX < rowX2 && mouseY >= y && mouseY < y + ROW_HEIGHT;
+            if (!isSub && tab == selectedTab) {
+                LzDraw.fill(ctx, lx + indent, rowY1, rowX2, rowY2, swapPending ? Colors.ROW_SWAP_SEL : Colors.ROW_SELECTED);
+            } else if (!isSub && swapPending && isMoveable(tab) && hoverRow) {
+                LzDraw.fill(ctx, lx + indent, rowY1, rowX2, rowY2, Colors.ROW_SWAP_HOVER);
             } else if (hoverRow) {
                 int hoverTint = switch (tab.type()) {
                     case FILTERED -> Colors.TAB_HOVER;
@@ -230,7 +281,7 @@ public class TabListScreen extends ConfigScreen {
                     case API      -> Colors.TAB_API_BG;
                     default       -> Colors.TAB_DEFAULT_HOVER;
                 };
-                LzDraw.fill(ctx, lx, rowY1, lx + 400, rowY2, hoverTint);
+                LzDraw.fill(ctx, lx + indent, rowY1, rowX2, rowY2, hoverTint);
             }
 
             int nameColor = switch (tab.type()) {
@@ -242,10 +293,10 @@ public class TabListScreen extends ConfigScreen {
             };
 
             // Name
-            String nameStr = tab.name() + " ";
-            LzDraw.drawText(ctx, nameStr, lx + 6, textY, nameColor);
+            String nameStr = (isSub ? "↳ " : "") + tab.name() + (tab.isMultiTab() ? " [multi]" : "") + " ";
+            LzDraw.drawText(ctx, nameStr, lx + indent + 6, textY, nameColor);
 
-            int infoX = lx + 6 + LzDraw.textWidth(nameStr);
+            int infoX = lx + indent + 6 + LzDraw.textWidth(nameStr);
 
             // Tab color swatch
             if (tab.tabColor() != 0) {
@@ -301,8 +352,9 @@ public class TabListScreen extends ConfigScreen {
             boolean isActive  = isNotes && tab == ChatManager.activeNoteTab;
             boolean canEdit   = tab.type() == TabType.FILTERED || tab.type() == TabType.API
                              || tab.type() == TabType.ALL || isNotes;
-            boolean canRemove = tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || isNotes
-                             || (tab.type() == TabType.API && tab.playerDeletable());
+            // Sub-tabs are never deletable here — remove them by editing the parent's Sub-Tabs list instead.
+            boolean canRemove = !isSub && (tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || isNotes
+                             || (tab.type() == TabType.API && tab.playerDeletable()));
 
             boolean hoverActive = isNotes && mouseX >= lx + 282 && mouseX < lx + 318 && mouseY >= y && mouseY < y + ROW_HEIGHT;
             boolean hoverEdit   = canEdit   && mouseX >= lx + 322 && mouseX < lx + 358 && mouseY >= y && mouseY < y + ROW_HEIGHT;
@@ -340,7 +392,7 @@ public class TabListScreen extends ConfigScreen {
         if (max > 0) {
             int sbX    = lx + 405;
             int trackH = listBottom() - LIST_TOP;
-            int totalH = tabs.size() * ROW_HEIGHT;
+            int totalH = rows.size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
 
@@ -396,7 +448,7 @@ public class TabListScreen extends ConfigScreen {
         int max  = maxScroll();
         if (button == 0 && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
             int trackH = listBottom() - LIST_TOP;
-            int totalH = allTabs().size() * ROW_HEIGHT;
+            int totalH = displayRows().size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int thumbY = LIST_TOP + (int)((long) scrollOffset * (trackH - thumbH) / max);
             if (my >= thumbY && my < thumbY + thumbH) {
@@ -416,20 +468,23 @@ public class TabListScreen extends ConfigScreen {
         if (mx < lx || mx >= lx + 400) return false;
 
         int relY = (int)(my - LIST_TOP) + scrollOffset;
-        int idx  = relY / ROW_HEIGHT;
+        int flatIdx = relY / ROW_HEIGHT;
+        List<Row> rows = displayRows();
+        if (flatIdx < 0 || flatIdx >= rows.size()) return false;
+
+        Row row     = rows.get(flatIdx);
+        ChatTab tab = row.tab();
+        boolean isSub = row.parent() != null;
         List<ChatTab> tabs = allTabs();
-        if (idx < 0 || idx >= tabs.size()) return false;
 
-        ChatTab tab = tabs.get(idx);
-
-        // Set Active button (NOTES only)
+        // Set Active button (NOTES only — sub-tabs are never NOTES, so this never applies to them)
         if (tab.type() == TabType.NOTES && mx >= lx + 282 && mx < lx + 318) {
             ChatManager.activeNoteTab = (NoteTab) tab;
             MultichatClient.saveTabsToConfig();
             return true;
         }
 
-        // Edit button
+        // Edit button — works the same for a sub-tab as any other FILTERED tab
         if (mx >= lx + 322 && mx < lx + 358) {
             if (tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL)
                 LzClient.mc().setScreen(TabEditScreen.create(this, tab));
@@ -438,30 +493,34 @@ public class TabListScreen extends ConfigScreen {
             return true;
         }
 
+        if (isSub) return true; // sub-tab rows have no remove/select/swap — consume the click and stop
+
         // Remove button
         if ((tab.type() == TabType.FILTERED || tab.type() == TabType.SEARCH || tab.type() == TabType.NOTES)
                 && mx >= lx + 362 && mx < lx + 398) {
+            int topIdx = tabs.indexOf(tab);
             if (quickDeleteMode || LzKeys.isCtrlDown()) {
-                doRemoveTab(idx, tab);
+                doRemoveTab(topIdx, tab);
             } else {
                 LzClient.mc().setScreen(new DeleteConfirmScreen(this,
                     "Delete tab \"" + tab.name() + "\"?",
-                    () -> doRemoveTab(idx, tab)));
+                    () -> doRemoveTab(topIdx, tab)));
             }
             return true;
         }
 
         // Row click — select / swap
         if (button == 0) {
-            if (swapPending && idx != selectedIdx && isMoveable(tab)) {
-                Collections.swap(tabs, selectedIdx, idx);
-                selectedIdx = idx;
+            int topIdx = tabs.indexOf(tab);
+            if (swapPending && topIdx != selectedIdx && isMoveable(tab)) {
+                Collections.swap(tabs, selectedIdx, topIdx);
+                selectedIdx = topIdx;
                 swapPending = false;
                 MultichatClient.saveTabsToConfig();
                 scrollToSelected();
             } else {
                 swapPending = false;
-                selectedIdx = (idx == selectedIdx || !isMoveable(tab)) ? -1 : idx;
+                selectedIdx = (topIdx == selectedIdx || !isMoveable(tab)) ? -1 : topIdx;
             }
             return true;
         }
@@ -475,7 +534,7 @@ public class TabListScreen extends ConfigScreen {
         if (scrollDragging) {
             int max    = maxScroll();
             int trackH = listBottom() - LIST_TOP;
-            int totalH = allTabs().size() * ROW_HEIGHT;
+            int totalH = displayRows().size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
             int travel = trackH - thumbH;
             if (travel > 0)

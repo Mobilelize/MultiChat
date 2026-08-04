@@ -147,6 +147,11 @@ public class MultiChatConfig extends LzConfig {
         if (pingSound == null) pingSound = "minecraft:entity.experience_orb.pickup";
         if (hiddenContextMenuItems == null) hiddenContextMenuItems = new HashSet<>();
         if (registeredHighlightMods == null) registeredHighlightMods = new HashSet<>();
+
+        // expandedParent is transient (always null right after load) but activeTabId is persisted —
+        // without this, a panel left drilled into a multi-tab's subs when the client closed would read
+        // that saved sub-list index back as a top-level one on restart. See ChatPanel.expandMultiTab.
+        if (panels != null) for (ChatPanel p : panels) p.normalizeActiveTabAfterLoad();
     }
 
     // ── Inner classes that have no natural home in a domain object ────────────
