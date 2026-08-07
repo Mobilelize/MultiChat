@@ -59,6 +59,7 @@ public class MultiChatConfig extends LzConfig {
     public List<String>    userHighlightKeywords = new ArrayList<>();
 
     public boolean         apiHighlightEnabled   = true; // player-side mute for mod-registered rules
+    public List<String>    highlightExceptions   = new ArrayList<>();
 
     /** Full per-span text formatting, not just color — mirrors every LzStyle.with* toggle. */
     public static class HighlightStyle {
@@ -146,6 +147,7 @@ public class MultiChatConfig extends LzConfig {
         if (timestampFormat == null) timestampFormat = "&d[&6HH&d:&6mm&d:&6ss&d]";
         if (collapseCounterFormat == null) collapseCounterFormat = "&e(x{count})";
         if (userHighlightKeywords == null) userHighlightKeywords = new ArrayList<>();
+        if (highlightExceptions == null) highlightExceptions = new ArrayList<>();
         if (keywordStyle == null) keywordStyle = new HighlightStyle(0xFFFF55, true);
         if (neutralStyle == null) neutralStyle = new HighlightStyle(0xFF5555, false);
         if (quickActions == null) quickActions = newDefaultQuickActions();

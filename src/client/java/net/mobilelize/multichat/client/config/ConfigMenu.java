@@ -273,6 +273,15 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.userHighlightKeywords = v)
                 .build());
 
+        highlight.addEntry(eb.startStrList(LzText.literal("Exceptions").mc(), MultichatClient.CONFIG.highlightExceptions)
+                .setTooltip(LzText.literal(
+                        "Safe words that shield a keyword match overlapping them. E.g. keyword \"ban\" + " +
+                        "exception \"urban\" stops it firing on \"urban\" — the rest of the message still " +
+                        "highlights normally if another keyword hits elsewhere in it."
+                ).mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.highlightExceptions = v)
+                .build());
+
         // Not persisted to config — these come from other mods calling MultiChatApi.addHighlightRule
         // at runtime, so this list is a live snapshot, not player-owned data. Edits here don't stick;
         // the actual source of truth is whatever mods currently have registered.

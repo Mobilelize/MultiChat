@@ -105,17 +105,18 @@ public final class HighlightEngine {
         String plain = rawLzText.string();
         if (plain.isEmpty()) return new HighlightResult(content, rawLzText, null);
         String lower = plain.toLowerCase();
+        List<int[]> protectedRanges = protectedRanges(lower, cfg.highlightExceptions);
 
         List<String> pool = null;
-        if (cfg.userHighlightEnabled && matchesAny(lower, cfg.userHighlightKeywords)) {
+        if (cfg.userHighlightEnabled && matchesAny(lower, cfg.userHighlightKeywords, protectedRanges)) {
             pool = cfg.userHighlightKeywords;
         } else if (cfg.apiHighlightEnabled) {
             List<String> apiKw = allApiKeywords();
-            if (matchesAny(lower, apiKw)) pool = apiKw;
+            if (matchesAny(lower, apiKw, protectedRanges)) pool = apiKw;
         }
         if (pool == null) return new HighlightResult(content, rawLzText, null);
 
-        List<String> matched = matchedKeywords(lower, pool);
+        List<String> matched = matchedKeywords(lower, pool, protectedRanges);
 
         String actionId = UUID.randomUUID().toString();
 
@@ -128,8 +129,8 @@ public final class HighlightEngine {
             .withClickRunCommand("/multichat execute " + actionId)
             .withHoverText(hoverText);
 
-        LzText newContent = reformat(content.string(), pool, keywordStyle, neutralStyle);
-        LzText newRaw     = reformat(rawLzText.string(), pool, keywordStyle, neutralStyle);
+        LzText newContent = reformat(content.string(), pool, keywordStyle, neutralStyle, cfg.highlightExceptions);
+        LzText newRaw     = reformat(rawLzText.string(), pool, keywordStyle, neutralStyle, cfg.highlightExceptions);
         return new HighlightResult(newContent, newRaw, actionId);
     }
 
@@ -161,17 +162,53 @@ public final class HighlightEngine {
                 panel.rebuildTabLines(tab);
     }
 
-    private static boolean matchesAny(String lowerPlain, List<String> keywords) {
-        for (String kw : keywords) {
-            if (!kw.isEmpty() && lowerPlain.contains(kw.toLowerCase())) return true;
+    /** Every occurrence range of every exception word in lowerPlain — keyword matches overlapping
+     *  one of these are treated as not-matched, without touching any other keyword hit in the message. */
+    private static List<int[]> protectedRanges(String lowerPlain, List<String> exceptions) {
+        List<int[]> ranges = new ArrayList<>();
+        if (exceptions == null) return ranges;
+        for (String ex : exceptions) {
+            if (ex == null || ex.isEmpty()) continue;
+            String exLower = ex.toLowerCase();
+            int from = 0, idx;
+            while ((idx = lowerPlain.indexOf(exLower, from)) >= 0) {
+                ranges.add(new int[]{idx, idx + exLower.length()});
+                from = idx + 1;
+            }
+        }
+        return ranges;
+    }
+
+    private static boolean overlapsProtected(int start, int end, List<int[]> protectedRanges) {
+        for (int[] r : protectedRanges) {
+            if (start < r[1] && end > r[0]) return true;
         }
         return false;
     }
 
-    private static List<String> matchedKeywords(String lowerPlain, List<String> keywords) {
+    private static boolean matchesAny(String lowerPlain, List<String> keywords, List<int[]> protectedRanges) {
+        for (String kw : keywords) {
+            if (kw.isEmpty()) continue;
+            String kwLower = kw.toLowerCase();
+            int from = 0, idx;
+            while ((idx = lowerPlain.indexOf(kwLower, from)) >= 0) {
+                if (!overlapsProtected(idx, idx + kwLower.length(), protectedRanges)) return true;
+                from = idx + 1;
+            }
+        }
+        return false;
+    }
+
+    private static List<String> matchedKeywords(String lowerPlain, List<String> keywords, List<int[]> protectedRanges) {
         List<String> found = new ArrayList<>();
         for (String kw : keywords) {
-            if (!kw.isEmpty() && lowerPlain.contains(kw.toLowerCase()) && !found.contains(kw)) found.add(kw);
+            if (kw.isEmpty() || found.contains(kw)) continue;
+            String kwLower = kw.toLowerCase();
+            int from = 0, idx;
+            while ((idx = lowerPlain.indexOf(kwLower, from)) >= 0) {
+                if (!overlapsProtected(idx, idx + kwLower.length(), protectedRanges)) { found.add(kw); break; }
+                from = idx + 1;
+            }
         }
         return found;
     }
@@ -196,11 +233,12 @@ public final class HighlightEngine {
             .withObfuscated(s.obfuscated);
     }
 
-    private static LzMutableText reformat(String plain, List<String> keywords, LzStyle keywordStyle, LzStyle neutralStyle) {
+    private static LzMutableText reformat(String plain, List<String> keywords, LzStyle keywordStyle, LzStyle neutralStyle, List<String> exceptions) {
+        List<int[]> protectedRanges = protectedRanges(plain.toLowerCase(), exceptions);
         LzMutableText result = LzText.empty();
         int i = 0;
         while (i < plain.length()) {
-            int[] match = findEarliestMatch(plain, i, keywords);
+            int[] match = findEarliestMatch(plain, i, keywords, protectedRanges);
             if (match == null) {
                 result.append(LzText.literal(plain.substring(i)).withStyle(neutralStyle));
                 break;
@@ -213,15 +251,17 @@ public final class HighlightEngine {
         return result;
     }
 
-    private static int[] findEarliestMatch(String plain, int fromIdx, List<String> keywords) {
+    private static int[] findEarliestMatch(String plain, int fromIdx, List<String> keywords, List<int[]> protectedRanges) {
         String lower = plain.toLowerCase();
         int bestStart = -1, bestEnd = -1;
         for (String kw : keywords) {
             if (kw.isEmpty()) continue;
-            int idx = lower.indexOf(kw.toLowerCase(), fromIdx);
+            String kwLower = kw.toLowerCase();
+            int idx = fromIdx;
+            while ((idx = lower.indexOf(kwLower, idx)) >= 0 && overlapsProtected(idx, idx + kwLower.length(), protectedRanges)) idx++;
             if (idx >= 0 && (bestStart < 0 || idx < bestStart)) {
                 bestStart = idx;
-                bestEnd = idx + kw.length();
+                bestEnd = idx + kwLower.length();
             }
         }
         return bestStart < 0 ? null : new int[]{bestStart, bestEnd};
