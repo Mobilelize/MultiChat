@@ -39,16 +39,17 @@ public final class ChatScrollbarDrag {
         int   visLines   = panel.resolveLines();
         int   topY       = panel.resolveTopY(windowHeight);
 
+        double areaTop = (topY - visLines * lineH) * (double) scale;
         boolean inMessageArea;
         if (!panel.showTabs()) {
-            inMessageArea = mouseY < topY * (double) scale;
+            inMessageArea = mouseY >= areaTop && mouseY < topY * (double) scale;
         } else {
             int tabY = ChatRenderer.getTabBarY(panel, topY, visLines, lineH);
             if (panel.tabsAtTop()) {
                 double tabBarBot = (tabY + ChatRenderer.TAB_HEIGHT) * (double) scale;
                 inMessageArea = mouseY > tabBarBot && mouseY < topY * (double) scale;
             } else {
-                inMessageArea = mouseY < tabY * (double) scale;
+                inMessageArea = mouseY >= areaTop && mouseY < tabY * (double) scale;
             }
         }
         if (!inMessageArea) return false;

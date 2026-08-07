@@ -621,13 +621,14 @@ public abstract class ChatScreenMixin {
     @Unique
     private static boolean isMouseInMessageArea(ChatPanel panel, double mouseY,
                                                 int topY, float scale, int lineH, int visibleLineCount) {
-        if (!panel.showTabs()) return mouseY < topY * (double) scale;
+        double areaTop = (topY - visibleLineCount * lineH) * (double) scale;
+        if (!panel.showTabs()) return mouseY >= areaTop && mouseY < topY * (double) scale;
         int tabY = ChatRenderer.getTabBarY(panel, topY, visibleLineCount, lineH);
         if (panel.tabsAtTop()) {
             double tabBarBot = (tabY + ChatRenderer.TAB_HEIGHT) * (double) scale;
             return mouseY > tabBarBot && mouseY < topY * (double) scale;
         }
-        return mouseY < tabY * (double) scale;
+        return mouseY >= areaTop && mouseY < tabY * (double) scale;
     }
 
 
