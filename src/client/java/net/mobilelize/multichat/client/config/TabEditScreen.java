@@ -506,7 +506,7 @@ public class TabEditScreen {
             (elem, nestedList) -> {
                 MutableRule rule = elem != null ? elem : new MutableRule(FilterType.CONTAINS, "", IndicatorFilter.ANY);
                 return new MultiElementListEntry<>(
-                    LzText.literal("Rule").mc(),
+                    LzText.literal("Rule " + ruleNumber(nestedList.getValue(), rule)).mc(),
                     rule,
                     List.of(
                         eb.startEnumSelector(LzText.literal("Type").mc(), FilterType.class, rule.type)
@@ -549,7 +549,7 @@ public class TabEditScreen {
                 MutableStyleCondition cond = elem != null
                     ? elem : new MutableStyleCondition(StyleTarget.WORD, "", WordLocation.ANYWHERE, 1, List.of(), List.of(), List.of());
                 return new MultiElementListEntry<>(
-                    LzText.literal("Condition").mc(),
+                    LzText.literal("Condition " + ruleNumber(nestedList.getValue(), cond)).mc(),
                     cond,
                     List.of(
                         eb.startEnumSelector(LzText.literal("Target").mc(), StyleTarget.class, cond.target)
@@ -580,6 +580,13 @@ public class TabEditScreen {
                 );
             }
         );
+    }
+
+    /** 1-based position of {@code elem} in {@code current} (identity match), or the next free
+     *  slot ({@code current.size() + 1}) when it's a brand-new element not yet added to the list. */
+    private static <T> int ruleNumber(List<T> current, T elem) {
+        for (int i = 0; i < current.size(); i++) if (current.get(i) == elem) return i + 1;
+        return current.size() + 1;
     }
 
     /** All 5 flags pre-populated as toggles — every one turned on must be present at once (AND). */
@@ -644,7 +651,7 @@ public class TabEditScreen {
             (elem, nestedList) -> {
                 MutableHexRow row = elem != null ? elem : new MutableHexRow(0xFFFFFF);
                 return new MultiElementListEntry<>(
-                    LzText.literal("Hex Color").mc(),
+                    LzText.literal("Hex Color " + ruleNumber(nestedList.getValue(), row)).mc(),
                     row,
                     List.of(
                         eb.startColorField(LzText.literal("Color").mc(), row.value)
