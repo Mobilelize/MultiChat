@@ -33,6 +33,10 @@ public final class HighlightEngine {
     // sourceModId -> keywords that mod registered
     private static final Map<String, List<String>> apiKeywords = new LinkedHashMap<>();
 
+    // sourceModId -> exception words that mod registered (shields matches the same as the player's
+    // own exception lists — see allExceptions)
+    private static final Map<String, List<String>> apiExceptions = new LinkedHashMap<>();
+
     // actionId -> data needed to restore the message this actionId's revert click belongs to
     private static final Map<String, RevertData> pendingReverts = new HashMap<>();
 
@@ -54,6 +58,19 @@ public final class HighlightEngine {
 
     public static void removeApiRule(String pattern, String sourceModId) {
         List<String> list = apiKeywords.get(sourceModId);
+        if (list != null) list.removeIf(p -> p.equalsIgnoreCase(pattern));
+    }
+
+    /** Idempotent — safe to call repeatedly with the same pattern (e.g. mod re-init, hot reload). */
+    public static void addApiException(String pattern, String sourceModId) {
+        if (pattern == null || pattern.isEmpty()) return;
+        List<String> list = apiExceptions.computeIfAbsent(sourceModId, k -> new ArrayList<>());
+        for (String existing : list) if (existing.equalsIgnoreCase(pattern)) return;
+        list.add(pattern);
+    }
+
+    public static void removeApiException(String pattern, String sourceModId) {
+        List<String> list = apiExceptions.get(sourceModId);
         if (list != null) list.removeIf(p -> p.equalsIgnoreCase(pattern));
     }
 
@@ -81,6 +98,17 @@ public final class HighlightEngine {
     /** Read-only snapshot of every keyword currently registered by other mods — for display only. */
     public static List<String> getApiKeywords() {
         return allApiKeywords();
+    }
+
+    private static List<String> allApiExceptions() {
+        List<String> all = new ArrayList<>();
+        for (List<String> list : apiExceptions.values()) all.addAll(list);
+        return all;
+    }
+
+    /** Read-only snapshot of every exception word currently registered by other mods — for display only. */
+    public static List<String> getApiExceptions() {
+        return allApiExceptions();
     }
 
     public static final class HighlightResult {
@@ -163,12 +191,16 @@ public final class HighlightEngine {
                 panel.rebuildTabLines(tab);
     }
 
-    /** Your Exceptions and API Exceptions are two lists for organization only — both protect
-     *  against a match from either keyword pool, so they're merged before any matching happens. */
+    /** Your Exceptions, API Exceptions, and mod-registered exceptions are separate lists purely for
+     *  organization — all of them protect against a match from either keyword pool, so they're merged
+     *  before any matching happens. */
     private static List<String> allExceptions(MultiChatConfig cfg) {
         List<String> all = new ArrayList<>();
         if (cfg.exceptionsEnabled) all.addAll(cfg.highlightExceptions);
-        if (cfg.apiExceptionsEnabled) all.addAll(cfg.apiHighlightExceptions);
+        if (cfg.apiExceptionsEnabled) {
+            all.addAll(cfg.apiHighlightExceptions);
+            all.addAll(allApiExceptions());
+        }
         return all;
     }
 

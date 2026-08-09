@@ -44,6 +44,12 @@ public class HelpScreen {
                           &f/multichat note&r&7                     Open active note tab editor
                           &f/multichat note add &b<text>&r&7         Append text to active note tab
                           &f/multichat note open &b<name>&r&7        Open a specific note tab editor
+                          &f/multichat highlight add &b<word>&r&7      Add a keyword to Your Keywords
+                          &f/multichat highlight remove &b<word>&r&7   Remove a keyword from Your Keywords
+                          &f/multichat highlight exception add &b<word>&r&7      Add a word to Your Exceptions
+                          &f/multichat highlight exception remove &b<word>&r&7   Remove a word from Your Exceptions
+                          &f/multichat highlight api exception add &b<word>&r&7    Add a word to API Exceptions
+                          &f/multichat highlight api exception remove &b<word>&r&7 Remove a word from API Exceptions
                           &f/multichat info show&r&7                 Show the info tab on Panel 2
                           &f/multichat info hide&r&7                 Hide the info tab from Panel 2
                           &f/multichat help&r&7                     Open this screen"""

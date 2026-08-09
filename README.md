@@ -11,7 +11,7 @@ Licensed under [GPL-3.0](LICENSE.txt).
 - Unlimited panels — **left panel** always visible by default, **right panel** optional (enable in Settings), add more via `/multichat panels`
 - Tab types: `ALL` (all messages), `VANILLA` (vanilla HUD passthrough), `FILTERED` (user-defined rules), `NOTES` (personal note-taking), `INFO` (mod guide), `SEARCH` (session-only query tabs), `API` (created by other mods)
 - **Multi-Tab** — any filtered tab can have nested sub-tabs. Enable via Tab Edit → `Multi Tab`; click the tab in the bar to drill into its sub-tabs, click the red `X` (or right-click → `Collapse Sub-tabs`) to back out. A sub-tab only ever sees what its parent's own filter already let through — the auto-created `All` sub-tab catches everything unfiltered, other sub-tabs narrow further with their own rules.
-- **Highlight Words** — Settings → Highlight Words. Matching a keyword reformats the whole message into a two-color scheme (matched word / rest of message). Hover a highlighted message to see what matched; click it to revert.
+- **Highlight Words** — Settings → Highlight Words. Matching a keyword reformats the whole message into a two-color scheme (matched word / rest of message). Hover a highlighted message to see what matched; click it to revert. Your Keywords and API Words (added by other mods) are independent lists with their own on/off toggle. Exceptions (Your Exceptions + API Exceptions, also independently toggleable) shield a word from triggering a match — e.g. exception `urban` stops keyword `ban` from firing on it — and protect against **both** keyword pools regardless of which exception list they're in; the split is just for organization, and API Exceptions is your way to silence an API-registered word you can't otherwise remove for good.
 - **Chat Themes** — Settings → Appearance → Chat Theme. Built-in: Vanilla, Simple Dark, Bold, Pink, Mint, Lavender. Mods can register their own via the API.
 - Right-click any message → Copy / Search / Jump to All / Delete message / **Delete from All** (removes it from every tab that has it, including sub-tabs)
 - Draggable scrollbar (glows on hover), **Always Focused** panel setting (stay fully visible permanently), **Pop Out** a tab into its own floating panel (right-click → Pop Out / Close Popout)
@@ -41,6 +41,13 @@ Licensed under [GPL-3.0](LICENSE.txt).
 | `/multichat note` | Open note editor for the active note tab |
 | `/multichat note add <text>` | Append a line to the active note tab |
 | `/multichat note open <name>` | Open note editor for a specific note tab |
+| `/multichat highlight` | Open settings screen |
+| `/multichat highlight add <word>` | Add a keyword to Your Keywords |
+| `/multichat highlight remove <word>` | Remove a keyword from Your Keywords |
+| `/multichat highlight exception add <word>` | Add a word to Your Exceptions |
+| `/multichat highlight exception remove <word>` | Remove a word from Your Exceptions |
+| `/multichat highlight api exception add <word>` | Add a word to API Exceptions |
+| `/multichat highlight api exception remove <word>` | Remove a word from API Exceptions |
 | `/multichat info show` | Show the Info tab on Panel 2 |
 | `/multichat info hide` | Hide the Info tab from Panel 2 |
 | `/multichat info panel show` | Enable Panel 2 |
@@ -63,6 +70,7 @@ Licensed under [GPL-3.0](LICENSE.txt).
 - Set/clear the active **context** (prefix applied to all outgoing player chat)
 - One-call click-to-run-a-callback helper — no need to hand-build the `/multichat execute` command yourself
 - Delete a message from every tab it appears in (moderation use cases)
+- Register keyword-highlight rules and exception words in code — same effect as the player's own Highlight Words lists, mutable/toggleable by the player independently of your defaults
 - Register your own chat theme (color palette)
 - Subscribe to events: message received, message added to tab, tab changed, message sent, panel focused, tab action
 - Query panels, focused panel, context tab, tabs by panel, and MultiChat config
@@ -619,6 +627,30 @@ public class MultiChatIntegration {
     }
 }
 ```
+
+---
+
+### 19. Highlight Words (keyword highlighting)
+
+Register keywords and exception words in code — same engine the player's own Highlight Words lists (Settings → Highlight Words) run on. A keyword match reformats the whole message into a two-color scheme; an exception word overlapping a match blocks it from firing, checked against **every** keyword pool (yours, other mods', the player's) regardless of which exception list it's registered through.
+
+```java
+// Keywords — muted in bulk by the player's "Enable API Words" toggle
+MultiChatApi.addHighlightRule("giveaway", "mymod");
+MultiChatApi.removeHighlightRule("giveaway", "mymod");
+
+// Exceptions — muted in bulk by the player's "Enable API Exceptions" toggle
+MultiChatApi.addHighlightException("giveaway tree", "mymod");
+MultiChatApi.removeHighlightException("giveaway tree", "mymod");
+
+// Seed your defaults exactly once — persisted across restarts, so re-adding
+// them every launch would silently undo any word the player removed.
+if (MultiChatApi.isFirstHighlightRegistration("mymod")) {
+    MultiChatApi.addHighlightRule("giveaway", "mymod");
+}
+```
+
+Both calls are idempotent (safe on hot reload / repeated init) and both are player-removable only through the read-only "API Words" / "API-Registered Exceptions" lists in Settings — the player can't edit those lists directly, but can counter an unwanted keyword by adding their own exception word for it.
 
 ---
 

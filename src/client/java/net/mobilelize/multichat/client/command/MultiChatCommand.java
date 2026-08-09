@@ -16,6 +16,7 @@ import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
 import java.util.List;
+import java.util.function.Function;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
@@ -96,6 +97,35 @@ public class MultiChatCommand {
                         .then(argument("name", StringArgumentType.greedyString())
                             .suggests(noteSuggestions())
                             .executes(MultiChatCommand::noteOpen))))
+                .then(literal("highlight")
+                    .executes(ctx -> {
+                        LzClient.send(() -> LzClient.mc().setScreen(ConfigMenu.create(null)));
+                        return 1;
+                    })
+                    .then(literal("add")
+                        .then(argument("word", StringArgumentType.greedyString())
+                            .executes(MultiChatCommand::highlightKeywordAdd)))
+                    .then(literal("remove")
+                        .then(argument("word", StringArgumentType.greedyString())
+                            .suggests(highlightSuggestions(cfg -> cfg.userHighlightKeywords))
+                            .executes(MultiChatCommand::highlightKeywordRemove)))
+                    .then(literal("exception")
+                        .then(literal("add")
+                            .then(argument("word", StringArgumentType.greedyString())
+                                .executes(MultiChatCommand::highlightExceptionAdd)))
+                        .then(literal("remove")
+                            .then(argument("word", StringArgumentType.greedyString())
+                                .suggests(highlightSuggestions(cfg -> cfg.highlightExceptions))
+                                .executes(MultiChatCommand::highlightExceptionRemove))))
+                    .then(literal("api")
+                        .then(literal("exception")
+                            .then(literal("add")
+                                .then(argument("word", StringArgumentType.greedyString())
+                                    .executes(MultiChatCommand::highlightApiExceptionAdd)))
+                            .then(literal("remove")
+                                .then(argument("word", StringArgumentType.greedyString())
+                                    .suggests(highlightSuggestions(cfg -> cfg.apiHighlightExceptions))
+                                    .executes(MultiChatCommand::highlightApiExceptionRemove))))))
                 .then(literal("info")
                     .then(literal("hide")
                         .executes(MultiChatCommand::infoHide))
@@ -118,6 +148,60 @@ public class MultiChatCommand {
                 })
                 .redirect(root));
         });
+    }
+
+    private static int highlightKeywordAdd(CommandContext<FabricClientCommandSource> ctx) {
+        return addToList(ctx, "keyword", MultichatClient.CONFIG.userHighlightKeywords);
+    }
+
+    private static int highlightKeywordRemove(CommandContext<FabricClientCommandSource> ctx) {
+        return removeFromList(ctx, "keyword", MultichatClient.CONFIG.userHighlightKeywords);
+    }
+
+    private static int highlightExceptionAdd(CommandContext<FabricClientCommandSource> ctx) {
+        return addToList(ctx, "exception", MultichatClient.CONFIG.highlightExceptions);
+    }
+
+    private static int highlightExceptionRemove(CommandContext<FabricClientCommandSource> ctx) {
+        return removeFromList(ctx, "exception", MultichatClient.CONFIG.highlightExceptions);
+    }
+
+    private static int highlightApiExceptionAdd(CommandContext<FabricClientCommandSource> ctx) {
+        return addToList(ctx, "API exception", MultichatClient.CONFIG.apiHighlightExceptions);
+    }
+
+    private static int highlightApiExceptionRemove(CommandContext<FabricClientCommandSource> ctx) {
+        return removeFromList(ctx, "API exception", MultichatClient.CONFIG.apiHighlightExceptions);
+    }
+
+    private static int addToList(CommandContext<FabricClientCommandSource> ctx, String label, List<String> list) {
+        String word = StringArgumentType.getString(ctx, "word");
+        if (list.stream().anyMatch(w -> w.equalsIgnoreCase(word))) {
+            feedback(ctx, "Already have " + label + " '" + word + "'."); return 0;
+        }
+        list.add(word);
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Added " + label + " [" + word + "].");
+        return 1;
+    }
+
+    private static int removeFromList(CommandContext<FabricClientCommandSource> ctx, String label, List<String> list) {
+        String word = StringArgumentType.getString(ctx, "word");
+        if (!list.removeIf(w -> w.equalsIgnoreCase(word))) {
+            feedback(ctx, "No " + label + " '" + word + "'."); return 0;
+        }
+        MultichatClient.saveTabsToConfig();
+        feedback(ctx, "Removed " + label + " [" + word + "].");
+        return 1;
+    }
+
+    private static SuggestionProvider<FabricClientCommandSource> highlightSuggestions(Function<MultiChatConfig, List<String>> listGetter) {
+        return (ctx, builder) -> {
+            for (String w : listGetter.apply(MultichatClient.CONFIG))
+                if (CommandSource.shouldSuggest(builder.getRemaining().toLowerCase(), w.toLowerCase()))
+                    builder.suggest(w);
+            return builder.buildFuture();
+        };
     }
 
     private static int noteAdd(CommandContext<FabricClientCommandSource> ctx) {

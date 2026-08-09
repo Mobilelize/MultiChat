@@ -109,6 +109,20 @@ public final class MultiChatApi {
     }
 
     /**
+     * Register a word that shields a keyword match overlapping it — same effect as the player's own
+     * exception lists (Settings → Highlight Words), just registered in code instead of typed in.
+     * Protects against every keyword pool (yours, other mods', this mod's own), not just this mod's
+     * rules. Muted in bulk by the same "Enable API Exceptions" toggle as the player's API Exceptions list.
+     */
+    public static void addHighlightException(String pattern, String sourceModId) {
+        HighlightEngine.addApiException(pattern, sourceModId);
+    }
+
+    public static void removeHighlightException(String pattern, String sourceModId) {
+        HighlightEngine.removeApiException(pattern, sourceModId);
+    }
+
+    /**
      * True only the very first time this modId has ever called this — persisted across restarts,
      * not just this session. Call this before seeding your default keyword list so you only ever
      * add your defaults once; re-adding them on every client start would silently undo any word

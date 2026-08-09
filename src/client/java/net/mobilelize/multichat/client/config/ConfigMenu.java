@@ -306,6 +306,15 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.apiHighlightExceptions = v)
                 .build());
 
+        // Not persisted to config — these come from other mods calling MultiChatApi.addHighlightException
+        // at runtime, same live-snapshot deal as API Words above. Edits here don't stick.
+        highlight.addEntry(eb.startStrList(LzText.literal("API-Registered Exceptions").mc(), HighlightEngine.getApiExceptions())
+                .setTooltip(LzText.literal(
+                        "Exception words other mods registered directly, same effect as API Exceptions above."
+                ).mc())
+                .setSaveConsumer(v -> {})
+                .build());
+
         highlight.addEntry(eb.startBooleanToggle(
                 LzText.literal("Enable API Exceptions").mc(),
                 MultichatClient.CONFIG.apiExceptionsEnabled)
