@@ -66,6 +66,11 @@ public class MultiChatConfig extends LzConfig {
     public boolean         apiExceptionsEnabled  = true;
     public List<String>    apiHighlightExceptions = new ArrayList<>();
 
+    public boolean         highlightSoundEnabled = false;
+    public String          highlightSound        = "minecraft:entity.experience_orb.pickup";
+    public float           highlightSoundVolume  = 1.0f;
+    public float           highlightSoundPitch   = 1.0f;
+
     /** Full per-span text formatting, not just color — mirrors every LzStyle.with* toggle. */
     public static class HighlightStyle {
         public int     color;
@@ -159,6 +164,7 @@ public class MultiChatConfig extends LzConfig {
         if (quickActions == null) quickActions = newDefaultQuickActions();
         if (searchDefaultMode == null) searchDefaultMode = SearchMode.CONTAINS;
         if (pingSound == null) pingSound = "minecraft:entity.experience_orb.pickup";
+        if (highlightSound == null) highlightSound = "minecraft:entity.experience_orb.pickup";
         if (hiddenContextMenuItems == null) hiddenContextMenuItems = new HashSet<>();
         if (registeredHighlightMods == null) registeredHighlightMods = new HashSet<>();
         if (registeredMods == null) registeredMods = new HashSet<>();

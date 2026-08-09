@@ -1,6 +1,8 @@
 package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.client.LzChatEntry;
+import net.mobilelize.fabriclib.client.LzSound;
+import net.mobilelize.fabriclib.registry.LzRegistry;
 import net.mobilelize.fabriclib.text.LzMutableText;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
@@ -111,6 +113,10 @@ public final class HighlightEngine {
         return allApiExceptions();
     }
 
+    public static Set<String> allSoundIds() {
+        return LzRegistry.soundIds();
+    }
+
     public static final class HighlightResult {
         public final LzText content;
         public final LzText raw;
@@ -144,6 +150,10 @@ public final class HighlightEngine {
             if (matchesAny(lower, apiKw, protectedRanges)) pool = apiKw;
         }
         if (pool == null) return new HighlightResult(content, rawLzText, null);
+
+        if (cfg.highlightSoundEnabled) {
+            LzSound.playMaster(cfg.highlightSound, cfg.highlightSoundPitch, cfg.highlightSoundVolume);
+        }
 
         List<String> matched = matchedKeywords(lower, pool, protectedRanges);
 

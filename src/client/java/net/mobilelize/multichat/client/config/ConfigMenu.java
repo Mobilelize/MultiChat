@@ -340,6 +340,51 @@ public class ConfigMenu {
         addHighlightStyleEntries(highlight, eb, "Keyword", MultichatClient.CONFIG.keywordStyle, 0xFFFF55, true);
         addHighlightStyleEntries(highlight, eb, "Neutral", MultichatClient.CONFIG.neutralStyle, 0xFF5555, false);
 
+        highlight.addEntry(eb.startBooleanToggle(
+                LzText.literal("Play Sound on Match").mc(),
+                MultichatClient.CONFIG.highlightSoundEnabled)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Plays a sound whenever a message matches a highlight keyword.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.highlightSoundEnabled = v)
+                .build());
+
+        highlight.addEntry(eb.startDropdownMenu(
+                LzText.literal("Highlight Sound").mc(),
+                DropdownMenuBuilder.TopCellElementBuilder.of(MultichatClient.CONFIG.highlightSound, s -> s),
+                DropdownMenuBuilder.CellCreatorBuilder.of())
+                .setDefaultValue("minecraft:entity.experience_orb.pickup")
+                .setSelections(HighlightEngine.allSoundIds())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.highlightSound = v)
+                .build());
+
+        highlight.addEntry(SoundBrowser.build(eb, HighlightEngine.allSoundIds(), soundId -> {
+            MultichatClient.CONFIG.highlightSound = soundId;
+            LzSound.playMaster(soundId, MultichatClient.CONFIG.highlightSoundPitch, MultichatClient.CONFIG.highlightSoundVolume);
+        }));
+
+        highlight.addEntry(eb.startIntSlider(
+                LzText.literal("Highlight Sound Volume").mc(),
+                MultiChatConfig.pingVolPct(MultichatClient.CONFIG.highlightSoundVolume), 0, 200)
+                .setDefaultValue(100)
+                .setTooltip(LzText.literal("0–200%. 100 = normal volume.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.highlightSoundVolume = MultiChatConfig.fromPingVolPct(v))
+                .build());
+
+        highlight.addEntry(eb.startIntSlider(
+                LzText.literal("Highlight Sound Pitch").mc(),
+                MultiChatConfig.pingPitchPct(MultichatClient.CONFIG.highlightSoundPitch), 50, 200)
+                .setDefaultValue(100)
+                .setTooltip(LzText.literal("50–200. 100 = normal pitch.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.highlightSoundPitch = MultiChatConfig.fromPingPitchPct(v))
+                .build());
+
+        highlight.addEntry(eb.startBooleanToggle(
+                LzText.literal("Test Highlight Sound").mc(), false)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Toggle ON then Save to play the current sound settings.").mc())
+                .setSaveConsumer(v -> { if (v) LzSound.playMaster(MultichatClient.CONFIG.highlightSound, MultichatClient.CONFIG.highlightSoundPitch, MultichatClient.CONFIG.highlightSoundVolume); })
+                .build());
+
         // ── Search ────────────────────────────────────────────────────────
         ConfigCategory search = builder.getOrCreateCategory(LzText.literal("Search").mc());
 
