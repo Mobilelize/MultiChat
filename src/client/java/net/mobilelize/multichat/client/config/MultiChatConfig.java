@@ -59,7 +59,12 @@ public class MultiChatConfig extends LzConfig {
     public List<String>    userHighlightKeywords = new ArrayList<>();
 
     public boolean         apiHighlightEnabled   = true; // player-side mute for mod-registered rules
+    public boolean         exceptionsEnabled     = true;
     public List<String>    highlightExceptions   = new ArrayList<>();
+    // Separate list purely for organization (which exceptions were added to counter API-registered
+    // words vs your own) — both lists protect against matches from EITHER pool, same as one merged list.
+    public boolean         apiExceptionsEnabled  = true;
+    public List<String>    apiHighlightExceptions = new ArrayList<>();
 
     /** Full per-span text formatting, not just color — mirrors every LzStyle.with* toggle. */
     public static class HighlightStyle {
@@ -148,6 +153,7 @@ public class MultiChatConfig extends LzConfig {
         if (collapseCounterFormat == null) collapseCounterFormat = "&e(x{count})";
         if (userHighlightKeywords == null) userHighlightKeywords = new ArrayList<>();
         if (highlightExceptions == null) highlightExceptions = new ArrayList<>();
+        if (apiHighlightExceptions == null) apiHighlightExceptions = new ArrayList<>();
         if (keywordStyle == null) keywordStyle = new HighlightStyle(0xFFFF55, true);
         if (neutralStyle == null) neutralStyle = new HighlightStyle(0xFF5555, false);
         if (quickActions == null) quickActions = newDefaultQuickActions();

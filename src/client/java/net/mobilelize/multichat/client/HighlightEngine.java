@@ -105,7 +105,8 @@ public final class HighlightEngine {
         String plain = rawLzText.string();
         if (plain.isEmpty()) return new HighlightResult(content, rawLzText, null);
         String lower = plain.toLowerCase();
-        List<int[]> protectedRanges = protectedRanges(lower, cfg.highlightExceptions);
+        List<String> allExceptions = allExceptions(cfg);
+        List<int[]> protectedRanges = protectedRanges(lower, allExceptions);
 
         List<String> pool = null;
         if (cfg.userHighlightEnabled && matchesAny(lower, cfg.userHighlightKeywords, protectedRanges)) {
@@ -129,8 +130,8 @@ public final class HighlightEngine {
             .withClickRunCommand("/multichat execute " + actionId)
             .withHoverText(hoverText);
 
-        LzText newContent = reformat(content.string(), pool, keywordStyle, neutralStyle, cfg.highlightExceptions);
-        LzText newRaw     = reformat(rawLzText.string(), pool, keywordStyle, neutralStyle, cfg.highlightExceptions);
+        LzText newContent = reformat(content.string(), pool, keywordStyle, neutralStyle, allExceptions);
+        LzText newRaw     = reformat(rawLzText.string(), pool, keywordStyle, neutralStyle, allExceptions);
         return new HighlightResult(newContent, newRaw, actionId);
     }
 
@@ -160,6 +161,15 @@ public final class HighlightEngine {
         for (ChatPanel panel : ChatManager.getAllActivePanels())
             for (ChatTab tab : data.touchedTabs())
                 panel.rebuildTabLines(tab);
+    }
+
+    /** Your Exceptions and API Exceptions are two lists for organization only — both protect
+     *  against a match from either keyword pool, so they're merged before any matching happens. */
+    private static List<String> allExceptions(MultiChatConfig cfg) {
+        List<String> all = new ArrayList<>();
+        if (cfg.exceptionsEnabled) all.addAll(cfg.highlightExceptions);
+        if (cfg.apiExceptionsEnabled) all.addAll(cfg.apiHighlightExceptions);
+        return all;
     }
 
     /** Every occurrence range of every exception word in lowerPlain — keyword matches overlapping

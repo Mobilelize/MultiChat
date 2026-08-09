@@ -273,13 +273,21 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.userHighlightKeywords = v)
                 .build());
 
-        highlight.addEntry(eb.startStrList(LzText.literal("Exceptions").mc(), MultichatClient.CONFIG.highlightExceptions)
+        highlight.addEntry(eb.startStrList(LzText.literal("Your Exceptions").mc(), MultichatClient.CONFIG.highlightExceptions)
                 .setTooltip(LzText.literal(
-                        "Safe words that shield a keyword match overlapping them. E.g. keyword \"ban\" + " +
-                        "exception \"urban\" stops it firing on \"urban\" — the rest of the message still " +
-                        "highlights normally if another keyword hits elsewhere in it."
+                        "Safe words that shield a keyword match overlapping them — works against both Your " +
+                        "Keywords and API Words. E.g. keyword \"ban\" + exception \"urban\" stops it firing on " +
+                        "\"urban\" — the rest of the message still highlights normally if another keyword hits " +
+                        "elsewhere in it."
                 ).mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.highlightExceptions = v)
+                .build());
+
+        highlight.addEntry(eb.startBooleanToggle(
+                LzText.literal("Enable Your Exceptions").mc(),
+                MultichatClient.CONFIG.exceptionsEnabled)
+                .setDefaultValue(true)
+                .setSaveConsumer(v -> MultichatClient.CONFIG.exceptionsEnabled = v)
                 .build());
 
         // Not persisted to config — these come from other mods calling MultiChatApi.addHighlightRule
@@ -287,6 +295,22 @@ public class ConfigMenu {
         // the actual source of truth is whatever mods currently have registered.
         highlight.addEntry(eb.startStrList(LzText.literal("API Words").mc(), HighlightEngine.getApiKeywords())
                 .setSaveConsumer(v -> {})
+                .build());
+
+        highlight.addEntry(eb.startStrList(LzText.literal("API Exceptions").mc(), MultichatClient.CONFIG.apiHighlightExceptions)
+                .setTooltip(LzText.literal(
+                        "Same effect as Your Exceptions above (protects against both keyword pools) — a separate " +
+                        "list just so words you add to counter an API-registered rule stay organized on their own, " +
+                        "since a mod can re-add its words on every connect and you can't remove them for good."
+                ).mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.apiHighlightExceptions = v)
+                .build());
+
+        highlight.addEntry(eb.startBooleanToggle(
+                LzText.literal("Enable API Exceptions").mc(),
+                MultichatClient.CONFIG.apiExceptionsEnabled)
+                .setDefaultValue(true)
+                .setSaveConsumer(v -> MultichatClient.CONFIG.apiExceptionsEnabled = v)
                 .build());
 
         highlight.addEntry(eb.startBooleanToggle(
