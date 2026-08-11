@@ -37,9 +37,9 @@ public class MessageRouter {
         if (rawLzText == null) rawLzText = content;
 
 
-        final String fullText   = LzText.stringSkippingObjects(rawLzText.mc());
+        final String fullText   = rawLzText.mc().getString();
         final String filterText = MultichatClient.CONFIG.normalizeFilterText
-            ? FilterRule.normalizeFilterText(fullText) : fullText;
+            ? FilterRule.normalizeFilterText(rawLzText.mc()) : fullText;
 
         final TreeMap<Integer, List<ChatTab>> diffByLayer = new TreeMap<>(Comparator.reverseOrder());
         for (ChatTab tab : ChatManager.getTabs()) {
