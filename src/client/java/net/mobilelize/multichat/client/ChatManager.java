@@ -488,6 +488,8 @@ public class ChatManager {
         ChatPanel panel = createPanel(tab.name() + " Popout");
         panel.setPopout(true);
         tab.visibleOnPanels().add(panel.id());
+        panel.rebuildTabLines(tab);
+        if (tab.isMultiTab()) for (ChatTab sub : tab.subTabs()) panel.rebuildTabLines(sub);
         MultichatClient.saveTabsToConfig();
         return panel;
     }
