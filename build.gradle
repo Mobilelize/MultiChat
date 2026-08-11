@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.15-SNAPSHOT'
+    id 'fabric-loom' version '1.17-SNAPSHOT'
     id 'maven-publish'
 }
 
@@ -26,6 +26,12 @@ repositories {
     mavenLocal()
     maven { url "https://maven.shedaniel.me/" }
     maven { url "https://maven.terraformersmc.com/releases/" }
+    exclusiveContent {
+        forRepository {
+            maven { url "https://api.modrinth.com/maven"; name "Modrinth" }
+        }
+        filter { includeGroup "maven.modrinth" }
+    }
     mavenCentral()
 }
 
@@ -44,6 +50,10 @@ dependencies {
     }
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Chat Heads — compile-only + dev-runtime, never bundled in the built jar.
+    modCompileOnly "maven.modrinth:Wb5oqrBJ:${project.chat_heads_version}"
+    modLocalRuntime "maven.modrinth:Wb5oqrBJ:${project.chat_heads_version}"
 }
 
 processResources {
