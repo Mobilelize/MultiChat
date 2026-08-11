@@ -37,7 +37,7 @@ public class MessageRouter {
         if (rawLzText == null) rawLzText = content;
 
 
-        final String fullText   = rawLzText.mc().getString();
+        final String fullText   = LzText.stringSkippingObjects(rawLzText.mc());
         final String filterText = MultichatClient.CONFIG.normalizeFilterText
             ? FilterRule.normalizeFilterText(fullText) : fullText;
 

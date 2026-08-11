@@ -1,6 +1,14 @@
 package net.mobilelize.fabriclib.text;
 
+import net.minecraft.text.ObjectTextContent;
+import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextContent;
+import net.minecraft.text.TranslatableTextContent;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Stable wrapper for MC Text.
@@ -37,6 +45,37 @@ public class LzText {
     public LzMutableText copy() { return new LzMutableText(text.copy()); }
 
     public String string() { return text.getString(); }
+
+    // MC-VERSION-SENSITIVE: ObjectTextContent added MC 1.21.9. Delete this method (and its
+    // call sites) outright when porting to an older branch — there's nothing to strip there.
+    // Mods that embed an inline "object" in chat (e.g. chat_heads' player-head sprite) make
+    // Text.getString() resolve to junk like "<[Bob head]Bob> hi", which breaks filter/search
+    // matching. This finds each ObjectTextContent node's own fallback string (its content
+    // only, not siblings) and cuts those substrings back out of the fully-resolved string.
+    public static String stringSkippingObjects(Text text) {
+        String full = text.getString();
+        List<String> fallbacks = new ArrayList<>();
+        collectObjectFallbacks(text, fallbacks);
+        for (String fallback : fallbacks) {
+            if (fallback.isEmpty()) continue;
+            int idx = full.indexOf(fallback);
+            if (idx >= 0) full = full.substring(0, idx) + full.substring(idx + fallback.length());
+        }
+        return full;
+    }
+
+    private static void collectObjectFallbacks(Text text, List<String> out) {
+        TextContent content = text.getContent();
+        if (content instanceof ObjectTextContent) {
+            StringBuilder sb = new StringBuilder();
+            content.visit(s -> { sb.append(s); return Optional.empty(); });
+            if (!sb.isEmpty()) out.add(sb.toString());
+        } else if (content instanceof TranslatableTextContent translatable) {
+            for (Object arg : translatable.getArgs())
+                if (arg instanceof Text argText) collectObjectFallbacks(argText, out);
+        }
+        for (Text sibling : text.getSiblings()) collectObjectFallbacks(sibling, out);
+    }
 
     // ── Static factories ────────────────────────────────────────────────────
 

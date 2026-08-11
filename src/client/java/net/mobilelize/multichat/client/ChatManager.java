@@ -138,7 +138,7 @@ public class ChatManager {
             LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
             for (ChatTab.MessageEntry me : source) {
                 if (me.entry().originalContent == null) continue;
-                String text = me.entry().originalContent.mc().getString();
+                String text = LzText.stringSkippingObjects(me.entry().originalContent.mc());
                 if (!tab.matchesText(text) || !tab.matchesTime(me.entry().creationTick)) continue;
                 String fText1 = MultichatClient.CONFIG.normalizeFilterText ? FilterRule.normalizeFilterText(text) : text;
                 if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText1, me.entry().indicator)) continue;
@@ -162,7 +162,7 @@ public class ChatManager {
             for (int i = source.size() - 1; i >= 0; i--) {
                 ChatTab.MessageEntry me = source.get(i);
                 if (me.entry().originalContent == null) continue;
-                String text = me.entry().originalContent.mc().getString();
+                String text = LzText.stringSkippingObjects(me.entry().originalContent.mc());
                 if (!tab.matchesText(text)) continue;
                 String fText2 = MultichatClient.CONFIG.normalizeFilterText ? FilterRule.normalizeFilterText(text) : text;
                 if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText2, me.entry().indicator)) continue;
@@ -214,7 +214,7 @@ public class ChatManager {
             ChatTab.MessageEntry src = all.get(i);
             LzText raw = src.entry().originalContent;
             if (raw == null) continue;
-            String fullText   = raw.mc().getString();
+            String fullText   = LzText.stringSkippingObjects(raw.mc());
             String filterText = MultichatClient.CONFIG.normalizeFilterText
                 ? FilterRule.normalizeFilterText(fullText) : fullText;
             LzMessageIndicator indicator = src.entry().indicator;
