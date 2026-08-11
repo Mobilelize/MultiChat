@@ -13,11 +13,17 @@ public final class LzChatLine {
 
     private final ChatHudLine.Visible line;
     @Nullable private LzChatEntry entry;
+    private boolean startOfEntry;
 
     public LzChatLine(ChatHudLine.Visible line) { this.line = line; }
 
     @Nullable
     public LzChatEntry entry() { return entry; }
+
+    /** True for the first physical (pre-wrap) line of its logical entry — symmetric to
+     *  {@link #endOfEntry()}, which marks the last. Bolted on like {@link #entry}, since vanilla's
+     *  ChatHudLine.Visible record has no room for it. */
+    public boolean startOfEntry() { return startOfEntry; }
 
     /** Raw MC ChatHudLine.Visible — escape hatch. */
     public ChatHudLine.Visible mc() { return line; }
@@ -49,12 +55,13 @@ public final class LzChatLine {
     /** Creates a new chat line with a logical-message entry for cross-panel identity. */
     public static LzChatLine create(int addedTime, LzOrderedText content,
                                     @Nullable LzMessageIndicator indicator, boolean endOfEntry,
-                                    @Nullable LzChatEntry entry) {
+                                    @Nullable LzChatEntry entry, boolean startOfEntry) {
         LzChatLine l = new LzChatLine(new ChatHudLine.Visible(
             addedTime, content.mc(),
             indicator == null ? null : indicator.mc(),
             endOfEntry));
         l.entry = entry;
+        l.startOfEntry = startOfEntry;
         return l;
     }
 

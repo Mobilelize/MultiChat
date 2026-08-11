@@ -16,6 +16,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.filter.MessageRouter;
 import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -145,6 +146,10 @@ public class ChatHudMixin {
     )
     private void captureRaw(Text message, @Nullable MessageSignatureData sig, @Nullable MessageIndicator indicator, CallbackInfo ci) {
         MessageRouter.pendingRaw = LzText.wrapMc(message);
+        // Same instant chat_heads' own ChatListenerMixin has just set ChatHeads.lastSenderData
+        // for this exact message (its @ModifyArg fires immediately before this vanilla method
+        // runs) — see ChatHeadsSupport's BEFORE_LINE support section for the full trace.
+        MessageRouter.pendingHeadRef = ChatHeadsSupport.captureLastSenderData();
     }
 
     @Inject(

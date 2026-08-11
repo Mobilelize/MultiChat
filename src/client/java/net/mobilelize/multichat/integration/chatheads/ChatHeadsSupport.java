@@ -1,7 +1,12 @@
 package net.mobilelize.multichat.integration.chatheads;
 
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.gui.DrawContext;
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.multichat.client.MultichatClient;
+
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Compatibility shim for dzwdz/chat_heads. Only this class touches chat_heads classes —
@@ -52,6 +57,80 @@ public final class ChatHeadsSupport {
     public static void init() {}
 
     public static boolean isPresent() { return present; }
+
+    // ── BEFORE_LINE support ──────────────────────────────────────────────────
+    //
+    // chat_heads' non-default renderPosition = BEFORE_LINE mode embeds nothing in the message
+    // Text at all — instead ChatListenerMixin sets the static ChatHeads.lastSenderData right
+    // before vanilla ChatComponent.addMessage(...) runs (the exact method ChatHudMixin.captureRaw
+    // already hooks at HEAD, same call stack, so capturing it there is race-free), and chat_heads'
+    // own mixins transfer that onto the first wrapped GuiMessage.Line of the message — objects
+    // MultiChat never creates. So MultiChat has to capture the head data itself at message-add
+    // time, remember which LzChatEntry it belongs to, and do chat_heads' own draw+offset job
+    // (ChatHeads.renderChatHead / getChatOffset) manually for its own LzChatLines.
+
+    /** Opaque handle to a chat_heads HeadData — lets code outside this package hold a reference
+     *  without importing chat_heads types. {@link #NONE} means "no head for this message". */
+    public static final class HeadRef {
+        public static final HeadRef NONE = new HeadRef(null);
+        private final dzwdz.chat_heads.HeadData data;
+        private HeadRef(dzwdz.chat_heads.HeadData data) { this.data = data; }
+    }
+
+    // Self-cleans as entries scroll out of every tab's history and become unreachable — no
+    // explicit trim/removal hook needed. Single-threaded render/tick, no synchronization needed.
+    private static final Map<LzChatEntry, HeadRef> headByEntry = new WeakHashMap<>();
+
+    /** Call from ChatHudMixin.captureRaw, at HEAD of ChatHud.addMessage — same instant chat_heads'
+     *  own ChatListenerMixin has just set ChatHeads.lastSenderData for this exact message. */
+    public static HeadRef captureLastSenderData() {
+        if (!present) return HeadRef.NONE;
+        try {
+            var data = dzwdz.chat_heads.ChatHeads.lastSenderData;
+            // getChatOffset() already encodes "are we even in BEFORE_LINE mode" (0 otherwise) —
+            // reuse it instead of re-deriving that from CONFIG ourselves.
+            return dzwdz.chat_heads.ChatHeads.getChatOffset(data) > 0 ? new HeadRef(data) : HeadRef.NONE;
+        } catch (Throwable t) {
+            present = false;
+            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            return HeadRef.NONE;
+        }
+    }
+
+    /** Associates a captured HeadRef with the logical message entry it belongs to. */
+    public static void attach(LzChatEntry entry, HeadRef ref) {
+        if (!present || ref == HeadRef.NONE) return;
+        headByEntry.put(entry, ref);
+    }
+
+    /** Returns the HeadRef for this entry, or {@link HeadRef#NONE} if it has none. */
+    public static HeadRef get(LzChatEntry entry) {
+        if (!present || entry == null) return HeadRef.NONE;
+        return headByEntry.getOrDefault(entry, HeadRef.NONE);
+    }
+
+    /** Pixels of leading space to reserve for the head on this entry's first wrapped line. 0 if none. */
+    public static int headWidth(HeadRef ref) {
+        if (!present || ref == HeadRef.NONE) return 0;
+        try {
+            return dzwdz.chat_heads.ChatHeads.getChatOffset(ref.data);
+        } catch (Throwable t) {
+            present = false;
+            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            return 0;
+        }
+    }
+
+    /** Draws the head texture at (x, y). No-op if ref is {@link HeadRef#NONE}. */
+    public static void renderHead(DrawContext context, int x, int y, HeadRef ref, float opacity) {
+        if (!present || ref == HeadRef.NONE) return;
+        try {
+            dzwdz.chat_heads.ChatHeads.renderChatHead(context, x, y, ref.data.playerInfo(), opacity);
+        } catch (Throwable t) {
+            present = false;
+            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+        }
+    }
 
     /** Call immediately before measuring/wrapping or drawing text that may contain a chat_heads object. */
     public static void beginHeadRendering() {

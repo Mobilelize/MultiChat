@@ -74,23 +74,31 @@ public class ChatSelection {
         if (lineIdx < bl || lineIdx > tl) return null;
 
         LzOrderedText content = line.content();
+        int off = headOffset(line);
         int x0, x1;
         if (tl == bl) {
-            x0 = (int) xOfChar(content, tc);
-            x1 = (int) xOfChar(content, bc);
+            x0 = off + (int) xOfChar(content, tc);
+            x1 = off + (int) xOfChar(content, bc);
         } else if (lineIdx == tl) {
-            x0 = (int) xOfChar(content, tc);
-            x1 = LzDraw.textWidth(content);
+            x0 = off + (int) xOfChar(content, tc);
+            x1 = off + LzDraw.textWidth(content);
         } else if (lineIdx == bl) {
-            x0 = 0;
-            x1 = (int) xOfChar(content, bc);
+            x0 = off;
+            x1 = off + (int) xOfChar(content, bc);
         } else {
-            x0 = 0;
-            x1 = LzDraw.textWidth(content);
+            x0 = off;
+            x1 = off + LzDraw.textWidth(content);
         }
 
         if (x1 <= x0) return null;
         return new int[]{x0, x1};
+    }
+
+    /** Pixels of chat_heads' BEFORE_LINE head reserved before this line's text — 0 unless it's
+     *  the first wrapped line of an entry that has one. See ChatHeadsSupport's BEFORE_LINE section. */
+    private static int headOffset(LzChatLine line) {
+        if (!line.startOfEntry()) return 0;
+        return ChatHeadsSupport.headWidth(ChatHeadsSupport.get(line.entry()));
     }
 
     // -----------------------------------------------------------------------
@@ -304,15 +312,19 @@ public class ChatSelection {
         return arr;
     }
 
-    public static int charIndexAtX(LzOrderedText text, float targetX) {
-        if (targetX <= 0f) return 0;
+    /** {@code line} may be null (callers pass a possibly-null list lookup straight through). */
+    public static int charIndexAtX(LzChatLine line, float targetX) {
+        if (line == null) return 0;
+        float adjusted = targetX - headOffset(line);
+        if (adjusted <= 0f) return 0;
+        LzOrderedText text = line.content();
         ChatHeadsSupport.beginHeadRendering();
         try {
         int[]   count = {0};
         float[] cumX  = {0f};
         visitVisible(text, (idx, style, cp) -> {
             float w = glyphWidth(style, cp);
-            if (cumX[0] + w * 0.5f >= targetX) return false;
+            if (cumX[0] + w * 0.5f >= adjusted) return false;
             cumX[0] += w;
             count[0]++;
             return true;

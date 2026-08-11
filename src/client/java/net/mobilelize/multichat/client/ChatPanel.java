@@ -122,7 +122,13 @@ public class ChatPanel {
     }
 
     private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
-        int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
+        // chat_heads' BEFORE_LINE head (if any) only ever sits on the entry's first wrapped line,
+        // but the whole entry wraps at one width — reserving its width across every line (rather
+        // than only the first) costs at most a slightly-early wrap on continuation lines, in
+        // exchange for one simple wrap call instead of re-deriving line-break structure per line.
+        ChatHeadsSupport.HeadRef headRef = ChatHeadsSupport.get(entry.entry());
+        int headWidth = ChatHeadsSupport.headWidth(headRef);
+        int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null)) - headWidth;
         ChatHeadsSupport.beginHeadRendering();
         List<LzOrderedText> lines;
         try {
@@ -131,8 +137,9 @@ public class ChatPanel {
             ChatHeadsSupport.endHeadRendering();
         }
         for (int i = 0; i < lines.size(); i++) {
-            boolean endOfEntry = i == lines.size() - 1;
-            panelLines.addFirst(LzChatLine.create(entry.entry().creationTick, lines.get(i), entry.entry().indicator, endOfEntry, entry.entry()));
+            boolean endOfEntry   = i == lines.size() - 1;
+            boolean startOfEntry = i == 0;
+            panelLines.addFirst(LzChatLine.create(entry.entry().creationTick, lines.get(i), entry.entry().indicator, endOfEntry, entry.entry(), startOfEntry));
         }
     }
 

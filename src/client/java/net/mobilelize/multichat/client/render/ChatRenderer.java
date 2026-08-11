@@ -358,12 +358,22 @@ public class ChatRenderer {
                 int textAlpha = row.textAlpha();
                 int textY     = row.textY();
 
+                // chat_heads' BEFORE_LINE head (if any) only ever sits on the entry's first
+                // wrapped line — see ChatHeadsSupport's BEFORE_LINE support section. Drawn before
+                // the text, at x=0, with the text itself shifted right by the reserved width.
+                ChatHeadsSupport.HeadRef headRef = visible.startOfEntry()
+                    ? ChatHeadsSupport.get(visible.entry()) : ChatHeadsSupport.HeadRef.NONE;
+                int headOffset = ChatHeadsSupport.headWidth(headRef);
+                if (headOffset > 0) {
+                    ChatHeadsSupport.renderHead(context.mc(), 0, textY, headRef, textAlpha / 255.0f);
+                }
+
                 if (MultichatClient.CONFIG.showIndicators) {
                     LzMessageIndicator indicator = visible.indicator();
                     if (indicator != null) {
                         LzDraw.fill(context, -4, row.lineBot(), -2, row.lineTop(), indicator.indicatorColor() | (textAlpha << 24));
                         if (row.s() == hoveredIndex && indicator.hasIcon()) {
-                            int iconX = LzDraw.textWidth(visible.content()) + 4;
+                            int iconX = headOffset + LzDraw.textWidth(visible.content()) + 4;
                             int iconY = textY + 9 - indicator.iconHeight() - 1;
                             indicator.drawIcon(context, iconX, iconY);
                         }
@@ -371,12 +381,12 @@ public class ChatRenderer {
                 }
 
                 if (hoverDrawer != null && hoverTransform != null) {
-                    hoverDrawer.text(Alignment.LEFT, 0, textY,
+                    hoverDrawer.text(Alignment.LEFT, headOffset, textY,
                         hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
                 } else {
                     LzDraw.pushMatrix(context);
                     LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
-                    LzDraw.drawText(context, visible.content(), 0, textY, theme.messageTextRgb + (textAlpha << 24));
+                    LzDraw.drawText(context, visible.content(), headOffset, textY, theme.messageTextRgb + (textAlpha << 24));
                     LzDraw.popMatrix(context);
                 }
             }

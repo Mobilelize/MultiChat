@@ -86,7 +86,7 @@ public abstract class ChatScreenMixin {
                             float localX = Math.max(0f, (mouseX / scale) - 4 - xOff);
                             List<LzChatLine> _selLines = selPanel.getTabLines(active);
                         int charIdx  = ChatSelection.charIndexAtX(
-                                _selLines != null ? _selLines.get(idx).content() : null, localX);
+                                _selLines != null ? _selLines.get(idx) : null, localX);
                             ChatSelection.extend(selPanel, idx, charIdx);
                         }
                     }
@@ -314,7 +314,7 @@ public abstract class ChatScreenMixin {
                     float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
                     List<LzChatLine> _dblLines = panel.getTabLines(active);
                     int charIdx  = ChatSelection.charIndexAtX(
-                        _dblLines != null ? _dblLines.get(exactIdx).content() : null, localX);
+                        _dblLines != null ? _dblLines.get(exactIdx) : null, localX);
                     ChatSelection.selectWord(panel, exactIdx, charIdx, MultichatClient.CONFIG.doubleClickNameSelect);
                     cir.setReturnValue(true);
                     return;
@@ -356,7 +356,7 @@ public abstract class ChatScreenMixin {
                 float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
                 List<LzChatLine> _sglLines = panel.getTabLines(active);
                 int charIdx  = ChatSelection.charIndexAtX(
-                    _sglLines != null ? _sglLines.get(exactIdx).content() : null, localX);
+                    _sglLines != null ? _sglLines.get(exactIdx) : null, localX);
                 ChatSelection.start(panel, exactIdx, charIdx);
                 cir.setReturnValue(true);
                 return;

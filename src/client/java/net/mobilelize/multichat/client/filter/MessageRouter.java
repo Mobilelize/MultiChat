@@ -11,6 +11,7 @@ import net.mobilelize.multichat.client.HighlightEngine;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.SearchTab;
 import net.mobilelize.multichat.client.TabType;
+import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,6 +23,11 @@ public class MessageRouter {
     // Raw text captured at HEAD of ChatHud.addMessage before any mod modifies it.
     // Set by ChatHudMixin.captureRaw (priority 2000 = first), consumed by routeOnReturn.
     public static LzText pendingRaw = null;
+
+    // chat_heads' BEFORE_LINE head data for the message currently being added, captured at the
+    // same HEAD hook (same instant chat_heads' own ChatListenerMixin sets it) — see
+    // ChatHeadsSupport.captureLastSenderData(). Consumed into sharedEntry below.
+    public static ChatHeadsSupport.HeadRef pendingHeadRef = ChatHeadsSupport.HeadRef.NONE;
 
     // Set before routing an API-injected message to prevent double-adding to the source tab.
     public static ChatTab skipTabOnRoute = null;
@@ -48,6 +54,8 @@ public class MessageRouter {
         }
 
         final LzChatEntry sharedEntry = new LzChatEntry(tick, rawLzText, indicator);
+        ChatHeadsSupport.attach(sharedEntry, pendingHeadRef);
+        pendingHeadRef = ChatHeadsSupport.HeadRef.NONE;
 
         // Highlight Words applies after filter/routing decisions (which stay based on the untouched
         // originals above) so recoloring a message can never change which tab it lands in. ALL tab
