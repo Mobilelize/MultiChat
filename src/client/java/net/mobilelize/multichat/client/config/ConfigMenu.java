@@ -233,6 +233,14 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.selectionUsesOriginalText = v)
                 .build());
 
+        selection.addEntry(eb.startBooleanToggle(
+                LzText.literal("Copy Includes Object Placeholder").mc(),
+                MultichatClient.CONFIG.copyIncludesObjectPlaceholder)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Messages containing an inline object (e.g. a chat_heads player-head icon) show a placeholder character (￼) where it was. ON: copying keeps that placeholder in the clipboard text. OFF: it's left out.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.copyIncludesObjectPlaceholder = v)
+                .build());
+
         // ── Advanced ──────────────────────────────────────────────────────
         ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
 

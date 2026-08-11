@@ -39,6 +39,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean doubleClickSelectEnabled     = true;
     public boolean doubleClickNameSelect        = true;
     public boolean selectionUsesOriginalText    = true;
+    public boolean copyIncludesObjectPlaceholder = true;
     public String  timestampFormat              = "&d[&6HH&d:&6mm&d:&6ss&d]";
     public String  collapseCounterFormat        = "&e(x{count})";
     public boolean arrowKeySwitchTabs           = true;

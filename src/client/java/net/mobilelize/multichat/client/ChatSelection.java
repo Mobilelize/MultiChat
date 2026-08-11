@@ -153,7 +153,13 @@ public class ChatSelection {
     private static void appendEntryRange(StringBuilder sb, List<LzChatLine> msgs, LzChatEntry entry,
                                           int groupTop, int groupBottom,
                                           int tl, int tc, int bl, int bc) {
-        int[] raw   = stripSectionPairs(entry.originalContent.mc().getString().codePoints().toArray());
+        // Built through the same styled-visit pipeline (collectCodepoints -> visitVisible) that
+        // produces `group`, not Text.getString(). That pipeline collapses an inline "object"
+        // (e.g. a chat_heads player-head icon) to exactly one OBJECT_PLACEHOLDER codepoint —
+        // getString() instead expands it to the object's own multi-character fallback string
+        // (e.g. "[Bob head]"), which desyncs codepoint-for-codepoint alignment against `group`
+        // and corrupts everything copied after it.
+        int[] raw   = stripNewlines(collectCodepoints(LzOrderedText.of(entry.originalContent)));
         int[] group = groupCodepoints(msgs, groupTop, groupBottom);
 
         int prefixLen = findRawStart(group, raw);
@@ -170,8 +176,8 @@ public class ChatSelection {
         for (int i = start; i < end; i++) {
             // prefix/suffix regions read straight from `group` (their real on-screen text);
             // the middle region substitutes `raw` to avoid wrap-dropped-space artifacts.
-            if (i >= prefixLen && i < prefixLen + raw.length) sb.appendCodePoint(raw[i - prefixLen]);
-            else sb.appendCodePoint(group[i]);
+            if (i >= prefixLen && i < prefixLen + raw.length) appendCp(sb, raw[i - prefixLen]);
+            else appendCp(sb, group[i]);
         }
     }
 
@@ -343,10 +349,21 @@ public class ChatSelection {
         int[] count = {0};
         visitVisible(text, (idx, style, cp) -> {
             if (count[0] >= end) return false;
-            if (count[0] >= start) sb.appendCodePoint(cp);
+            if (count[0] >= start) appendCp(sb, cp);
             count[0]++;
             return true;
         });
+    }
+
+    // Vanilla's own placeholder for an inline "object" (e.g. a chat_heads player-head icon) —
+    // net.minecraft.text.ObjectTextContent.REPLACEMENT. Both `raw` and `group` collapse an
+    // object to exactly this one codepoint (see appendEntryRange), so stripping/keeping it is
+    // a single check here rather than string surgery.
+    private static final int OBJECT_PLACEHOLDER = '￼';
+
+    private static void appendCp(StringBuilder sb, int cp) {
+        if (cp == OBJECT_PLACEHOLDER && !MultichatClient.CONFIG.copyIncludesObjectPlaceholder) return;
+        sb.appendCodePoint(cp);
     }
 
     private static float glyphWidth(LzStyle style, int cp) {
@@ -390,20 +407,17 @@ public class ChatSelection {
         return true;
     }
 
-    // raw (original source string) may carry literal '\n'/'\r' (leading, trailing, or between
-    // lines of a multi-line message). group (rendered codepoints) never has them — the wrapper
-    // consumes newlines as line breaks, not glyphs. appendEntryRange assumes raw and group are
-    // codepoint-aligned; leftover newlines break that (a leading '\n' even kills the anchor
-    // match in findRawStart outright), so they must be stripped same as section-sign pairs.
-    // Line breaks in the copied text come from sb.append('\n') between LzChatLines already.
-    private static int[] stripSectionPairs(int[] codepoints) {
+    // raw (entry.originalContent's codepoints) may carry literal '\n'/'\r' (leading, trailing,
+    // or between lines of a multi-line message). group (rendered codepoints) never has them —
+    // the wrapper consumes newlines as line breaks, not glyphs. appendEntryRange assumes raw
+    // and group are codepoint-aligned; leftover newlines break that (a leading '\n' even kills
+    // the anchor match in findRawStart outright), so they're stripped here. Section-sign
+    // handling doesn't need repeating — collectCodepoints already applies it identically to
+    // both raw and group via visitVisible. Line breaks in the copied text come from
+    // sb.append('\n') between LzChatLines already.
+    private static int[] stripNewlines(int[] codepoints) {
         java.util.List<Integer> out = new java.util.ArrayList<>(codepoints.length);
-        for (int i = 0; i < codepoints.length; i++) {
-            int cp = codepoints[i];
-            if (cp == SECTION_SIGN) {
-                if (i + 1 < codepoints.length && isFormatCode(codepoints[i + 1])) i++;
-                continue;
-            }
+        for (int cp : codepoints) {
             if (cp == '\n' || cp == '\r') continue;
             out.add(cp);
         }
