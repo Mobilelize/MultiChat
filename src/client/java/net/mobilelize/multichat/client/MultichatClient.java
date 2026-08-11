@@ -12,6 +12,7 @@ import net.mobilelize.multichat.client.command.MultiChatCommand;
 import net.mobilelize.multichat.client.config.MultiChatConfig;
 import net.mobilelize.multichat.client.mouse.MouseClient;
 import net.mobilelize.multichat.client.ping.PingPlayer;
+import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,6 +27,7 @@ public class MultichatClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         CONFIG = LzConfig.load(MultiChatConfig.class);
+        ChatHeadsSupport.init();
         LzAfk.init();
         restoreFromConfig();
         MultiChatCommand.register();

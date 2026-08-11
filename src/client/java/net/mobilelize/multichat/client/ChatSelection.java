@@ -8,6 +8,7 @@ import net.mobilelize.fabriclib.text.LzMutableText;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 
 import java.util.List;
 
@@ -305,6 +306,8 @@ public class ChatSelection {
 
     public static int charIndexAtX(LzOrderedText text, float targetX) {
         if (targetX <= 0f) return 0;
+        ChatHeadsSupport.beginHeadRendering();
+        try {
         int[]   count = {0};
         float[] cumX  = {0f};
         visitVisible(text, (idx, style, cp) -> {
@@ -315,6 +318,9 @@ public class ChatSelection {
             return true;
         });
         return count[0];
+        } finally {
+            ChatHeadsSupport.endHeadRendering();
+        }
     }
 
     // -----------------------------------------------------------------------

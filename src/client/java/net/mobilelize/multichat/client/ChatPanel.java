@@ -4,6 +4,7 @@ import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 
 import java.util.*;
 
@@ -122,7 +123,13 @@ public class ChatPanel {
 
     private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
         int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
-        List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(entry.rendered().mc()), width);
+        ChatHeadsSupport.beginHeadRendering();
+        List<LzOrderedText> lines;
+        try {
+            lines = LzChat.breakLines(LzText.wrapMc(entry.rendered().mc()), width);
+        } finally {
+            ChatHeadsSupport.endHeadRendering();
+        }
         for (int i = 0; i < lines.size(); i++) {
             boolean endOfEntry = i == lines.size() - 1;
             panelLines.addFirst(LzChatLine.create(entry.entry().creationTick, lines.get(i), entry.entry().indicator, endOfEntry, entry.entry()));

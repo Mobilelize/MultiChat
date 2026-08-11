@@ -13,6 +13,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.*;
+import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3x2f;
@@ -310,68 +311,77 @@ public class ChatRenderer {
         }
         int linesDrawn = rows.size();
 
-        // Pass 1: all background-layer fills, for every row, before any text is drawn.
-        for (Row row : rows) {
-            LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (row.bgAlpha() << 24) | lineBgRgb);
+        // Both passes below query glyph widths (Pass 1's lineHighlight/selection math, Pass 2's
+        // indicator icon offset and the actual text draw) that must agree with each other and
+        // with the wrap-time measurement in ChatPanel.wrapEntryInto — one begin/end bracket
+        // around both, rather than per-call, so they can't drift out of sync with each other.
+        ChatHeadsSupport.beginHeadRendering();
+        try {
+            // Pass 1: all background-layer fills, for every row, before any text is drawn.
+            for (Row row : rows) {
+                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (row.bgAlpha() << 24) | lineBgRgb);
 
-            LzChatEntry visibleEntry = row.visible().entry();
-            if (!ChatRenderer.highlightEntries.isEmpty()
-                    && ChatRenderer.currentTick < ChatRenderer.highlightUntilTick
-                    && visibleEntry != null && ChatRenderer.highlightEntries.contains(visibleEntry)) {
-                int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
-                int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightSearchRgb);
-            }
-            if (!ChatRenderer.copyHighlightEntries.isEmpty()
-                    && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
-                    && visibleEntry != null && ChatRenderer.copyHighlightEntries.contains(visibleEntry)) {
-                int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
-                int hlAlpha = Math.min(120, remaining * 6);
-                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightNewRgb);
-            }
+                LzChatEntry visibleEntry = row.visible().entry();
+                if (!ChatRenderer.highlightEntries.isEmpty()
+                        && ChatRenderer.currentTick < ChatRenderer.highlightUntilTick
+                        && visibleEntry != null && ChatRenderer.highlightEntries.contains(visibleEntry)) {
+                    int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
+                    int hlAlpha = Math.min(120, remaining * 6);
+                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightSearchRgb);
+                }
+                if (!ChatRenderer.copyHighlightEntries.isEmpty()
+                        && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
+                        && visibleEntry != null && ChatRenderer.copyHighlightEntries.contains(visibleEntry)) {
+                    int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
+                    int hlAlpha = Math.min(120, remaining * 6);
+                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightNewRgb);
+                }
 
-            int flashAge = currentTick - panel.tabFlashTick();
-            if (flashAge >= 0 && flashAge < FLASH_TICKS) {
-                float t = (float) flashAge / FLASH_TICKS;
-                int flashAlpha = (int)(80 * (1f - t) * (1f - t));
-                if (flashAlpha > 0)
-                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (flashAlpha << 24) | theme.highlightFlashRgb);
-            }
+                int flashAge = currentTick - panel.tabFlashTick();
+                if (flashAge >= 0 && flashAge < FLASH_TICKS) {
+                    float t = (float) flashAge / FLASH_TICKS;
+                    int flashAlpha = (int)(80 * (1f - t) * (1f - t));
+                    if (flashAlpha > 0)
+                        LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (flashAlpha << 24) | theme.highlightFlashRgb);
+                }
 
-            if (MultichatClient.CONFIG.selectionEnabled) {
-                int[] selRect = ChatSelection.lineHighlight(row.visible(), row.s(), panel);
-                if (selRect != null)
-                    LzDraw.fill(context, selRect[0], row.lineBot(), selRect[1], row.lineTop(), theme.selection);
-            }
-        }
-
-        // Pass 2: indicators + text, for every row, always drawn on top of every background above.
-        for (Row row : rows) {
-            LzChatLine visible = row.visible();
-            int textAlpha = row.textAlpha();
-            int textY     = row.textY();
-
-            if (MultichatClient.CONFIG.showIndicators) {
-                LzMessageIndicator indicator = visible.indicator();
-                if (indicator != null) {
-                    LzDraw.fill(context, -4, row.lineBot(), -2, row.lineTop(), indicator.indicatorColor() | (textAlpha << 24));
-                    if (row.s() == hoveredIndex && indicator.hasIcon()) {
-                        int iconX = LzDraw.textWidth(visible.content()) + 4;
-                        int iconY = textY + 9 - indicator.iconHeight() - 1;
-                        indicator.drawIcon(context, iconX, iconY);
-                    }
+                if (MultichatClient.CONFIG.selectionEnabled) {
+                    int[] selRect = ChatSelection.lineHighlight(row.visible(), row.s(), panel);
+                    if (selRect != null)
+                        LzDraw.fill(context, selRect[0], row.lineBot(), selRect[1], row.lineTop(), theme.selection);
                 }
             }
 
-            if (hoverDrawer != null && hoverTransform != null) {
-                hoverDrawer.text(Alignment.LEFT, 0, textY,
-                    hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
-            } else {
-                LzDraw.pushMatrix(context);
-                LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
-                LzDraw.drawText(context, visible.content(), 0, textY, theme.messageTextRgb + (textAlpha << 24));
-                LzDraw.popMatrix(context);
+            // Pass 2: indicators + text, for every row, always drawn on top of every background above.
+            for (Row row : rows) {
+                LzChatLine visible = row.visible();
+                int textAlpha = row.textAlpha();
+                int textY     = row.textY();
+
+                if (MultichatClient.CONFIG.showIndicators) {
+                    LzMessageIndicator indicator = visible.indicator();
+                    if (indicator != null) {
+                        LzDraw.fill(context, -4, row.lineBot(), -2, row.lineTop(), indicator.indicatorColor() | (textAlpha << 24));
+                        if (row.s() == hoveredIndex && indicator.hasIcon()) {
+                            int iconX = LzDraw.textWidth(visible.content()) + 4;
+                            int iconY = textY + 9 - indicator.iconHeight() - 1;
+                            indicator.drawIcon(context, iconX, iconY);
+                        }
+                    }
+                }
+
+                if (hoverDrawer != null && hoverTransform != null) {
+                    hoverDrawer.text(Alignment.LEFT, 0, textY,
+                        hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
+                } else {
+                    LzDraw.pushMatrix(context);
+                    LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
+                    LzDraw.drawText(context, visible.content(), 0, textY, theme.messageTextRgb + (textAlpha << 24));
+                    LzDraw.popMatrix(context);
+                }
             }
+        } finally {
+            ChatHeadsSupport.endHeadRendering();
         }
 
         long queueCount = LzClient.mc().getMessageHandler().getUnprocessedMessageCount();
