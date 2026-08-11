@@ -122,13 +122,13 @@ public class ChatPanel {
     }
 
     private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
-        // chat_heads' BEFORE_LINE head (if any) only ever sits on the entry's first wrapped line,
-        // but the whole entry wraps at one width — reserving its width across every line (rather
-        // than only the first) costs at most a slightly-early wrap on continuation lines, in
-        // exchange for one simple wrap call instead of re-deriving line-break structure per line.
-        ChatHeadsSupport.HeadRef headRef = ChatHeadsSupport.get(entry.entry());
-        int headWidth = ChatHeadsSupport.headWidth(headRef);
-        int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null)) - headWidth;
+        // chat_heads' BEFORE_LINE head (if any) does NOT reserve space at wrap time — real
+        // chat_heads wraps at full width same as always, then shifts the first line's text right
+        // by headWidth at render time only, accepting that it may extend slightly past the normal
+        // edge (their own fixTextOverflow mixin widens the background-fill rect to match, rather
+        // than avoiding the overflow). Reducing wrap width here would wrap a line early and leave
+        // headed messages short of the wall — see ChatRenderer.renderAt for the render-time shift.
+        int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
         ChatHeadsSupport.beginHeadRendering();
         List<LzOrderedText> lines;
         try {

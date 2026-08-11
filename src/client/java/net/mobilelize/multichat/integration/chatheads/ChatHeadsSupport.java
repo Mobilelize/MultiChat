@@ -82,14 +82,17 @@ public final class ChatHeadsSupport {
     private static final Map<LzChatEntry, HeadRef> headByEntry = new WeakHashMap<>();
 
     /** Call from ChatHudMixin.captureRaw, at HEAD of ChatHud.addMessage — same instant chat_heads'
-     *  own ChatListenerMixin has just set ChatHeads.lastSenderData for this exact message. */
+     *  own ChatListenerMixin has just set ChatHeads.lastSenderData for this exact message. Always
+     *  wraps whatever value that is (including HeadData.EMPTY, for a message with no real head) —
+     *  NOT pre-filtered by whether it currently produces a nonzero offset. headWidth()/renderHead()
+     *  re-derive that live from current config on every call, so a config change (e.g. toggling
+     *  "offset non-player text") takes effect instantly for every message already in history, the
+     *  same way real chat_heads re-evaluates it fresh every render frame. Pre-filtering here would
+     *  freeze that decision at message-arrival time and never revisit it. */
     public static HeadRef captureLastSenderData() {
         if (!present) return HeadRef.NONE;
         try {
-            var data = dzwdz.chat_heads.ChatHeads.lastSenderData;
-            // getChatOffset() already encodes "are we even in BEFORE_LINE mode" (0 otherwise) —
-            // reuse it instead of re-deriving that from CONFIG ourselves.
-            return dzwdz.chat_heads.ChatHeads.getChatOffset(data) > 0 ? new HeadRef(data) : HeadRef.NONE;
+            return new HeadRef(dzwdz.chat_heads.ChatHeads.lastSenderData);
         } catch (Throwable t) {
             present = false;
             MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
@@ -99,7 +102,7 @@ public final class ChatHeadsSupport {
 
     /** Associates a captured HeadRef with the logical message entry it belongs to. */
     public static void attach(LzChatEntry entry, HeadRef ref) {
-        if (!present || ref == HeadRef.NONE) return;
+        if (!present) return;
         headByEntry.put(entry, ref);
     }
 
@@ -121,10 +124,14 @@ public final class ChatHeadsSupport {
         }
     }
 
-    /** Draws the head texture at (x, y). No-op if ref is {@link HeadRef#NONE}. */
+    /** Draws the head texture at (x, y). No-op if ref is {@link HeadRef#NONE} or carries no real
+     *  head (a nonzero {@link #headWidth} can still happen with no head to draw — chat_heads'
+     *  "offset non-player text" alignment option reserves the space without a texture to fill
+     *  it, matching real chat_heads' own {@code headData != HeadData.EMPTY} guard). */
     public static void renderHead(DrawContext context, int x, int y, HeadRef ref, float opacity) {
         if (!present || ref == HeadRef.NONE) return;
         try {
+            if (ref.data == dzwdz.chat_heads.HeadData.EMPTY) return;
             dzwdz.chat_heads.ChatHeads.renderChatHead(context, x, y, ref.data.playerInfo(), opacity);
         } catch (Throwable t) {
             present = false;
