@@ -13,6 +13,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.client.render.ChatRenderer;
+import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -108,6 +109,20 @@ public class PanelLayoutScreen extends LzScreen {
         return snapEnabled ? Math.round(v / (float) GRID_SIZE) * GRID_SIZE : v;
     }
 
+    // Draws text rotated 90°, centered in a narrow vertical strip too thin for horizontal text.
+    // NOTE: rotation sign picked to read bottom-to-top; screen space is Y-down so this may come
+    // out mirrored/upside-down vs. intent — flip the sign on the rotate() call below if so.
+    private void drawVerticalLabel(LzDrawContext ctx, String text, int x1, int y1, int x2, int y2, int color) {
+        int cx = (x1 + x2) / 2;
+        int cy = (y1 + y2) / 2;
+        int textW = LzDraw.textWidth(text);
+        LzDraw.pushMatrix(ctx);
+        LzDraw.translate(ctx, cx, cy);
+        LzDraw.rotate(ctx, -(float) (Math.PI / 2));
+        LzDraw.drawText(ctx, text, -textW / 2, -4, color);
+        LzDraw.popMatrix(ctx);
+    }
+
     // Docks the panel to LEFT or RIGHT anchor based on which side its center is closer to.
     private void snapToNearestWall(ChatPanel panel) {
         if (panel == null || panel.primary()) return;
@@ -178,6 +193,25 @@ public class PanelLayoutScreen extends LzScreen {
                 LzDraw.drawBorder(ctx, x1, y1, x2, y2, Colors.PANEL_LOCKED_BORDER);
                 LzDraw.drawCenteredText(ctx, LzText.literal(panel.name() + " (locked)"), cx, cy - 4, Colors.PANEL_LOCKED_TEXT);
                 LzDraw.drawCenteredText(ctx, LzText.literal("primary panel"),            cx, cy + 5, Colors.PANEL_LOCKED_SUBTITLE);
+
+                // Chat Heads' BEFORE_LINE mode extends only the primary panel's actual render/
+                // hit-test bound past its configured width (ChatHeadsSupport §0c) — show that
+                // extra strip here so it's not a surprise when it shows up in-game. 0 (and this
+                // whole block skipped) unless chat_heads is actually in that mode.
+                //
+                // Starts at x2 + OUTER_PAD_R, not x2 — the outer border drawn just above already
+                // extends to x2 + OUTER_PAD_R to represent the chat's own normal render margin
+                // (matches ChatRenderer's background fill, chatWidth + 4 + 4). This strip is
+                // *additional* on top of that existing margin, not a replacement for it — starting
+                // it at bare x2 drew it underneath/inside that border instead of past it.
+                int chatHeadsExtra = ChatHeadsSupport.maxHeadWidth();
+                if (chatHeadsExtra > 0) {
+                    int exX1 = x2 + OUTER_PAD_R;
+                    int exX2 = exX1 + Math.round(chatHeadsExtra * panel.resolveScale());
+                    LzDraw.fill(ctx, exX1, y1, exX2, y2, Colors.PANEL_CHATHEADS_FILL);
+                    LzDraw.drawBorder(ctx, exX1, y1, exX2, y2, Colors.PANEL_CHATHEADS_BORDER);
+                    drawVerticalLabel(ctx, "chat heads", exX1, y1, exX2, y2, Colors.PANEL_CHATHEADS_TEXT);
+                }
             } else {
                 boolean drag  = dragging == panel;
                 boolean resiz = resizing == panel;

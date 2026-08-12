@@ -86,6 +86,10 @@ public final class LzDraw {
     // 1.21.6: ctx.getMatrices().scale(sx, sy)
     public static void scale(LzDrawContext ctx, float sx, float sy) { ctx.mc().getMatrices().scale(sx, sy); }
 
+    // 1.21.6: Matrix3x2fStack.rotate(radians) — screen space is Y-down, so a positive angle here
+    // reads as visually clockwise, not the counterclockwise you'd expect from plain math convention.
+    public static void rotate(LzDrawContext ctx, float radians) { ctx.mc().getMatrices().rotate(radians); }
+
     // ── Text ──────────────────────────────────────────────────────────────
 
     // 1.21: ctx.drawTextWithShadow(tr, text, x, y, colour)   26.1: VERIFY name

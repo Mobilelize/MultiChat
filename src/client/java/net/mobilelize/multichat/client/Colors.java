@@ -159,6 +159,9 @@ public final class Colors {
     public static final int PANEL_LOCKED_BORDER      = 0xFF4488FF;
     public static final int PANEL_LOCKED_TEXT        = 0xFF88AAFF;
     public static final int PANEL_LOCKED_SUBTITLE    = 0x884488FF;
+    public static final int PANEL_CHATHEADS_FILL     = 0x40FFCC44;
+    public static final int PANEL_CHATHEADS_BORDER   = 0xFFFFCC44;
+    public static final int PANEL_CHATHEADS_TEXT     = 0xFFFFE8A0;
     public static final int PANEL_UNFOCUSED_LINE     = 0xFF44FF88;
     public static final int PANEL_UNFOCUSED_LINE_DIM = 0x8844FF88;
     public static final int PANEL_DRAG_FILL          = 0x33FFAA00;
