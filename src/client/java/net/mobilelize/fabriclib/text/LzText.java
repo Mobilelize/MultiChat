@@ -77,6 +77,44 @@ public class LzText {
         for (Text sibling : text.getSiblings()) collectObjectFallbacks(sibling, out);
     }
 
+    // MC-VERSION-SENSITIVE: ObjectTextContent added MC 1.21.9. Delete this method (and its call
+    // sites) outright when porting to an older branch. For a caller that needs to REBUILD a Text
+    // tree from Text.getString() (e.g. HighlightEngine.reformat, which reformats a message into a
+    // highlight-colored copy) — unlike stringSkippingObjects, which just removes the junk for
+    // matching purposes, this locates each object's own fallback-string range within getString()
+    // so the caller can splice the real node back in there instead of literal-copying the junk.
+    public record ObjectSpan(int start, int end, Text node) {}
+
+    public static List<ObjectSpan> objectSpans(Text text) {
+        String full = text.getString();
+        List<Text> nodes = new ArrayList<>();
+        collectObjectNodes(text, nodes);
+        List<ObjectSpan> spans = new ArrayList<>();
+        int searchFrom = 0;
+        for (Text node : nodes) {
+            StringBuilder sb = new StringBuilder();
+            node.getContent().visit(s -> { sb.append(s); return Optional.empty(); });
+            String fallback = sb.toString();
+            if (fallback.isEmpty()) continue;
+            int idx = full.indexOf(fallback, searchFrom);
+            if (idx < 0) continue; // shouldn't happen, but never splice at a made-up position
+            spans.add(new ObjectSpan(idx, idx + fallback.length(), node));
+            searchFrom = idx + fallback.length();
+        }
+        return spans;
+    }
+
+    private static void collectObjectNodes(Text text, List<Text> out) {
+        TextContent content = text.getContent();
+        if (content instanceof ObjectTextContent) {
+            out.add(text);
+        } else if (content instanceof TranslatableTextContent translatable) {
+            for (Object arg : translatable.getArgs())
+                if (arg instanceof Text argText) collectObjectNodes(argText, out);
+        }
+        for (Text sibling : text.getSiblings()) collectObjectNodes(sibling, out);
+    }
+
     // ── Static factories ────────────────────────────────────────────────────
 
     /**

@@ -216,6 +216,19 @@ public class HelpScreen {
 
         help.addEntry(eb.startTextDescription(LzText.format(
                 """
+                        &e&lChat Heads&r
+                        &7Works with the Chat Heads mod automatically if it's installed — nothing to configure.
+                          &fBefore Name&r&7 (their default) — the head is part of the message text already,
+                            MultiChat's normal rendering draws it with no special handling.
+                          &fBefore Line&r&7 — MultiChat draws and positions the head itself. Your &fmain panel&r&7
+                            grows slightly on its right edge to keep it selectable (shown as an amber strip in
+                            &fPanel Layout&r&7 while active); other panels wrap around it instead of overflowing.
+                        &7Switching Chat Heads' render mode mid-session is picked up automatically — every
+                        panel reflows within a tick."""
+        ).mc()).build());
+
+        help.addEntry(eb.startTextDescription(LzText.format(
+                """
                         &e&lFormat Codes&r
                         &7Used in Timestamp Format and Collapse Counter Format fields.
                           &f&#RRGGBB&r&7 — hex color   \

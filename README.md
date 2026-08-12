@@ -20,6 +20,7 @@ Licensed under [GPL-3.0](LICENSE.txt).
 - Tab list and settings accessible via ModMenu or in-game config button
 - `Ctrl+Arrow` → cycle focused panel; `Arrow` → switch tabs on focused panel
 - Text cursor changes shape based on what it's hovering (message, tab, scrollbar, etc.)
+- **Chat Heads compatibility** — works with [dzwdz/chat_heads](https://modrinth.com/mod/chat-heads) automatically if it's installed. Nothing to configure, no setting to toggle, nothing breaks if it's absent. See below for details.
 
 ---
 
@@ -54,6 +55,19 @@ Licensed under [GPL-3.0](LICENSE.txt).
 | `/multichat info panel hide` | Disable Panel 2 |
 | `/multichat execute <id>` | Fire a TAB_ACTION event (used by API click events) |
 | `/multichat help` | Open help screen |
+
+---
+
+### Chat Heads compatibility
+
+MultiChat works with [dzwdz/chat_heads](https://modrinth.com/mod/chat-heads) automatically — install it and go, nothing to configure on MultiChat's side.
+
+- **`Before Name`** (chat_heads' default render position) — the head icon is embedded directly into the message text by chat_heads itself. MultiChat's normal rendering already draws whatever's in the message, so this works with zero special handling.
+- **`Before Line`** — chat_heads instead draws the head as a separate element before the whole line, outside the message text. MultiChat renders and positions it directly for this mode:
+  - The head stays fully selectable and clickable, not just visible.
+  - Your **main chat panel** grows slightly on its right edge to make room for it, matching how chat_heads behaves in vanilla chat. That extra space is shown as an amber strip labeled "chat heads" in the Panel Layout editor (`/multichat layout`) whenever `Before Line` is active.
+  - Every other panel reserves the space at wrap time instead of extending, so messages wrap around the head rather than rendering past the panel's edge.
+- Switching chat_heads' render position mid-session (in its own config screen) is detected automatically — every panel reflows to match within a tick, no relog needed.
 
 ---
 

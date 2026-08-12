@@ -141,6 +141,11 @@ public final class HighlightEngine {
         String lower = plain.toLowerCase();
         List<String> allExceptions = allExceptions(cfg);
         List<int[]> protectedRanges = protectedRanges(lower, allExceptions);
+        // A chat_heads (or similar mod) embedded object resolves through getString() to its own
+        // junk fallback text (e.g. "[Bob head]") — never a real keyword to match against, so it's
+        // protected the same as an exception word. Same ranges reformat() below uses to splice the
+        // real object node back in instead of literal-copying that junk.
+        for (LzText.ObjectSpan span : LzText.objectSpans(rawLzText.mc())) protectedRanges.add(new int[]{span.start(), span.end()});
 
         List<String> pool = null;
         if (cfg.userHighlightEnabled && matchesAny(lower, cfg.userHighlightKeywords, protectedRanges)) {
@@ -168,8 +173,8 @@ public final class HighlightEngine {
             .withClickRunCommand("/multichat execute " + actionId)
             .withHoverText(hoverText);
 
-        LzText newContent = reformat(content.string(), pool, keywordStyle, neutralStyle, allExceptions);
-        LzText newRaw     = reformat(rawLzText.string(), pool, keywordStyle, neutralStyle, allExceptions);
+        LzText newContent = reformat(content, pool, keywordStyle, neutralStyle, allExceptions);
+        LzText newRaw     = reformat(rawLzText, pool, keywordStyle, neutralStyle, allExceptions);
         return new HighlightResult(newContent, newRaw, actionId);
     }
 
@@ -285,12 +290,32 @@ public final class HighlightEngine {
             .withObfuscated(s.obfuscated);
     }
 
-    private static LzMutableText reformat(String plain, List<String> keywords, LzStyle keywordStyle, LzStyle neutralStyle, List<String> exceptions) {
+    private static LzMutableText reformat(LzText source, List<String> keywords, LzStyle keywordStyle, LzStyle neutralStyle, List<String> exceptions) {
+        String plain = source.string();
         List<int[]> protectedRanges = protectedRanges(plain.toLowerCase(), exceptions);
+        // objectSpans are already excluded from ever being a keyword match (apply() adds them to
+        // its own protectedRanges before matching) — this list is only consulted here, to splice
+        // the real node back in wherever its junk fallback text would otherwise get flattened into
+        // literal characters by the plain-string rebuild below.
+        List<LzText.ObjectSpan> objectSpans = LzText.objectSpans(source.mc());
         LzMutableText result = LzText.empty();
         int i = 0;
         while (i < plain.length()) {
+            LzText.ObjectSpan nextObj = null;
+            for (LzText.ObjectSpan span : objectSpans) {
+                if (span.start() >= i) { nextObj = span; break; }
+            }
             int[] match = findEarliestMatch(plain, i, keywords, protectedRanges);
+
+            int objStart   = nextObj != null ? nextObj.start() : Integer.MAX_VALUE;
+            int matchStart = match   != null ? match[0]        : Integer.MAX_VALUE;
+
+            if (objStart <= matchStart) {
+                if (objStart > i) result.append(LzText.literal(plain.substring(i, objStart)).withStyle(neutralStyle));
+                result.append(LzText.wrapMc(nextObj.node())); // real node, own style untouched — not recolored
+                i = nextObj.end();
+                continue;
+            }
             if (match == null) {
                 result.append(LzText.literal(plain.substring(i)).withStyle(neutralStyle));
                 break;

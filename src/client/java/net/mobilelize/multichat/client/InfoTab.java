@@ -80,6 +80,7 @@ public class InfoTab extends ChatTab {
         lines.add(tip("Popped-out tabs can be closed again.", "Right-click it → Close Popout."));
         lines.add(tip("Style Rules check rendering, not text.", "Bold/italic/underline/strikethrough/color — separate from normal filter rules."));
         lines.add(tip("Leave a Style Rule's Word field blank to skip content matching.", "Checks just the formatting at that location instead of a specific word."));
+        lines.add(tip("Chat Heads mod support is automatic.", "Both Before Name and Before Line render modes work with no setup — see Help for details."));
         lines.add(blank());
 
         // ── Commands ──────────────────────────────────────────────────────────
@@ -145,6 +146,7 @@ public class InfoTab extends ChatTab {
         lines.add(feat("Always Focused Panel", "&7Keep a panel fully visible permanently"));
         lines.add(feat("Pop Out Tabs",       "&7Turn a tab into its own floating panel"));
         lines.add(feat("Style Rules",        "&7Whitelist/blacklist by actual rendered formatting, not text"));
+        lines.add(feat("Chat Heads Support", "&7Works with both Chat Heads render modes automatically"));
         lines.add(blank());
 
         // ── Tab Types ─────────────────────────────────────────────────────────
