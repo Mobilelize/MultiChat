@@ -96,7 +96,7 @@ public class MessageRouter {
                 }
                 case SEARCH -> {
                     final SearchTab st = (SearchTab) tab;
-                    if (!st.matches(fullText, indicator, tick)) break;
+                    if (!st.matches(filterText, indicator, tick)) break;
                     if (st.collapseIdentical()) {
                         ChatManager.addSearchMessageWithCollapse(st, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                     } else {
