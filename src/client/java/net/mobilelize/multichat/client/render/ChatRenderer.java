@@ -358,14 +358,27 @@ public class ChatRenderer {
                 int textAlpha = row.textAlpha();
                 int textY     = row.textY();
 
-                // chat_heads' BEFORE_LINE head (if any) only ever sits on the entry's first
-                // wrapped line — see ChatHeadsSupport's BEFORE_LINE support section. Drawn before
-                // the text, at x=0, with the text itself shifted right by the reserved width.
-                ChatHeadsSupport.HeadRef headRef = visible.startOfEntry()
-                    ? ChatHeadsSupport.get(visible.entry()) : ChatHeadsSupport.HeadRef.NONE;
-                int headOffset = ChatHeadsSupport.headWidth(headRef);
-                if (headOffset > 0) {
-                    ChatHeadsSupport.renderHead(context.mc(), 0, textY, headRef, textAlpha / 255.0f);
+                // chat_heads' BEFORE_LINE head texture (if any) only ever sits on the entry's
+                // first wrapped line — see ChatHeadsSupport's BEFORE_LINE support section. But the
+                // reserved INDENT applies per-line, independent of whether that specific line has
+                // a head: every continuation line of a wrapped message gets the same "no head of
+                // my own" offset any headless message's first line would (emptyLineWidth()),
+                // driven purely by chat_heads' "offset non-player text" alignment setting, so a
+                // multi-line message's lines all stay flush with each other and with the head.
+                // Gated on the entry having gone through chat_heads' pipeline at all (get() !=
+                // NONE) — MultiChat's own synthetic lines (Notes/Info tabs, custom raw text) never
+                // do, and shouldn't pick up alignment padding meant for real chat messages.
+                ChatHeadsSupport.HeadRef headRef = ChatHeadsSupport.get(visible.entry());
+                int headOffset = 0;
+                if (headRef != ChatHeadsSupport.HeadRef.NONE) {
+                    if (visible.startOfEntry()) {
+                        headOffset = ChatHeadsSupport.headWidth(headRef);
+                        if (headOffset > 0) {
+                            ChatHeadsSupport.renderHead(context.mc(), 0, textY, headRef, textAlpha / 255.0f);
+                        }
+                    } else {
+                        headOffset = ChatHeadsSupport.emptyLineWidth();
+                    }
                 }
 
                 if (MultichatClient.CONFIG.showIndicators) {

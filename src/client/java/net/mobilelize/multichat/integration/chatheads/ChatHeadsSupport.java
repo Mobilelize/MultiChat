@@ -124,6 +124,24 @@ public final class ChatHeadsSupport {
         }
     }
 
+    /** Offset for a line that never carries head data of its own — every continuation line of a
+     *  wrapped multi-line message (real chat_heads resets its per-line head data to EMPTY right
+     *  after the first line consumes it, unconditionally, whether or not that entry had a real
+     *  head), and effectively also the first line of any entry with no head at all (headWidth of
+     *  a ref wrapping HeadData.EMPTY reduces to exactly this). Purely driven by chat_heads' own
+     *  "offset non-player text" alignment setting — when that's on, every line indents to stay
+     *  flush with lines that do have a real head; when it's off, only actual head lines indent. */
+    public static int emptyLineWidth() {
+        if (!present) return 0;
+        try {
+            return dzwdz.chat_heads.ChatHeads.getChatOffset(dzwdz.chat_heads.HeadData.EMPTY);
+        } catch (Throwable t) {
+            present = false;
+            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            return 0;
+        }
+    }
+
     /** Draws the head texture at (x, y). No-op if ref is {@link HeadRef#NONE} or carries no real
      *  head (a nonzero {@link #headWidth} can still happen with no head to draw — chat_heads'
      *  "offset non-player text" alignment option reserves the space without a texture to fill

@@ -94,11 +94,15 @@ public class ChatSelection {
         return new int[]{x0, x1};
     }
 
-    /** Pixels of chat_heads' BEFORE_LINE head reserved before this line's text — 0 unless it's
-     *  the first wrapped line of an entry that has one. See ChatHeadsSupport's BEFORE_LINE section. */
+    /** Pixels of chat_heads' BEFORE_LINE indent reserved before this line's text. 0 unless the
+     *  entry went through chat_heads' pipeline at all (excludes MultiChat's own synthetic lines —
+     *  Notes/Info tabs, custom raw text). The entry's own head-derived width on its first wrapped
+     *  line; every continuation line uses the same "no head of my own" alignment width, matching
+     *  ChatRenderer's render-time offset exactly. See ChatHeadsSupport's BEFORE_LINE section. */
     private static int headOffset(LzChatLine line) {
-        if (!line.startOfEntry()) return 0;
-        return ChatHeadsSupport.headWidth(ChatHeadsSupport.get(line.entry()));
+        ChatHeadsSupport.HeadRef ref = ChatHeadsSupport.get(line.entry());
+        if (ref == ChatHeadsSupport.HeadRef.NONE) return 0;
+        return line.startOfEntry() ? ChatHeadsSupport.headWidth(ref) : ChatHeadsSupport.emptyLineWidth();
     }
 
     // -----------------------------------------------------------------------
