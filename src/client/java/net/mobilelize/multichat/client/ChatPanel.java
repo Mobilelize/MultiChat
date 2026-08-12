@@ -144,13 +144,16 @@ public class ChatPanel {
                 width -= Math.max(ChatHeadsSupport.headWidth(ref), ChatHeadsSupport.emptyLineWidth());
             }
         }
-        ChatHeadsSupport.beginHeadRendering();
-        List<LzOrderedText> lines;
-        try {
-            lines = LzChat.breakLines(LzText.wrapMc(entry.rendered().mc()), width);
-        } finally {
-            ChatHeadsSupport.endHeadRendering();
-        }
+        // Deliberately NOT bracketed with ChatHeadsSupport.begin/endHeadRendering() here, unlike
+        // ChatRenderer's actual draw call. chat_heads' customHeadRendering flag is only ever true
+        // during real vanilla ChatComponent.render() (ChatComponentRenderMixin) — never during
+        // the wrap/line-break decision itself, which happens separately at message-add time. So
+        // vanilla's own wrap uses the object glyph's UNPADDED width and only pads at render time,
+        // accepting the resulting minor wrap/render mismatch (their own fixTextOverflow mixin
+        // papers over exactly that). Padding here too made MultiChat wrap more conservatively
+        // than vanilla — one word early on borderline-fitting lines — which is the bug this
+        // comment is here to stop someone reintroducing.
+        List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(entry.rendered().mc()), width);
         for (int i = 0; i < lines.size(); i++) {
             boolean endOfEntry   = i == lines.size() - 1;
             boolean startOfEntry = i == 0;
