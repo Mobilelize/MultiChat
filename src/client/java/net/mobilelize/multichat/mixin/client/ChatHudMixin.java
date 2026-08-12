@@ -107,7 +107,7 @@ public class ChatHudMixin {
             if (!active.hasMessages()) continue;
 
             float scale      = panel.resolveScale();
-            int   chatWidth  = panel.resolveWidth();
+            int   chatWidth  = panel.resolveRenderWidth();
             int   lines      = panel.resolveLines();
             int   lineHeight = panel.resolveLineHeight();
             int   topY       = panel.resolveTopY(windowHeight);

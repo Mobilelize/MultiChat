@@ -75,7 +75,7 @@ public abstract class ChatScreenMixin {
                     int windowWidth  = LzClient.scaledWindowWidth();
                     int windowHeight = LzClient.scaledWindowHeight();
                     float scale      = selPanel.resolveScale();
-                    int chatWidth    = selPanel.resolveWidth();
+                    int chatWidth    = selPanel.resolveRenderWidth();
                     int lineH        = selPanel.resolveLineHeight();
                     int xOff         = selPanel.computeXOffset(windowWidth);
                     ChatTab active   = selPanel.getActiveTab();
@@ -253,7 +253,7 @@ public abstract class ChatScreenMixin {
             for (ChatPanel panel : ChatManager.getAllPanels()) {
                 if (!panel.isEnabled()) continue;
                 float scale = panel.resolveScale();
-                int chatWidth = panel.resolveWidth();
+                int chatWidth = panel.resolveRenderWidth();
                 int lineH = panel.resolveLineHeight();
                 int visibleLineCount = panel.resolveLines();
                 int topY = panel.resolveTopY(windowHeight);
@@ -298,7 +298,7 @@ public abstract class ChatScreenMixin {
                 for (ChatPanel panel : ChatManager.getAllPanels()) {
                     if (!panel.isEnabled()) continue;
                     float scale = panel.resolveScale();
-                    int chatWidth = panel.resolveWidth();
+                    int chatWidth = panel.resolveRenderWidth();
                     int lineH = panel.resolveLineHeight();
                     int visibleLineCount = panel.resolveLines();
                     int topY = panel.resolveTopY(windowHeight);
@@ -328,7 +328,7 @@ public abstract class ChatScreenMixin {
             if (!isDoubleClick) for (ChatPanel panel : ChatManager.getAllPanels()) {
                 if (!panel.isEnabled()) continue;
                 float scale = panel.resolveScale();
-                int chatWidth = panel.resolveWidth();
+                int chatWidth = panel.resolveRenderWidth();
                 int lineH = panel.resolveLineHeight();
                 int visibleLineCount = panel.resolveLines();
                 int topY = panel.resolveTopY(windowHeight);
@@ -485,7 +485,7 @@ public abstract class ChatScreenMixin {
             if (active == null || active.type() == TabType.VANILLA) continue;
 
             float scale           = panel.resolveScale();
-            int   chatWidth       = panel.resolveWidth();
+            int   chatWidth       = panel.resolveRenderWidth();
             int   lineH           = panel.resolveLineHeight();
             int   visibleLineCount = panel.resolveLines();
             int   topY            = panel.resolveTopY(windowHeight);
@@ -532,7 +532,7 @@ public abstract class ChatScreenMixin {
         for (ChatPanel panel : ChatManager.getAllPanels()) {
             if (!panel.isEnabled()) continue;
             float scale        = panel.resolveScale();
-            int   chatWidth    = panel.resolveWidth();
+            int   chatWidth    = panel.resolveWidth();       // tab bar bounds below — never extends
             int   lineH        = panel.resolveLineHeight();
             int   visibleLines = panel.resolveLines();
             int   topY         = panel.resolveTopY(windowHeight);
@@ -594,7 +594,7 @@ public abstract class ChatScreenMixin {
             // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
             if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
                 int hit = ChatSelection.hitLine(panel, mouseX, mouseY,
-                    visibleLines, scale, lineH, windowHeight, chatWidth, xOff);
+                    visibleLines, scale, lineH, windowHeight, panel.resolveRenderWidth(), xOff);
                 if (hit >= 0) {
                     ChatTab active = panel.getActiveTab();
                     List<LzChatLine> lines = active != null ? panel.getTabLines(active) : null;

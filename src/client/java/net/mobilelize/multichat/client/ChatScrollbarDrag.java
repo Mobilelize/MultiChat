@@ -34,7 +34,7 @@ public final class ChatScrollbarDrag {
         if (!panel.isEnabled() || panel.getActiveTab() == null) return false;
 
         float scale      = panel.resolveScale();
-        int   chatWidth  = panel.resolveWidth();
+        int   chatWidth  = panel.resolveRenderWidth(); // scrollbar column sits just right of the message area's own edge
         int   lineH      = panel.resolveLineHeight();
         int   visLines   = panel.resolveLines();
         int   topY       = panel.resolveTopY(windowHeight);

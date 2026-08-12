@@ -142,6 +142,25 @@ public final class ChatHeadsSupport {
         }
     }
 
+    /** Fixed per-panel width to reserve so chat_heads' render-time shift+overflow (see class doc)
+     *  has somewhere to go without falling off a fixed-width panel edge — 0 unless chat_heads is
+     *  actually in BEFORE_LINE mode (in BEFORE_NAME, nothing ever shifts, so there's nothing to
+     *  reserve for). Same constant chat_heads itself always reserves for a head
+     *  ({@code headWidth()} = {@code 8 + 2 + drawShadow}px) — not per-message, doesn't need a
+     *  HeadRef. Callers apply this per-panel (see ChatPanel.resolveRenderWidth), not per-row. */
+    public static int maxHeadWidth() {
+        if (!present) return 0;
+        try {
+            if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE)
+                return 0;
+            return dzwdz.chat_heads.ChatHeads.headWidth();
+        } catch (Throwable t) {
+            present = false;
+            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            return 0;
+        }
+    }
+
     /** Draws the head texture at (x, y). No-op if ref is {@link HeadRef#NONE} or carries no real
      *  head (a nonzero {@link #headWidth} can still happen with no head to draw — chat_heads'
      *  "offset non-player text" alignment option reserves the space without a texture to fill

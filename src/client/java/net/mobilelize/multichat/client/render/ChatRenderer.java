@@ -93,7 +93,8 @@ public class ChatRenderer {
                 || (activeTab instanceof NoteTab nt && nt.renderOutOfFocus());
 
             float scale          = panel.resolveScale();
-            int chatWidth        = panel.resolveWidth();
+            int chatWidth        = panel.resolveWidth();       // tab bar — never extends for chat_heads
+            int renderWidth      = panel.resolveRenderWidth(); // message area — primary panel may extend
             double chatOpacity   = panel.resolveChatOpacity();
             double bgOpacity     = panel.resolveBgOpacity();
             int lineHeight       = panel.resolveLineHeight();
@@ -112,14 +113,14 @@ public class ChatRenderer {
             if (msgs == null || msgs.isEmpty()) continue;
 
             int hoveredIndex = computeHoveredIndex(panel, mouseX, mouseY,
-                    visibleLineCount, windowHeight, scale, lineHeight, chatWidth, xOffset, focused);
+                    visibleLineCount, windowHeight, scale, lineHeight, renderWidth, xOffset, focused);
             int panelBg   = panel.bgColor() != 0 ? panel.bgColor()
                     : MultichatClient.CONFIG.defaultPanelBgColor != 0 ? MultichatClient.CONFIG.defaultPanelBgColor
                     : ThemeRegistry.active().defaultPanelBg;
             int lineBgRgb = (activeTab.msgBgColor() != 0 ? activeTab.msgBgColor() : panelBg) & 0xFFFFFF;
             renderAt(context, currentTick, effectiveFocused,
                     msgs, msgs.size(), panel.getScrolledLines(activeTab), hasUnread,
-                    chatWidth, topY, scale, chatOpacity, bgOpacity,
+                    renderWidth, topY, scale, chatOpacity, bgOpacity,
                     lineHeight, textOffset, visibleLineCount, hoveredIndex, xOffset, panel, lineBgRgb,
                     focused, mouseX, mouseY, windowWidth, windowHeight);
         }
@@ -497,7 +498,7 @@ public class ChatRenderer {
             if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
 
             float scale    = panel.resolveScale();
-            int chatWidth  = panel.resolveWidth();
+            int chatWidth  = panel.resolveRenderWidth();
             int lineHeight = panel.resolveLineHeight();
             int panelTopY  = panel.resolveTopY(windowHeight);
             int xOffset    = panel.computeXOffset(windowWidth);
@@ -541,7 +542,7 @@ public class ChatRenderer {
             if (active == null || active.type() == TabType.VANILLA || !active.hasMessages()) continue;
 
             float scale          = panel.resolveScale();
-            int chatWidth        = panel.resolveWidth();
+            int chatWidth        = panel.resolveRenderWidth();
             int lineHeight       = panel.resolveLineHeight();
             int visibleLineCount = panel.resolveLines();
             int xOffset          = panel.computeXOffset(windowWidth);

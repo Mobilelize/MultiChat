@@ -122,13 +122,19 @@ public class ChatPanel {
     }
 
     private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
-        // chat_heads' BEFORE_LINE head (if any) does NOT reserve space at wrap time — real
-        // chat_heads wraps at full width same as always, then shifts the first line's text right
-        // by headWidth at render time only, accepting that it may extend slightly past the normal
-        // edge (their own fixTextOverflow mixin widens the background-fill rect to match, rather
-        // than avoiding the overflow). Reducing wrap width here would wrap a line early and leave
-        // headed messages short of the wall — see ChatRenderer.renderAt for the render-time shift.
+        // chat_heads' BEFORE_LINE head (if any) does NOT reserve space at wrap time in real
+        // chat_heads — it wraps at full width same as always, then shifts the first line's text
+        // right by headWidth at render time only, accepting that it may extend slightly past the
+        // normal edge (their own fixTextOverflow mixin widens the background-fill rect to match,
+        // rather than avoiding the overflow). The primary panel matches that exactly — its render
+        // bound grows instead (resolveRenderWidth()) so the overflow stays visible and selectable.
+        // Every other panel has nowhere for that overflow to go (fixed edge, other UI can sit past
+        // it), so unlike real chat_heads it DOES reserve the width here, trading "matches vanilla
+        // exactly" for "never renders outside its own bounds" on panels that aren't the main chat.
         int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
+        if (!primary && ChatHeadsSupport.get(entry.entry()) != ChatHeadsSupport.HeadRef.NONE) {
+            width -= ChatHeadsSupport.maxHeadWidth();
+        }
         ChatHeadsSupport.beginHeadRendering();
         List<LzOrderedText> lines;
         try {
@@ -272,6 +278,20 @@ public class ChatPanel {
         float scale = resolveScale();
         if (primary || customWidth <= 0) return LzMath.ceil((float) LzChat.chatWidth() / scale);
         return customWidth;
+    }
+
+    /** Width to use for rendering bounds and hit-testing (background fill, click/drag/hover
+     *  region) — {@link #resolveWidth()} plus the primary panel's chat_heads BEFORE_LINE
+     *  allowance, if any (0 for every other panel, and 0 there too unless chat_heads is actually
+     *  in that mode). {@code resolveWidth()} itself stays the configured/logical width, used for
+     *  panel positioning math ({@code computeXOffset}'s RIGHT/CUSTOM anchors) and the layout
+     *  editor — neither should react to this. See ChatHeadsSupport's BEFORE_LINE section for why:
+     *  chat_heads shifts a headed line's text right at render time without shrinking the wrap, so
+     *  it can extend past the nominal edge — only the primary panel grows to keep that overflow
+     *  selectable and visible; other panels reserve the same width at wrap time instead
+     *  (ChatPanel.wrapEntryInto) so nothing overflows past their fixed edge at all. */
+    public int resolveRenderWidth() {
+        return resolveWidth() + (primary ? ChatHeadsSupport.maxHeadWidth() : 0);
     }
 
     // Focused line count from MC options — not isChatFocused()-dependent.
