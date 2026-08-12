@@ -143,8 +143,9 @@ public final class HighlightEngine {
         List<int[]> protectedRanges = protectedRanges(lower, allExceptions);
         // A chat_heads (or similar mod) embedded object resolves through getString() to its own
         // junk fallback text (e.g. "[Bob head]") — never a real keyword to match against, so it's
-        // protected the same as an exception word. Same ranges reformat() below uses to splice the
-        // real object node back in instead of literal-copying that junk.
+        // protected the same as an exception word for this trigger check. reformat() below (which
+        // splices the real object node back in) recomputes this same exclusion itself, separately,
+        // since it runs once each against content/rawLzText — different LzText instances than this.
         for (LzText.ObjectSpan span : LzText.objectSpans(rawLzText.mc())) protectedRanges.add(new int[]{span.start(), span.end()});
 
         List<String> pool = null;
@@ -293,11 +294,16 @@ public final class HighlightEngine {
     private static LzMutableText reformat(LzText source, List<String> keywords, LzStyle keywordStyle, LzStyle neutralStyle, List<String> exceptions) {
         String plain = source.string();
         List<int[]> protectedRanges = protectedRanges(plain.toLowerCase(), exceptions);
-        // objectSpans are already excluded from ever being a keyword match (apply() adds them to
-        // its own protectedRanges before matching) — this list is only consulted here, to splice
-        // the real node back in wherever its junk fallback text would otherwise get flattened into
-        // literal characters by the plain-string rebuild below.
         List<LzText.ObjectSpan> objectSpans = LzText.objectSpans(source.mc());
+        // apply()'s own protectedRanges (built from rawLzText, for the matchesAny/matchedKeywords
+        // trigger check) already excludes object spans — but reformat() is called once each for
+        // content and rawLzText, separate LzText instances with their own object spans, so that
+        // exclusion doesn't carry over here automatically. Without it, a keyword that happens to
+        // match inside an object's junk fallback text (plausible — e.g. "head" against chat_heads'
+        // own "[Bob head]"-style fallback) gets consumed as a match first, i lands inside the
+        // object's span, and that span (whose start is now behind i) can never be found again —
+        // the object silently never gets spliced back in for that message.
+        for (LzText.ObjectSpan span : objectSpans) protectedRanges.add(new int[]{span.start(), span.end()});
         LzMutableText result = LzText.empty();
         int i = 0;
         while (i < plain.length()) {
@@ -307,11 +313,12 @@ public final class HighlightEngine {
             }
             int[] match = findEarliestMatch(plain, i, keywords, protectedRanges);
 
-            int objStart   = nextObj != null ? nextObj.start() : Integer.MAX_VALUE;
-            int matchStart = match   != null ? match[0]        : Integer.MAX_VALUE;
-
-            if (objStart <= matchStart) {
-                if (objStart > i) result.append(LzText.literal(plain.substring(i, objStart)).withStyle(neutralStyle));
+            // nextObj/match are each independently nullable ("nothing left of that kind") — only
+            // prefer the object branch when one actually exists. Comparing MAX_VALUE sentinels
+            // for "neither found" here previously picked the object branch with a null object,
+            // crashing on plain.substring(i, Integer.MAX_VALUE).
+            if (nextObj != null && (match == null || nextObj.start() <= match[0])) {
+                if (nextObj.start() > i) result.append(LzText.literal(plain.substring(i, nextObj.start())).withStyle(neutralStyle));
                 result.append(LzText.wrapMc(nextObj.node())); // real node, own style untouched — not recolored
                 i = nextObj.end();
                 continue;
