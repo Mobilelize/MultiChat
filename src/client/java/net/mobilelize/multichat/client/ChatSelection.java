@@ -247,7 +247,13 @@ public class ChatSelection {
                                int visibleLineCount, float scale, int lineHeight,
                                int windowHeight, int chatWidth, int xOffset) {
         double localX = mouseX / scale - 4.0 - xOffset;
-        if (localX < -4.0 || localX > chatWidth) return -1;
+        // Slack on the right (matches scrollPanel's own +8 tolerance) — a line whose text nearly
+        // fills chatWidth and ends in narrow glyphs (t, i, l, and especially |, only 1-2px wide)
+        // has a tiny-to-nonexistent click window past its own last character before this bound
+        // rejects the click outright, making that character effectively unselectable.
+        // charIndexAtX itself has no upper bound (any x past the last character's midpoint
+        // already resolves to "select to end"), so this is the only place actually blocking it.
+        if (localX < -4.0 || localX > chatWidth + 8) return -1;
         int topY = panel.resolveTopY(windowHeight);
         double chatY = (topY * (double) scale - mouseY) / (scale * lineHeight);
         if (chatY < 0.0) return -1;

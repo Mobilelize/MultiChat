@@ -493,7 +493,7 @@ public abstract class ChatScreenMixin {
 
             int    xOff   = panel.computeXOffset(windowWidth);
             double localX = mouseX / (double) scale - 4.0 - xOff;
-            if (localX < -4.0 || localX > chatWidth) continue;
+            if (localX < -4.0 || localX > chatWidth + 8) continue; // see ChatSelection.hitLine
 
             cir.setReturnValue(true);
             return;

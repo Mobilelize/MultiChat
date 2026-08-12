@@ -462,7 +462,7 @@ public class ChatRenderer {
         int    topY       = panel.resolveTopY(windowHeight);
         double chatY      = (topY * (double) scale - mouseY) / (scale * lineHeight);
 
-        if (localChatX < -4.0 || localChatX > chatWidth) return -1;
+        if (localChatX < -4.0 || localChatX > chatWidth + 8) return -1; // see ChatSelection.hitLine
 
         ChatTab activeTab = panel.getActiveTab();
         if (activeTab == null) return -1;
@@ -506,7 +506,7 @@ public class ChatRenderer {
             double localChatX = x / scale - 4.0 - xOffset;
             double chatY      = (panelTopY * (double) scale - y) / (scale * lineHeight);
 
-            if (localChatX < -4.0 || localChatX > chatWidth) continue;
+            if (localChatX < -4.0 || localChatX > chatWidth + 8) continue; // see ChatSelection.hitLine
 
             List<LzChatLine> msgs = panel.getTabLines(active);
             if (msgs == null) continue;
@@ -550,7 +550,7 @@ public class ChatRenderer {
 
             double chatLineY = (topY * (double) scale - mouseY) / (scale * lineHeight);
             double chatLineX = mouseX / scale - 4.0 - xOffset;
-            if (chatLineX < -4.0 || chatLineX > chatWidth) continue;
+            if (chatLineX < -4.0 || chatLineX > chatWidth + 8) continue; // see ChatSelection.hitLine
 
             List<LzChatLine> panelMsgs = panel.getTabLines(active);
             if (panelMsgs == null) continue;
