@@ -45,6 +45,12 @@ public class MultichatClient implements ClientModInitializer {
                     if (tab instanceof InfoTab it) it.rebuildMessages();
                 }
             }
+            // chat_heads has no save callback to hook (checked its config-screen source), so
+            // catching a renderPosition switch (BEFORE_NAME <-> BEFORE_LINE) means polling —
+            // otherwise every panel's already-wrapped lines stay wrapped for the OLD mode while
+            // render-time offset (which reads config live every frame) immediately starts
+            // shifting them for the new one: text visibly moves without ever re-wrapping.
+            if (ChatHeadsSupport.pollRenderPositionChanged()) ChatManager.resetForRefresh();
         });
 
         MessageAddedToTabCallback.EVENT.register((tab, message) -> PingPlayer.playForTab(tab));

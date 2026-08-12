@@ -132,8 +132,17 @@ public class ChatPanel {
         // it), so unlike real chat_heads it DOES reserve the width here, trading "matches vanilla
         // exactly" for "never renders outside its own bounds" on panels that aren't the main chat.
         int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
-        if (!primary && ChatHeadsSupport.get(entry.entry()) != ChatHeadsSupport.HeadRef.NONE) {
-            width -= ChatHeadsSupport.maxHeadWidth();
+        if (!primary) {
+            // Reserve only what this entry will actually use — headWidth() for a real head on
+            // line 0, emptyLineWidth() for the "offset non-player text" alignment case on every
+            // other line, both correctly 0 when neither applies (e.g. no head found AND that
+            // alignment setting is off). Blindly reserving maxHeadWidth() for every entry that
+            // merely participated in chat_heads' pipeline wrapped messages a line early even when
+            // nothing was ever going to render an offset for them.
+            ChatHeadsSupport.HeadRef ref = ChatHeadsSupport.get(entry.entry());
+            if (ref != ChatHeadsSupport.HeadRef.NONE) {
+                width -= Math.max(ChatHeadsSupport.headWidth(ref), ChatHeadsSupport.emptyLineWidth());
+            }
         }
         ChatHeadsSupport.beginHeadRendering();
         List<LzOrderedText> lines;

@@ -58,6 +58,34 @@ public final class ChatHeadsSupport {
 
     public static boolean isPresent() { return present; }
 
+    // Last renderPosition seen by pollRenderPositionChanged(). chat_heads' config screen has no
+    // save callback we can hook (checked its source — nothing calls a chat refresh/reset on
+    // save), so detecting a mode switch means polling this once a tick and comparing. Everything
+    // downstream (wrapWidth reservation, render-time offset) already reads config live and
+    // reacts instantly on its own — the one thing that DOESN'T self-correct is wrap-time
+    // reservation baked into already-built LzChatLines on non-primary panels (§0c), which needs
+    // an explicit rebuild when the mode actually changes, not just a live re-read.
+    private static dzwdz.chat_heads.config.RenderPosition lastKnownRenderPosition = null;
+
+    /** Call once a tick (see MultichatClient). Returns true (and updates the cached value) the
+     *  moment chat_heads' renderPosition differs from what it was last tick — callers should
+     *  rebuild every panel's wrapped lines in response (ChatManager.resetForRefresh()). Never
+     *  fires on the very first call (nothing to compare against yet), so mod startup doesn't
+     *  trigger a spurious rebuild. */
+    public static boolean pollRenderPositionChanged() {
+        if (!present) return false;
+        try {
+            var current = dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition();
+            boolean changed = lastKnownRenderPosition != null && current != lastKnownRenderPosition;
+            lastKnownRenderPosition = current;
+            return changed;
+        } catch (Throwable t) {
+            present = false;
+            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            return false;
+        }
+    }
+
     // ── BEFORE_LINE support ──────────────────────────────────────────────────
     //
     // chat_heads' non-default renderPosition = BEFORE_LINE mode embeds nothing in the message
@@ -88,10 +116,20 @@ public final class ChatHeadsSupport {
      *  re-derive that live from current config on every call, so a config change (e.g. toggling
      *  "offset non-player text") takes effect instantly for every message already in history, the
      *  same way real chat_heads re-evaluates it fresh every render frame. Pre-filtering here would
-     *  freeze that decision at message-arrival time and never revisit it. */
+     *  freeze that decision at message-arrival time and never revisit it.
+     *  <p>
+     *  Gated on being in BEFORE_LINE mode right now, though — unlike the rest of this class, that
+     *  one check IS frozen at capture time, deliberately. Under BEFORE_NAME the head is a real
+     *  ObjectTextContent baked into the message Text itself (§ above), fully self-contained; if we
+     *  attached a real HeadRef for it too and the user later switches to BEFORE_LINE, this old
+     *  message would get a second head drawn (our own offset-based one) on top of the one already
+     *  permanently embedded in its text. Only messages that arrive while BEFORE_LINE is actually
+     *  active need our own draw/offset machinery at all. */
     public static HeadRef captureLastSenderData() {
         if (!present) return HeadRef.NONE;
         try {
+            if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE)
+                return HeadRef.NONE;
             return new HeadRef(dzwdz.chat_heads.ChatHeads.lastSenderData);
         } catch (Throwable t) {
             present = false;
