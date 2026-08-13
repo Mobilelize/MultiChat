@@ -29,6 +29,9 @@ public class MultiChatConfig extends LzConfig {
     public int     defaultPanelBgColor          = 0; // 0 = unset, inherit the active theme's defaultPanelBg
     public boolean modDisabled                  = false;
     public boolean normalizeFilterText          = false;
+    // MC-VERSION-SENSITIVE: ObjectTextContent (chat_heads-style inline sprites) only exists MC 1.21.9+.
+    // Delete this field outright when porting to an older branch — nothing to strip there.
+    public boolean stripObjectContent           = true;
     public boolean showIndicators               = true;
     public boolean cursorChangingEnabled         = true;
     public boolean selectionEnabled             = true;

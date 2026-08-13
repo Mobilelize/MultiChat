@@ -1,9 +1,7 @@
 package net.mobilelize.multichat.client.filter;
 
 import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
-import net.mobilelize.fabriclib.text.LzText;
 
 import java.util.regex.Pattern;
 
@@ -59,12 +57,5 @@ public record FilterRule (FilterType type, String value, IndicatorFilter indicat
                 .replaceAll("\\p{C}", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-    }
-
-    // Strips inline "object" content (e.g. chat_heads' player-head sprite) before normalizing,
-    // so it never pollutes filter matching. Gated behind normalizeFilterText like the rest of
-    // this normalization — takes the raw Text so it can walk the tree, not just the resolved string.
-    public static String normalizeFilterText(Text text) {
-        return normalizeFilterText(LzText.stringSkippingObjects(text));
     }
 }

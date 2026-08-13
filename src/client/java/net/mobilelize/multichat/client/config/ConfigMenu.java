@@ -261,6 +261,14 @@ public class ConfigMenu {
                 .build());
 
         advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Strip Object Content").mc(),
+                MultichatClient.CONFIG.stripObjectContent)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Strip inline \"object\" content (e.g. chat_heads' player-head sprite) from messages before matching filter rules. MC 1.21.9+ only. Only affects routing — not collapse, count, or display.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.stripObjectContent = v)
+                .build());
+
+        advanced.addEntry(eb.startBooleanToggle(
                 LzText.literal("Disable MultiChat").mc(),
                 MultichatClient.CONFIG.modDisabled)
                 .setDefaultValue(false)

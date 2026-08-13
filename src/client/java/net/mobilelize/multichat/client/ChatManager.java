@@ -139,8 +139,9 @@ public class ChatManager {
             for (ChatTab.MessageEntry me : source) {
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
-                String fText1 = MultichatClient.CONFIG.normalizeFilterText
-                    ? FilterRule.normalizeFilterText(me.entry().originalContent.mc()) : text;
+                String fText1 = MultichatClient.CONFIG.stripObjectContent
+                    ? LzText.stringSkippingObjects(me.entry().originalContent.mc()) : text;
+                if (MultichatClient.CONFIG.normalizeFilterText) fText1 = FilterRule.normalizeFilterText(fText1);
                 if (!tab.matchesText(fText1) || !tab.matchesTime(me.entry().creationTick)) continue;
                 if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText1, me.entry().indicator)) continue;
                 newest.putIfAbsent(text, me);
@@ -164,8 +165,9 @@ public class ChatManager {
                 ChatTab.MessageEntry me = source.get(i);
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
-                String fText2 = MultichatClient.CONFIG.normalizeFilterText
-                    ? FilterRule.normalizeFilterText(me.entry().originalContent.mc()) : text;
+                String fText2 = MultichatClient.CONFIG.stripObjectContent
+                    ? LzText.stringSkippingObjects(me.entry().originalContent.mc()) : text;
+                if (MultichatClient.CONFIG.normalizeFilterText) fText2 = FilterRule.normalizeFilterText(fText2);
                 if (!tab.matchesText(fText2)) continue;
                 if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText2, me.entry().indicator)) continue;
                 if (!tab.matchesTime(me.entry().creationTick)) continue;
@@ -216,9 +218,11 @@ public class ChatManager {
             ChatTab.MessageEntry src = all.get(i);
             LzText raw = src.entry().originalContent;
             if (raw == null) continue;
-            String fullText   = raw.mc().getString();
-            String filterText = MultichatClient.CONFIG.normalizeFilterText
-                ? FilterRule.normalizeFilterText(raw.mc()) : fullText;
+            String fullText = raw.mc().getString();
+            String objText = MultichatClient.CONFIG.stripObjectContent
+                ? LzText.stringSkippingObjects(raw.mc()) : fullText;
+            final String filterText = MultichatClient.CONFIG.normalizeFilterText
+                ? FilterRule.normalizeFilterText(objText) : objText;
             LzMessageIndicator indicator = src.entry().indicator;
 
             boolean include = effectiveDiff
