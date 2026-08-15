@@ -409,7 +409,7 @@ public class PanelLayoutScreen extends LzScreen {
 
     private void attemptClose() {
         if (isDirty()) LzClient.mc().setScreen(new ConfirmScreen(this, "Save changes?", this::save, this::restoreAndClose));
-        else restoreAndClose();
+        else close();
     }
 
     private void save() {
