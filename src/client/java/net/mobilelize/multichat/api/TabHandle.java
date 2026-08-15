@@ -230,6 +230,14 @@ public class TabHandle {
     public List<FilterRule> getWhitelistRules() { return Collections.unmodifiableList(tab.filterRules().whitelist()); }
     public List<FilterRule> getBlacklistRules() { return Collections.unmodifiableList(tab.filterRules().blacklist()); }
 
+    /** When true, messages that matched a Highlight Words keyword reach this tab even if they fail its filter rules. */
+    public TabHandle setForceHighlightMatches(boolean enabled) {
+        tab.setForceHighlightMatches(enabled);
+        return this;
+    }
+
+    public boolean getForceHighlightMatches() { return tab.forceHighlightMatches(); }
+
     // ------------------------------------------------------------------
     // Style conditions
     // ------------------------------------------------------------------
