@@ -68,6 +68,11 @@ public class ChatRenderer {
         ChatRenderer.currentTick = currentTick;
         ChatManager.initWallTime(currentTick);
 
+        // Applied here (every rendered frame) instead of the tick loop (fixed 20Hz) so a finished
+        // background rewrap shows up on the very next frame instead of waiting on a tick boundary.
+        // Drained even if chat ends up not visible this frame — no reason to sit on a finished swap.
+        WrapCoordinator.drain(32);
+
         if (LzOptions.chatVisibility() == LzChatVisibility.HIDDEN) return;
 
         boolean anyVisible = ChatManager.getAllPanels().stream().anyMatch(p -> p.isVisibleInChat(focused));
@@ -358,6 +363,19 @@ public class ChatRenderer {
                 LzChatLine visible = row.visible();
                 int textAlpha = row.textAlpha();
                 int textY     = row.textY();
+
+                if (visible.isSkeleton()) {
+                    // Whole tab is wrapping on a background thread (see WrapCoordinator) — draw a
+                    // plain loading bar instead of real text. Width is a deterministic pseudo-random
+                    // spread (keyed off the row) so a block of placeholders doesn't read as one
+                    // solid rectangle.
+                    int seed = row.s() * 0x9E3779B1;
+                    int barW = 30 + Math.floorMod(seed, Math.max(1, chatWidth - 40));
+                    int barAlpha = (int)(textAlpha * 0.35);
+                    if (barAlpha > 2)
+                        LzDraw.fill(context, 0, textY, barW, textY + 8, (barAlpha << 24) | (theme.messageTextRgb & 0xFFFFFF));
+                    continue;
+                }
 
                 // chat_heads' BEFORE_LINE head texture (if any) only ever sits on the entry's
                 // first wrapped line — see ChatHeadsSupport's BEFORE_LINE support section. But the

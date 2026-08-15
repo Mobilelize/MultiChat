@@ -14,6 +14,7 @@ public final class LzChatLine {
     private final ChatHudLine.Visible line;
     @Nullable private LzChatEntry entry;
     private boolean startOfEntry;
+    private boolean skeleton;
 
     public LzChatLine(ChatHudLine.Visible line) { this.line = line; }
 
@@ -24,6 +25,11 @@ public final class LzChatLine {
      *  {@link #endOfEntry()}, which marks the last. Bolted on like {@link #entry}, since vanilla's
      *  ChatHudLine.Visible record has no room for it. */
     public boolean startOfEntry() { return startOfEntry; }
+
+    /** True for a generic loading-placeholder row — not tied to any real message. Used while a
+     *  tab's history is being wrapped on a background thread (see WrapCoordinator); the whole
+     *  skeleton block is discarded and replaced wholesale once the real content is ready. */
+    public boolean isSkeleton() { return skeleton; }
 
     /** Raw MC ChatHudLine.Visible — escape hatch. */
     public ChatHudLine.Visible mc() { return line; }
@@ -62,6 +68,18 @@ public final class LzChatLine {
             endOfEntry));
         l.entry = entry;
         l.startOfEntry = startOfEntry;
+        return l;
+    }
+
+    /** Generic loading-placeholder row — no message content, no entry identity. Just fills space
+     *  while a background wrap is in flight. {@code addedTime} should be the current tick (like a
+     *  freshly-added real message) — the existing age-based fade/hide rules in ChatRenderer key off
+     *  it, and an old/stale addedTime (e.g. 0) reads as an ancient message and gets hidden outright
+     *  the moment chat is unfocused instead of fading in normally. */
+    public static LzChatLine createSkeleton(int addedTime) {
+        LzChatLine l = new LzChatLine(new ChatHudLine.Visible(addedTime, LzOrderedText.EMPTY.mc(), null, true));
+        l.startOfEntry = true;
+        l.skeleton = true;
         return l;
     }
 

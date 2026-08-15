@@ -4,9 +4,11 @@ import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
+import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ChatPanel {
 
@@ -20,6 +22,13 @@ public class ChatPanel {
 
     private transient Map<UUID, List<LzChatLine>> tabMessages;
     private transient Map<UUID, List<LzChatLine>> customTabLines;
+
+    // Bumped on every rebuildTabLinesOffloaded() call for a tab; carried on the queued background
+    // job so a result from a rebuild that's since been superseded (another settings change fired
+    // before the old one finished) is recognized as stale and dropped. See WrapCoordinator. Read
+    // from the background worker too (to skip a stale job before wasting compute on it, not just
+    // after) — needs to be a thread-safe map, not a plain HashMap.
+    private transient Map<UUID, Long> tabGenerations;
 
     private int     margin             = 0;
     private int activeTabId = 0;
@@ -91,6 +100,23 @@ public class ChatPanel {
         return scrollPositions;
     }
 
+    private Map<UUID, Long> tabGenerations() {
+        if (tabGenerations == null) tabGenerations = new ConcurrentHashMap<>();
+        return tabGenerations;
+    }
+
+    private long bumpGeneration(UUID tabId) {
+        long g = tabGenerations().getOrDefault(tabId, 0L) + 1;
+        tabGenerations().put(tabId, g);
+        return g;
+    }
+
+    /** Thread-safe read — called from WrapCoordinator's background thread to skip a job whose
+     *  rebuild has since been superseded, before spending any wrap work on it. */
+    long currentGeneration(UUID tabId) {
+        return tabGenerations().getOrDefault(tabId, 0L);
+    }
+
     /** Drills into a multi-tab: getVisibleTabs() substitutes its sub-tabs for the normal top-level list,
      *  so the existing tab-bar rendering/click/arrow-cycling code works on sub-tabs with zero new code. */
     public void expandMultiTab(ChatTab parent) {
@@ -121,18 +147,20 @@ public class ChatPanel {
         activeTab   = null;
     }
 
-    private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
-        // chat_heads' BEFORE_LINE head (if any) does NOT reserve space at wrap time in real
-        // chat_heads — it wraps at full width same as always, then shifts the first line's text
-        // right by headWidth at render time only, accepting that it may extend slightly past the
-        // normal edge (their own fixTextOverflow mixin widens the background-fill rect to match,
-        // rather than avoiding the overflow). The primary panel matches that exactly — its render
-        // bound grows instead (resolveRenderWidth()) so the overflow stays visible and selectable.
-        // Every other panel has nowhere for that overflow to go (fixed edge, other UI can sit past
-        // it), so unlike real chat_heads it DOES reserve the width here, trading "matches vanilla
-        // exactly" for "never renders outside its own bounds" on panels that aren't the main chat.
-        int width = resolveWidth() - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
-        if (!primary) {
+    /** Wrap width for a single entry — chat_heads' BEFORE_LINE head (if any) does NOT reserve space
+     *  at wrap time in real chat_heads — it wraps at full width same as always, then shifts the
+     *  first line's text right by headWidth at render time only, accepting that it may extend
+     *  slightly past the normal edge (their own fixTextOverflow mixin widens the background-fill
+     *  rect to match, rather than avoiding the overflow). The primary panel matches that exactly —
+     *  its render bound grows instead (resolveRenderWidth()) so the overflow stays visible and
+     *  selectable. Every other panel has nowhere for that overflow to go (fixed edge, other UI can
+     *  sit past it), so unlike real chat_heads it DOES reserve the width here, trading "matches
+     *  vanilla exactly" for "never renders outside its own bounds" on panels that aren't the main
+     *  chat. Static/pure (baseWidth + isPrimary snapshotted by the caller) so it's safe to call from
+     *  WrapCoordinator's background thread as well as the main thread. */
+    private static int computeEntryWidth(ChatTab.MessageEntry entry, int baseWidth, boolean isPrimary) {
+        int width = baseWidth - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
+        if (!isPrimary) {
             // Reserve only what this entry will actually use — headWidth() for a real head on
             // line 0, emptyLineWidth() for the "offset non-player text" alignment case on every
             // other line, both correctly 0 when neither applies (e.g. no head found AND that
@@ -144,21 +172,46 @@ public class ChatPanel {
                 width -= Math.max(ChatHeadsSupport.headWidth(ref), ChatHeadsSupport.emptyLineWidth());
             }
         }
-        // Deliberately NOT bracketed with ChatHeadsSupport.begin/endHeadRendering() here, unlike
-        // ChatRenderer's actual draw call. chat_heads' customHeadRendering flag is only ever true
-        // during real vanilla ChatComponent.render() (ChatComponentRenderMixin) — never during
-        // the wrap/line-break decision itself, which happens separately at message-add time. So
-        // vanilla's own wrap uses the object glyph's UNPADDED width and only pads at render time,
-        // accepting the resulting minor wrap/render mismatch (their own fixTextOverflow mixin
-        // papers over exactly that). Padding here too made MultiChat wrap more conservatively
-        // than vanilla — one word early on borderline-fitting lines — which is the bug this
-        // comment is here to stop someone reintroducing.
+        return width;
+    }
+
+    /** Wraps one entry into its physical lines, in final flat-list order (index 0 = the entry's
+     *  LAST physical line — see the ordering note on {@link #buildTabLines}). Pure — touches no
+     *  ChatPanel/ChatTab mutable state, safe to run on WrapCoordinator's background thread.
+     *  Deliberately NOT bracketed with ChatHeadsSupport.begin/endHeadRendering() here, unlike
+     *  ChatRenderer's actual draw call. chat_heads' customHeadRendering flag is only ever true
+     *  during real vanilla ChatComponent.render() (ChatComponentRenderMixin) — never during the
+     *  wrap/line-break decision itself, which happens separately at message-add time. So vanilla's
+     *  own wrap uses the object glyph's UNPADDED width and only pads at render time, accepting the
+     *  resulting minor wrap/render mismatch (their own fixTextOverflow mixin papers over exactly
+     *  that). Padding here too made MultiChat wrap more conservatively than vanilla — one word
+     *  early on borderline-fitting lines — which is the bug this comment is here to stop someone
+     *  reintroducing. */
+    private static List<LzChatLine> buildEntryLines(ChatTab.MessageEntry entry, int width) {
         List<LzOrderedText> lines = LzChat.breakLines(LzText.wrapMc(entry.rendered().mc()), width);
-        for (int i = 0; i < lines.size(); i++) {
+        List<LzChatLine> out = new ArrayList<>(lines.size());
+        for (int i = lines.size() - 1; i >= 0; i--) {
             boolean endOfEntry   = i == lines.size() - 1;
             boolean startOfEntry = i == 0;
-            panelLines.addFirst(LzChatLine.create(entry.entry().creationTick, lines.get(i), entry.entry().indicator, endOfEntry, entry.entry(), startOfEntry));
+            out.add(LzChatLine.create(entry.entry().creationTick, lines.get(i), entry.entry().indicator, endOfEntry, entry.entry(), startOfEntry));
         }
+        return out;
+    }
+
+    /** Wraps a full ordered list of entries (index 0 = newest, matching ChatTab.messages()'s and
+     *  ChatRenderer's convention) into the flat newest-first line list ChatRenderer indexes into.
+     *  Static/pure, so this is the method WrapCoordinator's background thread calls too — same
+     *  output as building it on the main thread, just off it. Package-visible for WrapCoordinator. */
+    static List<LzChatLine> buildTabLines(List<ChatTab.MessageEntry> entries, int baseWidth, boolean isPrimary) {
+        List<LzChatLine> out = new ArrayList<>();
+        for (ChatTab.MessageEntry entry : entries) {
+            out.addAll(buildEntryLines(entry, computeEntryWidth(entry, baseWidth, isPrimary)));
+        }
+        return out;
+    }
+
+    private void wrapEntryInto(List<LzChatLine> panelLines, ChatTab.MessageEntry entry) {
+        panelLines.addAll(0, buildEntryLines(entry, computeEntryWidth(entry, resolveWidth(), primary)));
     }
 
     public void addTabMessage(ChatTab tab, ChatTab.MessageEntry entry) {
@@ -172,23 +225,89 @@ public class ChatPanel {
 
     public void clearTabLines(ChatTab tab) {
         tabMessages().remove(tab.id());
+        // Invalidates any background rebuild still targeting this tab's old list — callers that
+        // clear and manually rebuild via addTabMessage (InfoTab/NoteTab/TabHandle) never call
+        // rebuildTabLines, so nothing else would bump the generation here.
+        bumpGeneration(tab.id());
     }
 
+    /** Rebuilds a tab's wrapped lines — full synchronous rewrap, or an off-main-thread rewrap
+     *  showing a loading placeholder until it's ready, per the "Optimized Loading" setting. Single
+     *  entry point: every caller (settings/scale/width changes, refilter, delete, popout) goes
+     *  through here, so all of them benefit from offloading with no special-casing. */
     public void rebuildTabLines(ChatTab tab) {
-        List<LzChatLine> panelLines = new ArrayList<>();
-        tabMessages().put(tab.id(), panelLines);
-        List<ChatTab.MessageEntry> entries = tab.messages();
-        for (int i = entries.size() - 1; i >= 0; i--) wrapEntryInto(panelLines, entries.get(i));
+        boolean worthOffloading = MultichatClient.CONFIG.optimizedLoadingEnabled
+            && tab.messageCount() >= MultichatClient.CONFIG.optimizedLoadingThreshold;
+        if (worthOffloading) rebuildTabLinesOffloaded(tab);
+        else rebuildTabLinesSync(tab);
+        buildCustomRawLines(tab);
+    }
 
+    private void rebuildTabLinesSync(ChatTab tab) {
+        tabMessages().put(tab.id(), buildTabLines(tab.messages(), resolveWidth(), primary));
+    }
+
+    /** Installs a generic skeleton block (sized to the panel's own visible area — see
+     *  ChatPanel#resolveLines) immediately, then wraps the tab's entire history on
+     *  WrapCoordinator's background thread and swaps it in wholesale once ready
+     *  ({@link #applyWrapResult}). No per-entry placeholder sizing, no incremental/partial apply —
+     *  the whole point is that there's nothing positional to keep in sync while the background job
+     *  runs; the swap either lands cleanly or (stale generation) doesn't happen at all. */
+    private void rebuildTabLinesOffloaded(ChatTab tab) {
+        long generation = bumpGeneration(tab.id());
+
+        List<LzChatLine> skeleton = new ArrayList<>();
+        int skeletonRows = Math.max(1, resolveLines());
+        int now = ChatRenderer.currentTick;
+        for (int i = 0; i < skeletonRows; i++) skeleton.add(LzChatLine.createSkeleton(now));
+        tabMessages().put(tab.id(), skeleton);
+
+        // Snapshot — the background thread must never read tab.messages() live while the main
+        // thread keeps mutating it (new messages, evictions) for the duration of the wrap.
+        List<ChatTab.MessageEntry> snapshot = new ArrayList<>(tab.messages());
+        // A settings/scale/width change rebuilds every tab on every panel (any of them could become
+        // active later), but only the tab actually on screen right now needs to resolve fast — jump
+        // it to the front of the queue instead of leaving it to wait behind every other tab's job.
+        boolean priority = tab == getActiveTab();
+        WrapCoordinator.submit(this, tab, generation, snapshot, resolveWidth(), primary, priority);
+    }
+
+    /** Applies one finished background rebuild, called from WrapCoordinator.drain() on the main
+     *  thread. Guarded by a generation check — a result from a rebuild that's since been superseded
+     *  (another settings change fired before this one finished) is dropped instead of overwriting
+     *  newer content. Any messages that arrived live after the skeleton was installed (addTabMessage
+     *  prepends onto whatever's currently there, skeleton or not) sit ahead of the skeleton block —
+     *  that prefix is real, already-correct content and is kept as-is in front of the finished
+     *  result rather than being re-wrapped or discarded. */
+    void applyWrapResult(WrapCoordinator.WrapResult result) {
+        UUID tabId = result.tab().id();
+        if (result.generation() != tabGenerations().getOrDefault(tabId, 0L)) return;
+        List<LzChatLine> current = tabMessages().get(tabId);
+        if (current == null) return;
+
+        int livePrefix = 0;
+        while (livePrefix < current.size() && !current.get(livePrefix).isSkeleton()) livePrefix++;
+
+        List<LzChatLine> finalLines = new ArrayList<>(livePrefix + result.lines().size());
+        finalLines.addAll(current.subList(0, livePrefix));
+        finalLines.addAll(result.lines());
+        tabMessages().put(tabId, finalLines);
+
+        // The skeleton's row count has nothing to do with real content size, so there's no
+        // meaningful delta to preserve — just keep the existing scroll position valid.
+        int scrolled = getScrolledLines(result.tab());
+        if (scrolled > finalLines.size()) setScrolledLines(result.tab(), finalLines.size());
+    }
+
+    private void buildCustomRawLines(ChatTab tab) {
         List<LzText> raw = tab.customRawLines();
-        if (!raw.isEmpty()) {
-            List<LzChatLine> customLines = new ArrayList<>();
-            customTabLines().put(tab.id(), customLines);
-            for (int i = raw.size() - 1; i >= 0; i--) {
-                LzText text = raw.get(i);
-                LzChatEntry synth = new LzChatEntry(0, text, null);
-                wrapEntryInto(customLines, new ChatTab.MessageEntry(text, text, synth));
-            }
+        if (raw.isEmpty()) return;
+        List<LzChatLine> customLines = new ArrayList<>();
+        customTabLines().put(tab.id(), customLines);
+        for (int i = raw.size() - 1; i >= 0; i--) {
+            LzText text = raw.get(i);
+            LzChatEntry synth = new LzChatEntry(0, text, null);
+            wrapEntryInto(customLines, new ChatTab.MessageEntry(text, text, synth));
         }
     }
 

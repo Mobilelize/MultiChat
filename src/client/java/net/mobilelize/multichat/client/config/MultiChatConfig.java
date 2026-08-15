@@ -53,6 +53,15 @@ public class MultiChatConfig extends LzConfig {
     public boolean showContextDisplay           = true;
     public boolean panelContextEnabled          = true;
     public boolean logApiMessages               = true;
+    // Off-main-thread rewrap for full tab rebuilds (settings/scale/width changes): shows a generic
+    // loading placeholder sized to the panel's visible area, wraps the whole tab's history on a
+    // background thread, then swaps the real content in all at once when it's ready — instead of
+    // freezing a frame doing it synchronously. See WrapCoordinator / PERFORMANCE_PLAN.md item 4.
+    public boolean optimizedLoadingEnabled      = true;
+    // Below this many messages in a tab, always rebuild synchronously regardless of the toggle
+    // above — sync is already instant at that size, and offloading adds a queue hop plus a tick of
+    // latency (submit -> worker wakes -> computes -> main thread applies next tick) for free.
+    public int     optimizedLoadingThreshold    = 300;
 
     // ── Highlight Words ──────────────────────────────────────────────────────
     // One shared style pair — both Your Keywords and API Words render with the same colors/formatting.

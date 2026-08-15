@@ -241,41 +241,6 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.copyIncludesObjectPlaceholder = v)
                 .build());
 
-        // ── Advanced ──────────────────────────────────────────────────────
-        ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
-
-        advanced.addEntry(eb.startBooleanToggle(
-                LzText.literal("Log API Messages").mc(),
-                MultichatClient.CONFIG.logApiMessages)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Log messages sent via the MultiChat API to the game log.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.logApiMessages = v)
-                .build());
-
-        advanced.addEntry(eb.startBooleanToggle(
-                LzText.literal("Normalize Filter Text").mc(),
-                MultichatClient.CONFIG.normalizeFilterText)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Strip invisible/control characters and collapse whitespace before matching filter rules. Helps when messages contain hidden formatting characters that prevent filters from matching. Only affects routing — not collapse, count, or display.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.normalizeFilterText = v)
-                .build());
-
-        advanced.addEntry(eb.startBooleanToggle(
-                LzText.literal("Strip Object Content").mc(),
-                MultichatClient.CONFIG.stripObjectContent)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Strip inline \"object\" content (e.g. chat_heads' player-head sprite) from messages before matching filter rules. MC 1.21.9+ only. Only affects routing — not collapse, count, or display.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.stripObjectContent = v)
-                .build());
-
-        advanced.addEntry(eb.startBooleanToggle(
-                LzText.literal("Disable MultiChat").mc(),
-                MultichatClient.CONFIG.modDisabled)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Disables passive features: custom chat rendering, tab routing, keybinds, and mouse hooks. Commands and the settings GUI still work.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.modDisabled = v)
-                .build());
-
         // ── Highlight Words ──────────────────────────────────────────────────
         ConfigCategory highlight = builder.getOrCreateCategory(LzText.literal("Highlight Words").mc());
 
@@ -400,6 +365,66 @@ public class ConfigMenu {
 
         addHighlightStyleEntries(highlight, eb, "Keyword", MultichatClient.CONFIG.keywordStyle, 0xFFFF55, true);
         addHighlightStyleEntries(highlight, eb, "Neutral", MultichatClient.CONFIG.neutralStyle, 0xFF5555, false);
+
+        // ── Performance ───────────────────────────────────────────────────
+        ConfigCategory performance = builder.getOrCreateCategory(LzText.literal("Performance").mc());
+
+        performance.addEntry(eb.startBooleanToggle(
+                LzText.literal("Optimized Loading").mc(),
+                MultichatClient.CONFIG.optimizedLoadingEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When a setting/scale/width change forces a full tab rebuild, show a " +
+                        "loading placeholder sized to the panel while the whole tab wraps on a background thread, " +
+                        "then swap the real content in once it's ready — instead of freezing a frame doing it on " +
+                        "the main thread. Turn off for the old behavior (always rewrap immediately, synchronously).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.optimizedLoadingEnabled = v)
+                .build());
+
+        performance.addEntry(eb.startIntField(
+                LzText.literal("Optimized Loading Threshold").mc(),
+                MultichatClient.CONFIG.optimizedLoadingThreshold)
+                .setDefaultValue(300)
+                .setMin(0)
+                .setTooltip(LzText.literal("Below this many messages in a tab, always rebuild it immediately/synchronously " +
+                        "regardless of Optimized Loading above — small tabs are already instant, so offloading them just " +
+                        "adds a background-thread round trip for nothing. 0 = always offload.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.optimizedLoadingThreshold = Math.max(0, v))
+                .build());
+
+        // ── Advanced ──────────────────────────────────────────────────────
+        ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
+
+        advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Log API Messages").mc(),
+                MultichatClient.CONFIG.logApiMessages)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Log messages sent via the MultiChat API to the game log.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.logApiMessages = v)
+                .build());
+
+        advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Normalize Filter Text").mc(),
+                MultichatClient.CONFIG.normalizeFilterText)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Strip invisible/control characters and collapse whitespace before matching filter rules. Helps when messages contain hidden formatting characters that prevent filters from matching. Only affects routing — not collapse, count, or display.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.normalizeFilterText = v)
+                .build());
+
+        advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Strip Object Content").mc(),
+                MultichatClient.CONFIG.stripObjectContent)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("Strip inline \"object\" content (e.g. chat_heads' player-head sprite) from messages before matching filter rules. MC 1.21.9+ only. Only affects routing — not collapse, count, or display.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.stripObjectContent = v)
+                .build());
+
+        advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Disable MultiChat").mc(),
+                MultichatClient.CONFIG.modDisabled)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Disables passive features: custom chat rendering, tab routing, keybinds, and mouse hooks. Commands and the settings GUI still work.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.modDisabled = v)
+                .build());
 
         // ── Search ────────────────────────────────────────────────────────
         ConfigCategory search = builder.getOrCreateCategory(LzText.literal("Search").mc());

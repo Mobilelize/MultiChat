@@ -38,6 +38,9 @@ public class MultichatClient implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraftClient -> {
+            // Finished background wraps are applied from ChatRenderer.render() instead (every
+            // frame, not every 20Hz tick) — a swap becomes visible on the very next frame after the
+            // background thread finishes it, instead of waiting on the tick boundary.
             if (firstTime && LzWorld.isLoaded()) {
                 firstTime = false;
                 for (ChatTab tab : ChatManager.getTabs()) {
