@@ -47,6 +47,7 @@ public class ChatTab {
     private boolean          playerDeletable         = false;
     private final Set<Integer> visibleOnPanels       = new LinkedHashSet<>();
     private final FilterRuleSet filterRules          = new FilterRuleSet();
+    private boolean          forceHighlightMatches  = false;
     private boolean          differenceMode          = false;
     private int              differenceLayerIndex    = 0;
     private boolean          differenceException     = false;
@@ -112,6 +113,10 @@ public class ChatTab {
 
     // ── Filtering ──────────────────────────────────────────────────────────────
     public FilterRuleSet filterRules() { return filterRules; }
+
+    /** When true, messages that matched a Highlight Words keyword reach this tab even if the filter rules above reject them. */
+    public boolean forceHighlightMatches()               { return forceHighlightMatches; }
+    public void    setForceHighlightMatches(boolean v)   { forceHighlightMatches = v; }
 
     /** Style-aware conditions, separate from filterRules — see StyleFilterSet. Empty = no restriction. */
     public StyleFilterSet styleRules() {

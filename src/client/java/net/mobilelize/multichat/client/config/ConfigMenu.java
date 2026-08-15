@@ -353,13 +353,10 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.apiHighlightEnabled = v)
                 .build());
 
-        addHighlightStyleEntries(highlight, eb, "Keyword", MultichatClient.CONFIG.keywordStyle, 0xFFFF55, true);
-        addHighlightStyleEntries(highlight, eb, "Neutral", MultichatClient.CONFIG.neutralStyle, 0xFF5555, false);
-
         highlight.addEntry(eb.startBooleanToggle(
                 LzText.literal("Play Sound on Match").mc(),
                 MultichatClient.CONFIG.highlightSoundEnabled)
-                .setDefaultValue(false)
+                .setDefaultValue(true)
                 .setTooltip(LzText.literal("Plays a sound whenever a message matches a highlight keyword.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.highlightSoundEnabled = v)
                 .build());
@@ -400,6 +397,9 @@ public class ConfigMenu {
                 .setTooltip(LzText.literal("Toggle ON then Save to play the current sound settings.").mc())
                 .setSaveConsumer(v -> { if (v) LzSound.playMaster(MultichatClient.CONFIG.highlightSound, MultichatClient.CONFIG.highlightSoundPitch, MultichatClient.CONFIG.highlightSoundVolume); })
                 .build());
+
+        addHighlightStyleEntries(highlight, eb, "Keyword", MultichatClient.CONFIG.keywordStyle, 0xFFFF55, true);
+        addHighlightStyleEntries(highlight, eb, "Neutral", MultichatClient.CONFIG.neutralStyle, 0xFF5555, false);
 
         // ── Search ────────────────────────────────────────────────────────
         ConfigCategory search = builder.getOrCreateCategory(LzText.literal("Search").mc());

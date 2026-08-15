@@ -131,6 +131,12 @@ public class TabEditScreen {
                 .setTooltip(LzText.literal("Max messages stored. 0 = unlimited.").mc())
                 .setSaveConsumer(tab::setMessageCap)
                 .build());
+
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Force Highlight Matches").mc(), tab.forceHighlightMatches())
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Let messages that matched a Highlight Words keyword into this tab even if they fail this tab's own filter rules.").mc())
+                .setSaveConsumer(tab::setForceHighlightMatches)
+                .build());
         }
 
 

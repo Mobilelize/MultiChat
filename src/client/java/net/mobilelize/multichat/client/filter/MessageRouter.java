@@ -81,7 +81,8 @@ public class MessageRouter {
                 }
                 case FILTERED -> {
                     if (tab.differenceMode() && !tab.differenceException()) break;
-                    if (tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText)) {
+                    boolean forcedByHighlight = tab.forceHighlightMatches() && highlighted.actionId != null;
+                    if (forcedByHighlight || (tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText))) {
                         ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                         touchedTabs.add(tab);
                         routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, rawLzText, touchedTabs);
@@ -89,7 +90,8 @@ public class MessageRouter {
                 }
                 case API -> {
                     if (tab == skipTabOnRoute) break;
-                    if (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText)) {
+                    boolean forcedByHighlight = tab.forceHighlightMatches() && highlighted.actionId != null;
+                    if (forcedByHighlight || (!tab.filterRules().isEmpty() && tab.filterRules().matches(filterText, indicator) && tab.styleRules().matches(rawLzText))) {
                         ChatManager.processMessage(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry);
                         touchedTabs.add(tab);
                         routeToSubTabs(tab, tick, highlightedContent, indicator, highlightedRaw, sharedEntry, filterText, rawLzText, touchedTabs);

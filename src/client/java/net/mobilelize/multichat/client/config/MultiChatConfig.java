@@ -70,7 +70,7 @@ public class MultiChatConfig extends LzConfig {
     public boolean         apiExceptionsEnabled  = true;
     public List<String>    apiHighlightExceptions = new ArrayList<>();
 
-    public boolean         highlightSoundEnabled = false;
+    public boolean         highlightSoundEnabled = true;
     public String          highlightSound        = "minecraft:entity.experience_orb.pickup";
     public float           highlightSoundVolume  = 1.0f;
     public float           highlightSoundPitch   = 1.0f;
