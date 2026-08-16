@@ -167,12 +167,6 @@ public class TabEditScreen {
         }
 
         if (tab.type() == TabType.FILTERED) {
-            settings.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
-                .setDefaultValue(false)
-                .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
-                .setSaveConsumer(v -> { if (v) ChatManager.refilterTab(tab); })
-                .build());
-
             settings.addEntry(eb.startBooleanToggle(LzText.literal("Multi Tab").mc(), tab.isMultiTab())
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Gives this tab sub-tabs. Messages that pass this tab's own filter are further split across its sub-tabs by their own rules. Click this tab in chat to drill into its sub-tabs; right-click any sub-tab → Collapse Sub-tabs to back out.").mc())
@@ -488,6 +482,19 @@ public class TabEditScreen {
             tab.styleRules().blacklist().clear();
             list.forEach(mc -> tab.styleRules().blacklist().add(mc.toStyleCondition()));
         }));
+
+        if (tab.type() == TabType.FILTERED) {
+            // Must be the LAST entry added on this screen: Cloth Config runs every entry's
+            // setSaveConsumer in add-order when Save is clicked, and this one needs to run the
+            // refilter AFTER every whitelist/blacklist/style-rule save-consumer above has already
+            // written its edits to tab.filterRules()/styleRules() — otherwise it scans against the
+            // rules as they were before this save, not the ones just changed.
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
+                .setSaveConsumer(v -> { if (v) ChatManager.refilterTab(tab); })
+                .build());
+        }
 
         return builder.build();
     }

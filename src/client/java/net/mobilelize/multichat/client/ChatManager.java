@@ -8,6 +8,8 @@ import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.MessageAddedToTabCallback;
 import net.mobilelize.multichat.client.filter.FilterRule;
+import net.mobilelize.multichat.client.filter.FilterRuleSet;
+import net.mobilelize.multichat.client.filter.StyleFilterSet;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -121,18 +123,44 @@ public class ChatManager {
     // ------------------------------------------------------------------
 
     /** Bits of tab/global config the pure compute functions below need — snapshotted once at submit
-     *  time instead of read live off the background thread, per the "snapshot inputs" rule used
-     *  everywhere else this codebase does background work (see WrapCoordinator). {@code tab}'s
-     *  matchesText/matchesTime (SearchTab, all-final fields), filterRules(), collapseRepeating(),
-     *  and collapseMatchFormatting() are still read live even in the background job — they're either
-     *  immutable by construction or only ever change via an explicit, infrequent user edit that
-     *  isn't realistically concurrent with an in-flight scan, so snapshotting them too would be
-     *  ceremony without a real correctness payoff. */
+     *  time (main thread) instead of read live off the background thread, per the "snapshot inputs"
+     *  rule used everywhere else this codebase does background work (see WrapCoordinator). This
+     *  covers every genuinely-mutable bit the matching loop touches — including filter rules, which
+     *  earlier only snapshotted the primitives here and read filterRules() live: TabEditScreen's
+     *  Save mutates a FilterRuleSet's whitelist/blacklist ArrayLists in place (clear() + repeated
+     *  add()), completely unsynchronized, so a background scan reading those same live lists while a
+     *  save is touching them races on plain ArrayLists with no protection at all — not just a
+     *  stale-value risk but a genuinely corrupted-iteration one, which is exactly the kind of
+     *  "sometimes 2 messages pass a blacklist-everything rule, sometimes more, nothing else changed"
+     *  symptom that showed up. tab.matchesText/matchesTime (SearchTab, all-final fields) are still
+     *  read live — those fields are actually immutable by construction, no snapshot needed. */
+    /** A tab's filterRules() + styleRules(), both snapshotted, matched together — MessageRouter gates
+     *  every FILTERED-tab check on {@code filterRules().matches(...) && styleRules().matches(raw)}
+     *  (see its FILTERED/diff-mode/routeToSubTabs branches); refilterTab only ever checked filterRules
+     *  and silently ignored styleRules entirely, so a refilter could disagree with what live routing
+     *  would have put there. This pairs them so every place refilterTab checks a tab's rules checks
+     *  both, the same way MessageRouter does. */
+    private record TabRuleSnapshot(FilterRuleSet.Snapshot filterRules, StyleFilterSet.Snapshot styleRules) {
+        static TabRuleSnapshot of(ChatTab t) {
+            return new TabRuleSnapshot(t.filterRules().snapshot(), t.styleRules().snapshot());
+        }
+        boolean matches(String filterText, LzMessageIndicator indicator, LzText raw) {
+            return filterRules.matches(filterText, indicator) && styleRules.matches(raw);
+        }
+    }
+
     private record RefilterConfig(boolean stripObjectContent, boolean normalizeFilterText,
-                                   String collapseCounterFormat, boolean showTimestamps, int messageCap) {
-        static RefilterConfig snapshot(ChatTab tab) {
+                                   String collapseCounterFormat, boolean showTimestamps, int messageCap,
+                                   boolean collapseRepeating, boolean collapseMatchFormatting,
+                                   TabRuleSnapshot ownRules, @Nullable TabRuleSnapshot parentGateRules,
+                                   List<TabRuleSnapshot> higherDiffRules) {
+        static RefilterConfig snapshot(ChatTab tab, @Nullable ChatTab parentGate, List<ChatTab> higherDiffTabs) {
             return new RefilterConfig(MultichatClient.CONFIG.stripObjectContent, MultichatClient.CONFIG.normalizeFilterText,
-                MultichatClient.CONFIG.collapseCounterFormat, tab.showTimestamps(), tab.messageCap());
+                MultichatClient.CONFIG.collapseCounterFormat, tab.showTimestamps(), tab.messageCap(),
+                tab.collapseRepeating(), tab.collapseMatchFormatting(),
+                TabRuleSnapshot.of(tab),
+                parentGate != null ? TabRuleSnapshot.of(parentGate) : null,
+                higherDiffTabs.stream().map(TabRuleSnapshot::of).toList());
         }
     }
 
@@ -155,30 +183,34 @@ public class ChatManager {
 
         List<ChatTab.MessageEntry> snapshot = new ArrayList<>(srcTab.messages());
         boolean collapseIdentical = tab.collapseIdentical();
-        RefilterConfig cfg = RefilterConfig.snapshot(tab);
+        // sourceTab()'s own filterRules() — same snapshot-not-live requirement as RefilterConfig's,
+        // see its javadoc.
+        FilterRuleSet.Snapshot sourceRules = tab.sourceTab() != null ? tab.sourceTab().filterRules().snapshot() : null;
+        RefilterConfig cfg = RefilterConfig.snapshot(tab, null, List.of());
 
         boolean worthOffloading = MultichatClient.CONFIG.optimizedRefilterEnabled
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applySearchRefilterResult(tab, generation, computeSearchRefilter(tab, snapshot, collapseIdentical, cfg));
+            applySearchRefilterResult(tab, generation, computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg));
             return;
         }
 
         for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
         FilterCoordinator.submit(tab, generation, () -> {
-            SearchRefilterResult r = computeSearchRefilter(tab, snapshot, collapseIdentical, cfg);
+            SearchRefilterResult r = computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg);
             return () -> applySearchRefilterResult(tab, generation, r);
         });
     }
 
     /** Pure — reads only {@code tab}'s final search fields (query/mode/case/time range, via
-     *  matchesText/matchesTime) and {@code cfg}, never mutates {@code tab}. Safe to run on
-     *  FilterCoordinator's background thread. Same matching/collapse-identical logic
+     *  matchesText/matchesTime), the pre-taken rule/config snapshots, never mutates {@code tab}.
+     *  Safe to run on FilterCoordinator's background thread. Same matching/collapse-identical logic
      *  refilterSearch always used, just building a plain result list instead of mutating the tab's
      *  live message deque as it goes. */
     private static SearchRefilterResult computeSearchRefilter(SearchTab tab, List<ChatTab.MessageEntry> source,
-                                                                boolean collapseIdentical, RefilterConfig cfg) {
+                                                                boolean collapseIdentical, @Nullable FilterRuleSet.Snapshot sourceRules,
+                                                                RefilterConfig cfg) {
         List<ChatTab.MessageEntry> result = new ArrayList<>();
         Map<LzChatEntry, Integer> collapseCounts = new HashMap<>();
 
@@ -192,7 +224,7 @@ public class ChatManager {
                     ? LzText.stringSkippingObjects(me.entry().originalContent.mc()) : text;
                 if (cfg.normalizeFilterText()) fText1 = FilterRule.normalizeFilterText(fText1);
                 if (!tab.matchesText(fText1) || !tab.matchesTime(me.entry().creationTick)) continue;
-                if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText1, me.entry().indicator)) continue;
+                if (sourceRules != null && !sourceRules.matches(fText1, me.entry().indicator)) continue;
                 newest.putIfAbsent(text, me);
                 counts.merge(text, 1, Integer::sum);
             }
@@ -219,7 +251,7 @@ public class ChatManager {
                     ? LzText.stringSkippingObjects(me.entry().originalContent.mc()) : text;
                 if (cfg.normalizeFilterText()) fText2 = FilterRule.normalizeFilterText(fText2);
                 if (!tab.matchesText(fText2)) continue;
-                if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText2, me.entry().indicator)) continue;
+                if (sourceRules != null && !sourceRules.matches(fText2, me.entry().indicator)) continue;
                 if (!tab.matchesTime(me.entry().creationTick)) continue;
                 LzText base = cfg.showTimestamps()
                     ? stampedText(me.entry().creationTick, me.entry().originalContent, me.entry().indicator)
@@ -273,30 +305,28 @@ public class ChatManager {
             : List.of();
 
         List<ChatTab.MessageEntry> snapshot = new ArrayList<>(allTab.messages());
-        RefilterConfig cfg = RefilterConfig.snapshot(tab);
+        RefilterConfig cfg = RefilterConfig.snapshot(tab, parentGate, higherDiffTabs);
 
         boolean worthOffloading = MultichatClient.CONFIG.optimizedRefilterEnabled
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applyFilterTabResult(tab, generation, computeFilterTab(tab, parentGate, higherDiffTabs, snapshot, effectiveDiff, cfg));
+            applyFilterTabResult(tab, generation, computeFilterTab(snapshot, effectiveDiff, cfg));
             return;
         }
 
         for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
         FilterCoordinator.submit(tab, generation, () -> {
-            List<ChatTab.MessageEntry> result = computeFilterTab(tab, parentGate, higherDiffTabs, snapshot, effectiveDiff, cfg);
+            List<ChatTab.MessageEntry> result = computeFilterTab(snapshot, effectiveDiff, cfg);
             return () -> applyFilterTabResult(tab, generation, result);
         });
     }
 
-    /** Pure — reads only {@code tab}/{@code parentGate}/{@code higherDiffTabs}' filterRules()
-     *  (rule data, changes only via explicit user edit) and {@code cfg}, never mutates anything.
-     *  Same collapse-run-length logic refilterTab always used (a repeat replaces the single
-     *  in-progress entry with an updated counter), just tracked against a local deque instead of
-     *  the tab's live one. */
-    private static List<ChatTab.MessageEntry> computeFilterTab(ChatTab tab, @Nullable ChatTab parentGate,
-                                                                 List<ChatTab> higherDiffTabs, List<ChatTab.MessageEntry> all,
+    /** Pure — reads only the pre-taken rule/config snapshot in {@code cfg}, never touches a live
+     *  ChatTab. Safe to run on FilterCoordinator's background thread. Same collapse-run-length logic
+     *  refilterTab always used (a repeat replaces the single in-progress entry with an updated
+     *  counter), just tracked against a local deque instead of the tab's live one. */
+    private static List<ChatTab.MessageEntry> computeFilterTab(List<ChatTab.MessageEntry> all,
                                                                  boolean effectiveDiff, RefilterConfig cfg) {
         ArrayDeque<ChatTab.MessageEntry> result = new ArrayDeque<>();
         String collapseLastText   = null;
@@ -315,16 +345,16 @@ public class ChatManager {
             LzMessageIndicator indicator = src.entry().indicator;
 
             boolean include = effectiveDiff
-                ? higherDiffTabs.stream().noneMatch(t -> t.filterRules().matches(filterText, indicator))
-                  && tab.filterRules().matches(filterText, indicator)
-                : tab.filterRules().matches(filterText, indicator);
-            if (include && parentGate != null && !parentGate.filterRules().matches(filterText, indicator))
+                ? cfg.higherDiffRules().stream().noneMatch(r -> r.matches(filterText, indicator, raw))
+                  && cfg.ownRules().matches(filterText, indicator, raw)
+                : cfg.ownRules().matches(filterText, indicator, raw);
+            if (include && cfg.parentGateRules() != null && !cfg.parentGateRules().matches(filterText, indicator, raw))
                 include = false;
             if (!include) continue;
 
-            boolean doCollapse = tab.collapseRepeating()
+            boolean doCollapse = cfg.collapseRepeating()
                 && fullText.equals(collapseLastText)
-                && (!tab.collapseMatchFormatting() || raw.mc().equals(collapseLastLzText.mc()));
+                && (!cfg.collapseMatchFormatting() || raw.mc().equals(collapseLastLzText.mc()));
 
             if (doCollapse) {
                 collapseRepeat++;

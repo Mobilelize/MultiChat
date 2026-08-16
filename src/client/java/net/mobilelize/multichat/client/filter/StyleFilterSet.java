@@ -30,6 +30,46 @@ public class StyleFilterSet {
 
     public boolean isEmpty() { return whitelist.isEmpty() && blacklist.isEmpty(); }
 
+    /** Immutable point-in-time copy — same reasoning as {@link FilterRuleSet#snapshot()}: whitelist()/
+     *  blacklist() return the live, unsynchronized lists a screen's Save button mutates in place, so
+     *  anything matching off the main thread must call this first and match against the snapshot. */
+    public Snapshot snapshot() {
+        return new Snapshot(List.copyOf(whitelist), whitelistMode, List.copyOf(blacklist), blacklistMode);
+    }
+
+    /** Same matching logic as {@link #matches(LzText)}, over copied lists — {@link StyleCondition} is
+     *  an immutable record and {@code List.copyOf} is itself immutable, so this is safe to share with
+     *  and call from any thread once created. */
+    public record Snapshot(List<StyleCondition> whitelist, WhitelistMode whitelistMode,
+                            List<StyleCondition> blacklist, BlacklistMode blacklistMode) {
+        public boolean matches(LzText text) {
+            if (!blacklist.isEmpty()) {
+                if (blacklistMode == BlacklistMode.ALL) {
+                    boolean allMatch = true;
+                    for (StyleCondition c : blacklist) {
+                        if (!c.matches(text)) { allMatch = false; break; }
+                    }
+                    if (allMatch) return false;
+                } else {
+                    for (StyleCondition c : blacklist) {
+                        if (c.matches(text)) return false;
+                    }
+                }
+            }
+            if (whitelist.isEmpty()) return true;
+            if (whitelistMode == WhitelistMode.ALL) {
+                for (StyleCondition c : whitelist) {
+                    if (!c.matches(text)) return false;
+                }
+                return true;
+            }
+            for (StyleCondition c : whitelist) {
+                if (c.matches(text)) return true;
+            }
+            return false;
+        }
+    }
+
     public boolean matches(LzText text) {
         if (!blacklist.isEmpty()) {
             if (blacklistMode == BlacklistMode.ALL) {
