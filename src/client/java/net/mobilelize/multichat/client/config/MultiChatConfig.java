@@ -62,6 +62,12 @@ public class MultiChatConfig extends LzConfig {
     // above — sync is already instant at that size, and offloading adds a queue hop plus a tick of
     // latency (submit -> worker wakes -> computes -> main thread applies next tick) for free.
     public int     optimizedLoadingThreshold    = 300;
+    // Same idea as the pair above, but for the search/filter matching scan (ChatManager.refilterSearch
+    // / refilterTab) rather than the tab-rebuild wrap step — separate knobs since the two can have
+    // very different cost profiles (a filter scan touches every ALL-tab message regardless of how
+    // small the resulting filtered tab ends up). See FilterCoordinator / PERFORMANCE_PLAN.md item 3.
+    public boolean optimizedRefilterEnabled     = true;
+    public int     optimizedRefilterThreshold   = 300;
 
     // ── Highlight Words ──────────────────────────────────────────────────────
     // One shared style pair — both Your Keywords and API Words render with the same colors/formatting.

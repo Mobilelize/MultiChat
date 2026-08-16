@@ -247,20 +247,26 @@ public class ChatPanel {
         tabMessages().put(tab.id(), buildTabLines(tab.messages(), resolveWidth(), primary));
     }
 
-    /** Installs a generic skeleton block (sized to the panel's own visible area — see
-     *  ChatPanel#resolveLines) immediately, then wraps the tab's entire history on
-     *  WrapCoordinator's background thread and swaps it in wholesale once ready
-     *  ({@link #applyWrapResult}). No per-entry placeholder sizing, no incremental/partial apply —
-     *  the whole point is that there's nothing positional to keep in sync while the background job
-     *  runs; the swap either lands cleanly or (stale generation) doesn't happen at all. */
-    private void rebuildTabLinesOffloaded(ChatTab tab) {
-        long generation = bumpGeneration(tab.id());
-
+    /** Installs a generic skeleton block (sized to the panel's own visible area) in place of
+     *  whatever this tab currently shows on this panel. Shared by the wrap-offload path below and
+     *  ChatManager's search/filter refilter offload — anywhere a tab's content is about to be
+     *  recomputed off the main thread should show this in the meantime. */
+    void showLoadingSkeleton(ChatTab tab) {
         List<LzChatLine> skeleton = new ArrayList<>();
         int skeletonRows = Math.max(1, resolveLines());
         int now = ChatRenderer.currentTick;
         for (int i = 0; i < skeletonRows; i++) skeleton.add(LzChatLine.createSkeleton(now));
         tabMessages().put(tab.id(), skeleton);
+    }
+
+    /** Wraps the tab's entire history on WrapCoordinator's background thread and swaps it in
+     *  wholesale once ready ({@link #applyWrapResult}). No per-entry placeholder sizing, no
+     *  incremental/partial apply — the whole point is that there's nothing positional to keep in
+     *  sync while the background job runs; the swap either lands cleanly or (stale generation)
+     *  doesn't happen at all. */
+    private void rebuildTabLinesOffloaded(ChatTab tab) {
+        long generation = bumpGeneration(tab.id());
+        showLoadingSkeleton(tab);
 
         // Snapshot — the background thread must never read tab.messages() live while the main
         // thread keeps mutating it (new messages, evictions) for the duration of the wrap.

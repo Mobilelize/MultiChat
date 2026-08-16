@@ -87,6 +87,13 @@ public class ChatTab {
     private transient int                unreadCount = 0;
     private transient TabMode            contentMode = TabMode.ROUTED_MESSAGES;
     private transient List<LzText>       customRawLines;
+    // Bumped on every refilterTab/refilterSearch call for this tab; carried on the background
+    // FilterCoordinator job so a result from a refilter that's since been superseded (query/filter
+    // changed again before the old scan finished) is recognized as stale and dropped. Read from the
+    // background worker (to skip a stale job before wasting compute on it) as well as the main
+    // thread, so it's a plain volatile long rather than needing a wrapper map like ChatPanel's
+    // per-tab generations — there's only ever one of these per tab, not one per panel.
+    private transient volatile long      refilterGeneration = 0;
 
     public ChatTab(String name, TabType type, Collection<Integer> visibleOnPanels) {
         this.name = name;
@@ -147,6 +154,10 @@ public class ChatTab {
         if (collapse == null) collapse = new CollapseState();
         return collapse;
     }
+
+    // ── Refilter generation (see FilterCoordinator) ────────────────────────────
+    public long bumpRefilterGeneration() { return ++refilterGeneration; }
+    public long refilterGeneration()     { return refilterGeneration; }
 
     // ── Display settings ───────────────────────────────────────────────────────
     public boolean differenceMode()                      { return differenceMode; }

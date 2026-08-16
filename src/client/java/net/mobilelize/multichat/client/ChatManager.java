@@ -120,85 +120,148 @@ public class ChatManager {
     // Refilter
     // ------------------------------------------------------------------
 
+    /** Bits of tab/global config the pure compute functions below need — snapshotted once at submit
+     *  time instead of read live off the background thread, per the "snapshot inputs" rule used
+     *  everywhere else this codebase does background work (see WrapCoordinator). {@code tab}'s
+     *  matchesText/matchesTime (SearchTab, all-final fields), filterRules(), collapseRepeating(),
+     *  and collapseMatchFormatting() are still read live even in the background job — they're either
+     *  immutable by construction or only ever change via an explicit, infrequent user edit that
+     *  isn't realistically concurrent with an in-flight scan, so snapshotting them too would be
+     *  ceremony without a real correctness payoff. */
+    private record RefilterConfig(boolean stripObjectContent, boolean normalizeFilterText,
+                                   String collapseCounterFormat, boolean showTimestamps, int messageCap) {
+        static RefilterConfig snapshot(ChatTab tab) {
+            return new RefilterConfig(MultichatClient.CONFIG.stripObjectContent, MultichatClient.CONFIG.normalizeFilterText,
+                MultichatClient.CONFIG.collapseCounterFormat, tab.showTimestamps(), tab.messageCap());
+        }
+    }
+
+    private record SearchRefilterResult(List<ChatTab.MessageEntry> entries, Map<LzChatEntry, Integer> collapseCounts) {
+        static final SearchRefilterResult EMPTY = new SearchRefilterResult(List.of(), Map.of());
+    }
+
     public static void refilterSearch(SearchTab tab) {
-        tab.clearMessages();
-        tab.clearCollapseCounts();
+        long generation = tab.bumpRefilterGeneration();
         for (ChatPanel panel : getAllActivePanels()) {
             panel.clearTabLines(tab);
             panel.setScrolledLines(tab, 0);
         }
 
         ChatTab srcTab = tab.sourceTab() != null ? tab.sourceTab() : tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
-        if (srcTab == null || !srcTab.hasMessages()) return;
+        if (srcTab == null || !srcTab.hasMessages()) {
+            applySearchRefilterResult(tab, generation, SearchRefilterResult.EMPTY);
+            return;
+        }
 
-        List<ChatTab.MessageEntry> source = srcTab.messages();
+        List<ChatTab.MessageEntry> snapshot = new ArrayList<>(srcTab.messages());
+        boolean collapseIdentical = tab.collapseIdentical();
+        RefilterConfig cfg = RefilterConfig.snapshot(tab);
 
-        if (tab.collapseIdentical()) {
+        boolean worthOffloading = MultichatClient.CONFIG.optimizedRefilterEnabled
+            && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
+
+        if (!worthOffloading) {
+            applySearchRefilterResult(tab, generation, computeSearchRefilter(tab, snapshot, collapseIdentical, cfg));
+            return;
+        }
+
+        for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
+        FilterCoordinator.submit(tab, generation, () -> {
+            SearchRefilterResult r = computeSearchRefilter(tab, snapshot, collapseIdentical, cfg);
+            return () -> applySearchRefilterResult(tab, generation, r);
+        });
+    }
+
+    /** Pure — reads only {@code tab}'s final search fields (query/mode/case/time range, via
+     *  matchesText/matchesTime) and {@code cfg}, never mutates {@code tab}. Safe to run on
+     *  FilterCoordinator's background thread. Same matching/collapse-identical logic
+     *  refilterSearch always used, just building a plain result list instead of mutating the tab's
+     *  live message deque as it goes. */
+    private static SearchRefilterResult computeSearchRefilter(SearchTab tab, List<ChatTab.MessageEntry> source,
+                                                                boolean collapseIdentical, RefilterConfig cfg) {
+        List<ChatTab.MessageEntry> result = new ArrayList<>();
+        Map<LzChatEntry, Integer> collapseCounts = new HashMap<>();
+
+        if (collapseIdentical) {
             LinkedHashMap<String, ChatTab.MessageEntry> newest = new LinkedHashMap<>();
             LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
             for (ChatTab.MessageEntry me : source) {
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
-                String fText1 = MultichatClient.CONFIG.stripObjectContent
+                String fText1 = cfg.stripObjectContent()
                     ? LzText.stringSkippingObjects(me.entry().originalContent.mc()) : text;
-                if (MultichatClient.CONFIG.normalizeFilterText) fText1 = FilterRule.normalizeFilterText(fText1);
+                if (cfg.normalizeFilterText()) fText1 = FilterRule.normalizeFilterText(fText1);
                 if (!tab.matchesText(fText1) || !tab.matchesTime(me.entry().creationTick)) continue;
                 if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText1, me.entry().indicator)) continue;
                 newest.putIfAbsent(text, me);
                 counts.merge(text, 1, Integer::sum);
             }
-            // Render newest→oldest with addLast: newest ends at index 0
+            // source is newest-first; LinkedHashMap keeps first-seen (= newest) per distinct text,
+            // in that same newest-first insertion order — no reversal needed, unlike the old
+            // addLast-into-a-live-deque version this replaced.
             for (Map.Entry<String, ChatTab.MessageEntry> e : newest.entrySet()) {
                 ChatTab.MessageEntry me = e.getValue();
                 int count = counts.get(e.getKey());
-                LzText base = tab.showTimestamps()
+                LzText base = cfg.showTimestamps()
                     ? stampedText(me.entry().creationTick, me.entry().originalContent, me.entry().indicator)
                     : me.entry().originalContent;
                 LzText rendered = count > 1
-                    ? LzText.wrapMc(base.mc().copy().append(LzText.format(" " + MultichatClient.CONFIG.collapseCounterFormat.replace("{count}", String.valueOf(count))).mc()))
+                    ? LzText.wrapMc(base.mc().copy().append(LzText.format(" " + cfg.collapseCounterFormat().replace("{count}", String.valueOf(count))).mc()))
                     : base;
-                if (count > 1) tab.collapseCounts().put(me.entry(), count);
-                tab.addLast(me.newRender(rendered));
+                if (count > 1) collapseCounts.put(me.entry(), count);
+                result.add(me.newRender(rendered));
             }
         } else {
-            for (int i = source.size() - 1; i >= 0; i--) {
-                ChatTab.MessageEntry me = source.get(i);
+            for (ChatTab.MessageEntry me : source) { // already newest-first
                 if (me.entry().originalContent == null) continue;
                 String text = me.entry().originalContent.mc().getString();
-                String fText2 = MultichatClient.CONFIG.stripObjectContent
+                String fText2 = cfg.stripObjectContent()
                     ? LzText.stringSkippingObjects(me.entry().originalContent.mc()) : text;
-                if (MultichatClient.CONFIG.normalizeFilterText) fText2 = FilterRule.normalizeFilterText(fText2);
+                if (cfg.normalizeFilterText()) fText2 = FilterRule.normalizeFilterText(fText2);
                 if (!tab.matchesText(fText2)) continue;
                 if (tab.sourceTab() != null && !tab.sourceTab().filterRules().matches(fText2, me.entry().indicator)) continue;
                 if (!tab.matchesTime(me.entry().creationTick)) continue;
-                LzText base = tab.showTimestamps()
+                LzText base = cfg.showTimestamps()
                     ? stampedText(me.entry().creationTick, me.entry().originalContent, me.entry().indicator)
                     : me.entry().originalContent;
-                tab.addFirst(me.newRender(base));
+                result.add(me.newRender(base));
             }
         }
 
-        if (tab.messageCap() > 0)
-            while (tab.messageCount() > tab.messageCap()) tab.removeLast();
+        if (cfg.messageCap() > 0)
+            while (result.size() > cfg.messageCap()) result.remove(result.size() - 1); // trim oldest = tail
 
-        for (ChatPanel panel : getAllActivePanels())
-            panel.rebuildTabLines(tab);
+        return new SearchRefilterResult(result, collapseCounts);
+    }
+
+    /** Guarded by a generation check — a result from a scan that's since been superseded (query
+     *  changed again before this one finished) is dropped instead of overwriting newer content. */
+    private static void applySearchRefilterResult(SearchTab tab, long generation, SearchRefilterResult r) {
+        if (generation != tab.refilterGeneration()) return;
+        tab.clearMessages();
+        tab.clearCollapseCounts();
+        for (ChatTab.MessageEntry me : r.entries()) tab.addLast(me); // already newest-first; addLast preserves that order
+        tab.collapseCounts().putAll(r.collapseCounts());
+        for (ChatPanel panel : getAllActivePanels()) panel.rebuildTabLines(tab);
     }
 
     public static void refilterTab(ChatTab tab) {
         if (tab.type() != TabType.FILTERED) return;
+        long generation = tab.bumpRefilterGeneration();
         // If this is a multi-tab's sub-tab, live routing only ever lets it see what the parent's own
         // filter already let through (MessageRouter.routeToSubTabs) — refilter needs the same gate,
         // otherwise it'd show messages the parent would have blocked live.
         ChatTab parentGate = findParentOf(tab);
-        tab.clearMessages();
         for (ChatPanel panel : getAllActivePanels()) {
             panel.clearTabLines(tab);
             panel.setScrolledLines(tab, 0);
         }
 
         ChatTab allTab = tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
-        if (allTab == null || !allTab.hasMessages()) return;
+        if (allTab == null || !allTab.hasMessages()) {
+            applyFilterTabResult(tab, generation, List.of());
+            return;
+        }
 
         boolean effectiveDiff = tab.differenceMode() && !tab.differenceException();
         List<ChatTab> higherDiffTabs = effectiveDiff
@@ -209,19 +272,45 @@ public class ChatManager {
                 .toList()
             : List.of();
 
+        List<ChatTab.MessageEntry> snapshot = new ArrayList<>(allTab.messages());
+        RefilterConfig cfg = RefilterConfig.snapshot(tab);
+
+        boolean worthOffloading = MultichatClient.CONFIG.optimizedRefilterEnabled
+            && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
+
+        if (!worthOffloading) {
+            applyFilterTabResult(tab, generation, computeFilterTab(tab, parentGate, higherDiffTabs, snapshot, effectiveDiff, cfg));
+            return;
+        }
+
+        for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
+        FilterCoordinator.submit(tab, generation, () -> {
+            List<ChatTab.MessageEntry> result = computeFilterTab(tab, parentGate, higherDiffTabs, snapshot, effectiveDiff, cfg);
+            return () -> applyFilterTabResult(tab, generation, result);
+        });
+    }
+
+    /** Pure — reads only {@code tab}/{@code parentGate}/{@code higherDiffTabs}' filterRules()
+     *  (rule data, changes only via explicit user edit) and {@code cfg}, never mutates anything.
+     *  Same collapse-run-length logic refilterTab always used (a repeat replaces the single
+     *  in-progress entry with an updated counter), just tracked against a local deque instead of
+     *  the tab's live one. */
+    private static List<ChatTab.MessageEntry> computeFilterTab(ChatTab tab, @Nullable ChatTab parentGate,
+                                                                 List<ChatTab> higherDiffTabs, List<ChatTab.MessageEntry> all,
+                                                                 boolean effectiveDiff, RefilterConfig cfg) {
+        ArrayDeque<ChatTab.MessageEntry> result = new ArrayDeque<>();
         String collapseLastText   = null;
         LzText collapseLastLzText = null;
         int    collapseRepeat     = 0;
 
-        List<ChatTab.MessageEntry> all = allTab.messages();
         for (int i = all.size() - 1; i >= 0; i--) {
             ChatTab.MessageEntry src = all.get(i);
             LzText raw = src.entry().originalContent;
             if (raw == null) continue;
             String fullText = raw.mc().getString();
-            String objText = MultichatClient.CONFIG.stripObjectContent
+            String objText = cfg.stripObjectContent()
                 ? LzText.stringSkippingObjects(raw.mc()) : fullText;
-            final String filterText = MultichatClient.CONFIG.normalizeFilterText
+            final String filterText = cfg.normalizeFilterText()
                 ? FilterRule.normalizeFilterText(objText) : objText;
             LzMessageIndicator indicator = src.entry().indicator;
 
@@ -239,29 +328,38 @@ public class ChatManager {
 
             if (doCollapse) {
                 collapseRepeat++;
-                tab.removeFirst();
+                result.removeFirst();
             } else {
                 collapseRepeat     = 1;
                 collapseLastText   = fullText;
                 collapseLastLzText = raw;
             }
 
-            LzText base = tab.showTimestamps()
+            LzText base = cfg.showTimestamps()
                 ? stampedText(src.entry().creationTick, raw, indicator)
                 : raw;
             LzText rendered = collapseRepeat > 1
-                ? LzText.wrapMc(base.mc().copy().append(LzText.format(" " + MultichatClient.CONFIG.collapseCounterFormat
+                ? LzText.wrapMc(base.mc().copy().append(LzText.format(" " + cfg.collapseCounterFormat()
                     .replace("{count}", String.valueOf(collapseRepeat))).mc()))
                 : base;
 
-            tab.addFirst(src.newRender(rendered));
+            result.addFirst(src.newRender(rendered));
         }
 
-        if (tab.messageCap() > 0)
-            while (tab.messageCount() > tab.messageCap()) tab.removeLast();
+        List<ChatTab.MessageEntry> list = new ArrayList<>(result);
+        if (cfg.messageCap() > 0)
+            while (list.size() > cfg.messageCap()) list.remove(list.size() - 1); // trim oldest = tail
+        return list;
+    }
 
-        for (ChatPanel panel : getAllActivePanels())
-            panel.rebuildTabLines(tab);
+    /** Guarded by a generation check — a result from a scan that's since been superseded (filter
+     *  rules edited again before this one finished) is dropped instead of overwriting newer
+     *  content. */
+    private static void applyFilterTabResult(ChatTab tab, long generation, List<ChatTab.MessageEntry> entries) {
+        if (generation != tab.refilterGeneration()) return;
+        tab.clearMessages();
+        for (ChatTab.MessageEntry me : entries) tab.addLast(me); // already newest-first; addLast preserves that order
+        for (ChatPanel panel : getAllActivePanels()) panel.rebuildTabLines(tab);
     }
 
     // ------------------------------------------------------------------
