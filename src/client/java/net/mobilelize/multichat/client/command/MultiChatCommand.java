@@ -1,11 +1,13 @@
 package net.mobilelize.multichat.client.command;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.command.CommandSource;
+import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.TabActionCallback;
@@ -15,6 +17,7 @@ import net.mobilelize.multichat.client.quickaction.QuickActionsEditScreen;
 import net.mobilelize.multichat.client.quickaction.QuickActionsOverlay;
 import net.mobilelize.multichat.client.render.ChatRenderer;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -139,6 +142,16 @@ public class MultiChatCommand {
                 .then(literal("execute")
                     .then(argument("id", StringArgumentType.word())
                         .executes(MultiChatCommand::executeAction)))
+                .then(literal("debug")
+                    // Live predicate, not a registration-time check — toggling the "Debug Commands"
+                    // setting hides/reveals this branch (tab-completion included) immediately, no
+                    // command-tree rebuild needed.
+                    .requires(source -> MultichatClient.CONFIG.debugCommandsEnabled)
+                    .then(literal("fill")
+                        .then(argument("count", IntegerArgumentType.integer(1, 5_000_000))
+                            .executes(MultiChatCommand::debugFill)))
+                    .then(literal("clear")
+                        .executes(MultiChatCommand::debugClear)))
                 .then(literal("help")
                     .executes(MultiChatCommand::printHelp)));
             dispatcher.register(literal("mlchat")
@@ -335,6 +348,47 @@ public class MultiChatCommand {
         panel.setEnabled(true);
         MultichatClient.saveTabsToConfig();
         feedback(ctx, "Panel 2 shown.");
+        return 1;
+    }
+
+    /** Bulk-generates {@code count} synthetic messages straight into the All tab's message list for
+     *  perf testing — bypasses live routing/wrap entirely (a single List.addAll(0, ...) instead of
+     *  count individual addFirst() + per-message wrap calls) since the point is to get a huge history
+     *  to test against quickly, not to simulate count individual chat events arriving one at a time.
+     *  Tagged with a recognizable "Test message #" prefix so `debug clear` can find and remove them
+     *  again without touching any real chat history mixed in. resetForRefresh() at the end is what
+     *  actually exercises the offload path (Optimized Loading's skeleton/background wrap) against the
+     *  new huge tab — that's the thing this command exists to make easy to test. */
+    private static int debugFill(CommandContext<FabricClientCommandSource> ctx) {
+        int count = IntegerArgumentType.getInteger(ctx, "count");
+        ChatTab allTab = ChatManager.getTabs().stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
+        if (allTab == null) { feedback(ctx, "No All tab found."); return 0; }
+
+        long start = System.currentTimeMillis();
+        int baseTick = ChatRenderer.currentTick;
+        List<ChatTab.MessageEntry> synthetic = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            LzText text = LzText.literal("Test message #" + i + " — the quick brown fox jumps over the lazy dog");
+            LzChatEntry entry = new LzChatEntry(baseTick - i, text, null);
+            synthetic.add(new ChatTab.MessageEntry(text, text, entry));
+        }
+        allTab.messages().addAll(0, synthetic); // index 0 = newest — prepend the whole batch as one shift
+        ChatManager.resetForRefresh();
+        long elapsed = System.currentTimeMillis() - start;
+        feedback(ctx, "Filled All tab with " + count + " test messages in " + elapsed + "ms. "
+            + "Now try: settings/scale changes, creating a Search over All, adding a Filtered tab rule.");
+        return 1;
+    }
+
+    private static int debugClear(CommandContext<FabricClientCommandSource> ctx) {
+        ChatTab allTab = ChatManager.getTabs().stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
+        if (allTab == null) { feedback(ctx, "No All tab found."); return 0; }
+        int before = allTab.messageCount();
+        allTab.messages().removeIf(me -> me.entry().originalContent != null
+            && me.entry().originalContent.mc().getString().startsWith("Test message #"));
+        int removed = before - allTab.messageCount();
+        ChatManager.resetForRefresh();
+        feedback(ctx, "Removed " + removed + " test messages.");
         return 1;
     }
 

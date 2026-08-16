@@ -523,6 +523,16 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.modDisabled = v)
                 .build());
 
+        advanced.addEntry(eb.startBooleanToggle(
+                LzText.literal("Debug Commands").mc(),
+                MultichatClient.CONFIG.debugCommandsEnabled)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Reveals /multichat debug fill <count> and /multichat debug clear — bulk-generates " +
+                        "(or removes) synthetic test messages in the All tab for perf testing (e.g. Optimized Loading/" +
+                        "Refiltering against a huge history). The command doesn't show up or run at all while this is off.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.debugCommandsEnabled = v)
+                .build());
+
         // ── Quick Actions ─────────────────────────────────────────────────────
         ConfigCategory quickActions = builder.getOrCreateCategory(LzText.literal("Quick Actions").mc());
 

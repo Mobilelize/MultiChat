@@ -28,6 +28,11 @@ public class MultiChatConfig extends LzConfig {
     public String  activeThemeId                = "vanilla";
     public int     defaultPanelBgColor          = 0; // 0 = unset, inherit the active theme's defaultPanelBg
     public boolean modDisabled                  = false;
+    // Gates /multichat debug (fill/clear test messages) — a Brigadier .requires() predicate on that
+    // command reads this live, so toggling it hides/reveals the command immediately, no restart or
+    // command-tree re-registration needed. Off by default: it's a perf-testing tool, not something
+    // that should be reachable by accident.
+    public boolean debugCommandsEnabled         = false;
     public boolean normalizeFilterText          = false;
     // MC-VERSION-SENSITIVE: ObjectTextContent (chat_heads-style inline sprites) only exists MC 1.21.9+.
     // Delete this field outright when porting to an older branch — nothing to strip there.
