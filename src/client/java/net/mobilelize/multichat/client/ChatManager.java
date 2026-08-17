@@ -168,14 +168,19 @@ public class ChatManager {
         static final SearchRefilterResult EMPTY = new SearchRefilterResult(List.of(), Map.of());
     }
 
+    /** A panel's wrap inputs, snapshotted on the main thread before an offloaded refilter job starts —
+     *  {@code resolveWidth()}/{@code primary()} are only safe to read from the main thread, same as
+     *  every other "snapshot inputs" spot in this file. Lets the background job build each active
+     *  panel's finished lines itself instead of the main thread having to bounce out to a second
+     *  background job (WrapCoordinator) afterward — see refilterSearch/refilterTab. */
+    private record PanelWrapSpec(ChatPanel panel, int width, boolean primary) {
+        static List<PanelWrapSpec> snapshot(List<ChatPanel> panels) {
+            return panels.stream().map(p -> new PanelWrapSpec(p, p.resolveWidth(), p.primary())).toList();
+        }
+    }
+
     public static void refilterSearch(SearchTab tab) {
         long generation = tab.bumpRefilterGeneration();
-        // Live routing keeps adding freshly-matched messages straight to `tab` (via addFirst) for as
-        // long as this scan takes — it's never blocked or queued, same as when Optimized Refiltering
-        // is off. Whatever's in the tab beyond this count once the scan's result lands arrived live
-        // during the scan, by position (index 0 = newest, live arrivals only ever land at the front)
-        // — no need to track *which* entry, just how many were already there before we started.
-        int preBuildCount = tab.messageCount();
         for (ChatPanel panel : getAllActivePanels()) {
             panel.clearTabLines(tab);
             panel.setScrolledLines(tab, 0);
@@ -183,7 +188,7 @@ public class ChatManager {
 
         ChatTab srcTab = tab.sourceTab() != null ? tab.sourceTab() : tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (srcTab == null || !srcTab.hasMessages()) {
-            applySearchRefilterResult(tab, generation, preBuildCount, SearchRefilterResult.EMPTY);
+            applySearchRefilterResult(tab, generation, SearchRefilterResult.EMPTY);
             return;
         }
 
@@ -198,14 +203,23 @@ public class ChatManager {
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applySearchRefilterResult(tab, generation, preBuildCount, computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg));
+            applySearchRefilterResult(tab, generation, computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg));
             return;
         }
 
+        // Offloaded path: matching/collapse AND every active panel's line-wrap happen in the SAME
+        // background job, so there's exactly one skeleton and one main-thread callback for the whole
+        // refilter — not a filter job followed by a second, separate wrap job (which used to re-show
+        // the skeleton and leave a window where tab.messages() had already moved on but nothing on
+        // screen reflected it — results flashing in and then vanishing).
         for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
+        List<PanelWrapSpec> panelSpecs = PanelWrapSpec.snapshot(getAllActivePanels());
         FilterCoordinator.submit(tab, generation, () -> {
             SearchRefilterResult r = computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg);
-            return () -> applySearchRefilterResult(tab, generation, preBuildCount, r);
+            Map<ChatPanel, List<LzChatLine>> panelLines = new HashMap<>();
+            for (PanelWrapSpec spec : panelSpecs)
+                panelLines.put(spec.panel(), ChatPanel.buildTabLines(r.entries(), spec.width(), spec.primary()));
+            return () -> applySearchRefilterResult(tab, generation, r, panelLines);
         });
     }
 
@@ -274,31 +288,40 @@ public class ChatManager {
 
     /** Guarded by a generation check — a result from a scan that's since been superseded (query
      *  changed again before this one finished) is dropped instead of overwriting newer content.
-     *  Everything from index 0 up to {@code preBuildCount} entries in are whatever live routing added
-     *  while the scan ran (see refilterSearch) — kept in front of the scan's own result instead of
-     *  being wiped by it. Not merged by text with the scan's own collapse groups (a live "a" and a
-     *  scanned "a (x18)" can end up as two separate entries instead of one combined one) — accepted
-     *  for now in exchange for staying simple; revisit if that turns out to matter in practice. */
-    private static void applySearchRefilterResult(SearchTab tab, long generation, int preBuildCount, SearchRefilterResult r) {
+     *  Sync (non-offloaded) path only — routes through rebuildTabLines, which independently decides
+     *  whether wrapping this (small) result is itself worth offloading. */
+    private static void applySearchRefilterResult(SearchTab tab, long generation, SearchRefilterResult r) {
         if (generation != tab.refilterGeneration()) return;
-        int liveCount = Math.max(0, tab.messageCount() - preBuildCount);
-        List<ChatTab.MessageEntry> livePrefix = new ArrayList<>(tab.messages().subList(0, liveCount));
         tab.clearMessages();
         tab.clearCollapseCounts();
-        for (ChatTab.MessageEntry me : livePrefix) tab.addLast(me); // already newest-first; addLast preserves that order
-        for (ChatTab.MessageEntry me : r.entries()) tab.addLast(me);
+        for (ChatTab.MessageEntry me : r.entries()) tab.addLast(me); // already newest-first; addLast preserves that order
         tab.collapseCounts().putAll(r.collapseCounts());
         for (ChatPanel panel : getAllActivePanels()) panel.rebuildTabLines(tab);
+    }
+
+    /** Offloaded path only — {@code panelLines} already holds each panel's finished wrap, built in the
+     *  same background job as the filter/collapse pass (see refilterSearch). Installs the filtered
+     *  data model and every panel's finished lines in one shot via applyWrapResult (which also
+     *  preserves whatever live routing prepended onto the panel's skeleton while the job ran — same
+     *  as WrapCoordinator's own callback), instead of calling rebuildTabLines and triggering a second,
+     *  separate background wrap. A panel with no entry in {@code panelLines} became active after the
+     *  job was submitted — falls back to a normal (possibly offloaded) rebuild for just that panel. */
+    private static void applySearchRefilterResult(SearchTab tab, long generation, SearchRefilterResult r, Map<ChatPanel, List<LzChatLine>> panelLines) {
+        if (generation != tab.refilterGeneration()) return;
+        tab.clearMessages();
+        tab.clearCollapseCounts();
+        for (ChatTab.MessageEntry me : r.entries()) tab.addLast(me); // already newest-first; addLast preserves that order
+        tab.collapseCounts().putAll(r.collapseCounts());
+        for (ChatPanel panel : getAllActivePanels()) {
+            List<LzChatLine> lines = panelLines.get(panel);
+            if (lines != null) panel.applyWrapResult(tab, lines);
+            else panel.rebuildTabLines(tab);
+        }
     }
 
     public static void refilterTab(ChatTab tab) {
         if (tab.type() != TabType.FILTERED) return;
         long generation = tab.bumpRefilterGeneration();
-        // Same reasoning as refilterSearch's preBuildCount — live routing keeps adding
-        // freshly-matched messages straight to `tab` for as long as this scan takes, unblocked; a
-        // plain count captured now is all that's needed to tell them apart from the scan's own
-        // (older) result once it lands, since live arrivals only ever land at the front.
-        int preBuildCount = tab.messageCount();
         // If this is a multi-tab's sub-tab, live routing only ever lets it see what the parent's own
         // filter already let through (MessageRouter.routeToSubTabs) — refilter needs the same gate,
         // otherwise it'd show messages the parent would have blocked live.
@@ -310,7 +333,7 @@ public class ChatManager {
 
         ChatTab allTab = tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (allTab == null || !allTab.hasMessages()) {
-            applyFilterTabResult(tab, generation, preBuildCount, List.of());
+            applyFilterTabResult(tab, generation, List.of());
             return;
         }
 
@@ -330,14 +353,21 @@ public class ChatManager {
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applyFilterTabResult(tab, generation, preBuildCount, computeFilterTab(snapshot, effectiveDiff, cfg));
+            applyFilterTabResult(tab, generation, computeFilterTab(snapshot, effectiveDiff, cfg));
             return;
         }
 
+        // Same reasoning as refilterSearch's offloaded path — fold filtering AND every active panel's
+        // line-wrap into one background job, so there's one skeleton and one main-thread callback
+        // instead of a filter job bouncing to the main thread only to kick off a second, separate wrap.
         for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
+        List<PanelWrapSpec> panelSpecs = PanelWrapSpec.snapshot(getAllActivePanels());
         FilterCoordinator.submit(tab, generation, () -> {
             List<ChatTab.MessageEntry> result = computeFilterTab(snapshot, effectiveDiff, cfg);
-            return () -> applyFilterTabResult(tab, generation, preBuildCount, result);
+            Map<ChatPanel, List<LzChatLine>> panelLines = new HashMap<>();
+            for (PanelWrapSpec spec : panelSpecs)
+                panelLines.put(spec.panel(), ChatPanel.buildTabLines(result, spec.width(), spec.primary()));
+            return () -> applyFilterTabResult(tab, generation, result, panelLines);
         });
     }
 
@@ -403,16 +433,24 @@ public class ChatManager {
 
     /** Guarded by a generation check — a result from a scan that's since been superseded (filter
      *  rules edited again before this one finished) is dropped instead of overwriting newer content.
-     *  See applySearchRefilterResult's javadoc for the preBuildCount/live-prefix reasoning — same
-     *  shape here. */
-    private static void applyFilterTabResult(ChatTab tab, long generation, int preBuildCount, List<ChatTab.MessageEntry> entries) {
+     *  Sync (non-offloaded) path only — see applySearchRefilterResult's 3-arg overload. */
+    private static void applyFilterTabResult(ChatTab tab, long generation, List<ChatTab.MessageEntry> entries) {
         if (generation != tab.refilterGeneration()) return;
-        int liveCount = Math.max(0, tab.messageCount() - preBuildCount);
-        List<ChatTab.MessageEntry> livePrefix = new ArrayList<>(tab.messages().subList(0, liveCount));
         tab.clearMessages();
-        for (ChatTab.MessageEntry me : livePrefix) tab.addLast(me); // already newest-first; addLast preserves that order
         for (ChatTab.MessageEntry me : entries) tab.addLast(me); // already newest-first; addLast preserves that order
         for (ChatPanel panel : getAllActivePanels()) panel.rebuildTabLines(tab);
+    }
+
+    /** Offloaded path only — see applySearchRefilterResult's 4-arg overload, same shape here. */
+    private static void applyFilterTabResult(ChatTab tab, long generation, List<ChatTab.MessageEntry> entries, Map<ChatPanel, List<LzChatLine>> panelLines) {
+        if (generation != tab.refilterGeneration()) return;
+        tab.clearMessages();
+        for (ChatTab.MessageEntry me : entries) tab.addLast(me); // already newest-first; addLast preserves that order
+        for (ChatPanel panel : getAllActivePanels()) {
+            List<LzChatLine> lines = panelLines.get(panel);
+            if (lines != null) panel.applyWrapResult(tab, lines);
+            else panel.rebuildTabLines(tab);
+        }
     }
 
     // ------------------------------------------------------------------
