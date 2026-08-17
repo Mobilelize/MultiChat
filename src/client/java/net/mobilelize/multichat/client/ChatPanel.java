@@ -8,7 +8,6 @@ import net.mobilelize.multichat.client.render.ChatRenderer;
 import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ChatPanel {
 
@@ -22,13 +21,6 @@ public class ChatPanel {
 
     private transient Map<UUID, List<LzChatLine>> tabMessages;
     private transient Map<UUID, List<LzChatLine>> customTabLines;
-
-    // Bumped on every rebuildTabLinesOffloaded() call for a tab; carried on the queued background
-    // job so a result from a rebuild that's since been superseded (another settings change fired
-    // before the old one finished) is recognized as stale and dropped. See WrapCoordinator. Read
-    // from the background worker too (to skip a stale job before wasting compute on it, not just
-    // after) — needs to be a thread-safe map, not a plain HashMap.
-    private transient Map<UUID, Long> tabGenerations;
 
     private int     margin             = 0;
     private int activeTabId = 0;
@@ -98,23 +90,6 @@ public class ChatPanel {
     private Map<ChatTab, Integer> scrollPositions() {
         if (scrollPositions == null) scrollPositions = new HashMap<>();
         return scrollPositions;
-    }
-
-    private Map<UUID, Long> tabGenerations() {
-        if (tabGenerations == null) tabGenerations = new ConcurrentHashMap<>();
-        return tabGenerations;
-    }
-
-    private long bumpGeneration(UUID tabId) {
-        long g = tabGenerations().getOrDefault(tabId, 0L) + 1;
-        tabGenerations().put(tabId, g);
-        return g;
-    }
-
-    /** Thread-safe read — called from WrapCoordinator's background thread to skip a job whose
-     *  rebuild has since been superseded, before spending any wrap work on it. */
-    long currentGeneration(UUID tabId) {
-        return tabGenerations().getOrDefault(tabId, 0L);
     }
 
     /** Drills into a multi-tab: getVisibleTabs() substitutes its sub-tabs for the normal top-level list,
@@ -225,30 +200,29 @@ public class ChatPanel {
 
     public void clearTabLines(ChatTab tab) {
         tabMessages().remove(tab.id());
-        // Invalidates any background rebuild still targeting this tab's old list — callers that
-        // clear and manually rebuild via addTabMessage (InfoTab/NoteTab/TabHandle) never call
-        // rebuildTabLines, so nothing else would bump the generation here.
-        bumpGeneration(tab.id());
     }
 
     /** Rebuilds a tab's wrapped lines — full synchronous rewrap, or an off-main-thread rewrap
-     *  showing a loading placeholder until it's ready, per the "Optimized Loading" setting. Single
-     *  entry point: every caller (settings/scale/width changes, refilter, delete, popout) goes
-     *  through here, so all of them benefit from offloading with no special-casing. */
+     *  (WrapCoordinator) showing a loading placeholder until it's ready, above a message-count
+     *  threshold ("Optimized Loading"). Single entry point: every caller (settings/scale/width
+     *  changes, refilter, delete, popout) goes through here. */
     public void rebuildTabLines(ChatTab tab) {
         boolean worthOffloading = MultichatClient.CONFIG.optimizedLoadingEnabled
             && tab.messageCount() >= MultichatClient.CONFIG.optimizedLoadingThreshold;
-        if (worthOffloading) rebuildTabLinesOffloaded(tab);
-        else rebuildTabLinesSync(tab);
+        if (worthOffloading) {
+            showLoadingSkeleton(tab);
+            // Snapshot — the background thread must never read tab.messages() live while the main
+            // thread keeps mutating it (new messages, evictions) for the duration of the wrap.
+            List<ChatTab.MessageEntry> snapshot = new ArrayList<>(tab.messages());
+            WrapCoordinator.submitRebuild(this, tab, snapshot, resolveWidth(), primary);
+        } else {
+            tabMessages().put(tab.id(), buildTabLines(tab.messages(), resolveWidth(), primary));
+        }
         buildCustomRawLines(tab);
     }
 
-    private void rebuildTabLinesSync(ChatTab tab) {
-        tabMessages().put(tab.id(), buildTabLines(tab.messages(), resolveWidth(), primary));
-    }
-
     /** Installs a generic skeleton block (sized to the panel's own visible area) in place of
-     *  whatever this tab currently shows on this panel. Shared by the wrap-offload path below and
+     *  whatever this tab currently shows on this panel. Shared by the wrap-offload path above and
      *  ChatManager's search/filter refilter offload — anywhere a tab's content is about to be
      *  recomputed off the main thread should show this in the meantime. */
     void showLoadingSkeleton(ChatTab tab) {
@@ -259,50 +233,31 @@ public class ChatPanel {
         tabMessages().put(tab.id(), skeleton);
     }
 
-    /** Wraps the tab's entire history on WrapCoordinator's background thread and swaps it in
-     *  wholesale once ready ({@link #applyWrapResult}). No per-entry placeholder sizing, no
-     *  incremental/partial apply — the whole point is that there's nothing positional to keep in
-     *  sync while the background job runs; the swap either lands cleanly or (stale generation)
-     *  doesn't happen at all. */
-    private void rebuildTabLinesOffloaded(ChatTab tab) {
-        long generation = bumpGeneration(tab.id());
-        showLoadingSkeleton(tab);
-
-        // Snapshot — the background thread must never read tab.messages() live while the main
-        // thread keeps mutating it (new messages, evictions) for the duration of the wrap.
-        List<ChatTab.MessageEntry> snapshot = new ArrayList<>(tab.messages());
-        // A settings/scale/width change rebuilds every tab on every panel (any of them could become
-        // active later), but only the tab actually on screen right now needs to resolve fast — jump
-        // it to the front of the queue instead of leaving it to wait behind every other tab's job.
-        boolean priority = tab == getActiveTab();
-        WrapCoordinator.submit(this, tab, generation, snapshot, resolveWidth(), primary, priority);
-    }
-
-    /** Applies one finished background rebuild, called from WrapCoordinator.drain() on the main
-     *  thread. Guarded by a generation check — a result from a rebuild that's since been superseded
-     *  (another settings change fired before this one finished) is dropped instead of overwriting
-     *  newer content. Any messages that arrived live after the skeleton was installed (addTabMessage
-     *  prepends onto whatever's currently there, skeleton or not) sit ahead of the skeleton block —
-     *  that prefix is real, already-correct content and is kept as-is in front of the finished
-     *  result rather than being re-wrapped or discarded. */
-    void applyWrapResult(WrapCoordinator.WrapResult result) {
-        UUID tabId = result.tab().id();
-        if (result.generation() != tabGenerations().getOrDefault(tabId, 0L)) return;
-        List<LzChatLine> current = tabMessages().get(tabId);
-        if (current == null) return;
-
+    /** Installs a finished background rebuild's lines — called by WrapCoordinator via LzClient.send()
+     *  on the main thread, only once the (panel, tab)'s generation is confirmed still current (a
+     *  canceled/superseded result never reaches this method at all — see WrapCoordinator.submitRebuild).
+     *  Anything real (non-skeleton) still sitting at the front of the current line list got there
+     *  through a path that doesn't go through WrapCoordinator's live-message handoff (e.g. custom
+     *  content) — kept in front of the fresh result rather than discarded, just in case. */
+    void applyWrapResult(ChatTab tab, List<LzChatLine> lines) {
+        List<LzChatLine> current = tabMessages().get(tab.id());
         int livePrefix = 0;
-        while (livePrefix < current.size() && !current.get(livePrefix).isSkeleton()) livePrefix++;
+        while (current != null && livePrefix < current.size() && !current.get(livePrefix).isSkeleton()) livePrefix++;
 
-        List<LzChatLine> finalLines = new ArrayList<>(livePrefix + result.lines().size());
-        finalLines.addAll(current.subList(0, livePrefix));
-        finalLines.addAll(result.lines());
-        tabMessages().put(tabId, finalLines);
+        List<LzChatLine> finalLines;
+        if (livePrefix > 0) {
+            finalLines = new ArrayList<>(livePrefix + lines.size());
+            finalLines.addAll(current.subList(0, livePrefix));
+            finalLines.addAll(lines);
+        } else {
+            finalLines = lines;
+        }
+        tabMessages().put(tab.id(), finalLines);
 
         // The skeleton's row count has nothing to do with real content size, so there's no
         // meaningful delta to preserve — just keep the existing scroll position valid.
-        int scrolled = getScrolledLines(result.tab());
-        if (scrolled > finalLines.size()) setScrolledLines(result.tab(), finalLines.size());
+        int scrolled = getScrolledLines(tab);
+        if (scrolled > finalLines.size()) setScrolledLines(tab, finalLines.size());
     }
 
     private void buildCustomRawLines(ChatTab tab) {

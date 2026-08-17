@@ -68,13 +68,6 @@ public class ChatRenderer {
         ChatRenderer.currentTick = currentTick;
         ChatManager.initWallTime(currentTick);
 
-        // Applied here (every rendered frame) instead of the tick loop (fixed 20Hz) so a finished
-        // background rewrap/refilter shows up on the very next frame instead of waiting on a tick
-        // boundary. Drained even if chat ends up not visible this frame — no reason to sit on a
-        // finished swap.
-        WrapCoordinator.drain(32);
-        FilterCoordinator.drain(8);
-
         if (LzOptions.chatVisibility() == LzChatVisibility.HIDDEN) return;
 
         boolean anyVisible = ChatManager.getAllPanels().stream().anyMatch(p -> p.isVisibleInChat(focused));

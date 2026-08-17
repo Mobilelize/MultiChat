@@ -170,14 +170,12 @@ public class ChatManager {
 
     public static void refilterSearch(SearchTab tab) {
         long generation = tab.bumpRefilterGeneration();
-        // The scan below computes its result from a snapshot of the source tab taken right now — but
-        // for a live-update search, MessageRouter keeps adding freshly-matched messages straight to
-        // `tab` for as long as the (possibly backgrounded) scan takes to finish. Those live arrivals
-        // are correct and newer than anything the snapshot could see; applySearchRefilterResult must
-        // not let its (stale-by-then) scan result wipe them out when it finally lands. Anchoring on
-        // "whatever tab's own newest message is right now" lets it recover exactly what arrived live
-        // in between, regardless of how long the scan took.
-        ChatTab.MessageEntry liveAnchor = tab.hasMessages() ? tab.getFirstMessage() : null;
+        // Live routing keeps adding freshly-matched messages straight to `tab` (via addFirst) for as
+        // long as this scan takes — it's never blocked or queued, same as when Optimized Refiltering
+        // is off. Whatever's in the tab beyond this count once the scan's result lands arrived live
+        // during the scan, by position (index 0 = newest, live arrivals only ever land at the front)
+        // — no need to track *which* entry, just how many were already there before we started.
+        int preBuildCount = tab.messageCount();
         for (ChatPanel panel : getAllActivePanels()) {
             panel.clearTabLines(tab);
             panel.setScrolledLines(tab, 0);
@@ -185,7 +183,7 @@ public class ChatManager {
 
         ChatTab srcTab = tab.sourceTab() != null ? tab.sourceTab() : tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (srcTab == null || !srcTab.hasMessages()) {
-            applySearchRefilterResult(tab, generation, liveAnchor, SearchRefilterResult.EMPTY);
+            applySearchRefilterResult(tab, generation, preBuildCount, SearchRefilterResult.EMPTY);
             return;
         }
 
@@ -200,31 +198,15 @@ public class ChatManager {
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applySearchRefilterResult(tab, generation, liveAnchor, computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg));
+            applySearchRefilterResult(tab, generation, preBuildCount, computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg));
             return;
         }
 
         for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
         FilterCoordinator.submit(tab, generation, () -> {
             SearchRefilterResult r = computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg);
-            return () -> applySearchRefilterResult(tab, generation, liveAnchor, r);
+            return () -> applySearchRefilterResult(tab, generation, preBuildCount, r);
         });
-    }
-
-    /** Entries currently at the front of {@code current} (newest-first) up to but not including
-     *  {@code anchor} — i.e. whatever's arrived since {@code anchor} was captured as "the newest
-     *  thing there at the time." {@code anchor == null} means the tab was empty at that time, so
-     *  everything present now arrived since — the loop naturally falls through to the end and
-     *  collects all of it, no special case needed. If {@code anchor} is present but was itself
-     *  evicted in the meantime (e.g. hit a message cap), the loop likewise never finds it and
-     *  collects everything — a harmless, rare over-preservation rather than a lost message. */
-    private static List<ChatTab.MessageEntry> capturePrefixUntil(List<ChatTab.MessageEntry> current, @Nullable ChatTab.MessageEntry anchor) {
-        List<ChatTab.MessageEntry> prefix = new ArrayList<>();
-        for (ChatTab.MessageEntry me : current) {
-            if (me == anchor) break;
-            prefix.add(me);
-        }
-        return prefix;
     }
 
     /** Pure — reads only {@code tab}'s final search fields (query/mode/case/time range, via
@@ -292,12 +274,15 @@ public class ChatManager {
 
     /** Guarded by a generation check — a result from a scan that's since been superseded (query
      *  changed again before this one finished) is dropped instead of overwriting newer content.
-     *  Anything live routing added to {@code tab} after {@code liveAnchor} was captured (see
-     *  refilterSearch) is preserved in front of the scan's own result instead of being wiped by it —
-     *  see refilterSearch's comment for why that matters for live-update search. */
-    private static void applySearchRefilterResult(SearchTab tab, long generation, @Nullable ChatTab.MessageEntry liveAnchor, SearchRefilterResult r) {
+     *  Everything from index 0 up to {@code preBuildCount} entries in are whatever live routing added
+     *  while the scan ran (see refilterSearch) — kept in front of the scan's own result instead of
+     *  being wiped by it. Not merged by text with the scan's own collapse groups (a live "a" and a
+     *  scanned "a (x18)" can end up as two separate entries instead of one combined one) — accepted
+     *  for now in exchange for staying simple; revisit if that turns out to matter in practice. */
+    private static void applySearchRefilterResult(SearchTab tab, long generation, int preBuildCount, SearchRefilterResult r) {
         if (generation != tab.refilterGeneration()) return;
-        List<ChatTab.MessageEntry> livePrefix = capturePrefixUntil(tab.messages(), liveAnchor);
+        int liveCount = Math.max(0, tab.messageCount() - preBuildCount);
+        List<ChatTab.MessageEntry> livePrefix = new ArrayList<>(tab.messages().subList(0, liveCount));
         tab.clearMessages();
         tab.clearCollapseCounts();
         for (ChatTab.MessageEntry me : livePrefix) tab.addLast(me); // already newest-first; addLast preserves that order
@@ -309,10 +294,11 @@ public class ChatManager {
     public static void refilterTab(ChatTab tab) {
         if (tab.type() != TabType.FILTERED) return;
         long generation = tab.bumpRefilterGeneration();
-        // Same reasoning as refilterSearch's liveAnchor: live routing keeps adding freshly-matched
-        // messages straight to `tab` for as long as this (possibly backgrounded) scan takes, and
-        // those must survive the eventual apply instead of being wiped by its now-stale result.
-        ChatTab.MessageEntry liveAnchor = tab.hasMessages() ? tab.getFirstMessage() : null;
+        // Same reasoning as refilterSearch's preBuildCount — live routing keeps adding
+        // freshly-matched messages straight to `tab` for as long as this scan takes, unblocked; a
+        // plain count captured now is all that's needed to tell them apart from the scan's own
+        // (older) result once it lands, since live arrivals only ever land at the front.
+        int preBuildCount = tab.messageCount();
         // If this is a multi-tab's sub-tab, live routing only ever lets it see what the parent's own
         // filter already let through (MessageRouter.routeToSubTabs) — refilter needs the same gate,
         // otherwise it'd show messages the parent would have blocked live.
@@ -324,7 +310,7 @@ public class ChatManager {
 
         ChatTab allTab = tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (allTab == null || !allTab.hasMessages()) {
-            applyFilterTabResult(tab, generation, liveAnchor, List.of());
+            applyFilterTabResult(tab, generation, preBuildCount, List.of());
             return;
         }
 
@@ -344,14 +330,14 @@ public class ChatManager {
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applyFilterTabResult(tab, generation, liveAnchor, computeFilterTab(snapshot, effectiveDiff, cfg));
+            applyFilterTabResult(tab, generation, preBuildCount, computeFilterTab(snapshot, effectiveDiff, cfg));
             return;
         }
 
         for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
         FilterCoordinator.submit(tab, generation, () -> {
             List<ChatTab.MessageEntry> result = computeFilterTab(snapshot, effectiveDiff, cfg);
-            return () -> applyFilterTabResult(tab, generation, liveAnchor, result);
+            return () -> applyFilterTabResult(tab, generation, preBuildCount, result);
         });
     }
 
@@ -416,13 +402,13 @@ public class ChatManager {
     }
 
     /** Guarded by a generation check — a result from a scan that's since been superseded (filter
-     *  rules edited again before this one finished) is dropped instead of overwriting newer
-     *  content. Anything live routing added to {@code tab} after {@code liveAnchor} was captured
-     *  (see refilterTab) is preserved in front of the scan's own result instead of being wiped by
-     *  it. */
-    private static void applyFilterTabResult(ChatTab tab, long generation, @Nullable ChatTab.MessageEntry liveAnchor, List<ChatTab.MessageEntry> entries) {
+     *  rules edited again before this one finished) is dropped instead of overwriting newer content.
+     *  See applySearchRefilterResult's javadoc for the preBuildCount/live-prefix reasoning — same
+     *  shape here. */
+    private static void applyFilterTabResult(ChatTab tab, long generation, int preBuildCount, List<ChatTab.MessageEntry> entries) {
         if (generation != tab.refilterGeneration()) return;
-        List<ChatTab.MessageEntry> livePrefix = capturePrefixUntil(tab.messages(), liveAnchor);
+        int liveCount = Math.max(0, tab.messageCount() - preBuildCount);
+        List<ChatTab.MessageEntry> livePrefix = new ArrayList<>(tab.messages().subList(0, liveCount));
         tab.clearMessages();
         for (ChatTab.MessageEntry me : livePrefix) tab.addLast(me); // already newest-first; addLast preserves that order
         for (ChatTab.MessageEntry me : entries) tab.addLast(me); // already newest-first; addLast preserves that order

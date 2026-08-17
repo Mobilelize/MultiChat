@@ -1,99 +1,76 @@
 package net.mobilelize.multichat.client;
 
 import net.mobilelize.fabriclib.client.LzChatLine;
+import net.mobilelize.fabriclib.client.LzClient;
 
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * Single background worker that off-loads chat-line wrapping (string measure/wrap) for
- * {@link ChatPanel#rebuildTabLines}'s "optimized loading" path, so a full-history rebuild never
- * blocks the render thread. See PERFORMANCE_PLAN.md item 4.
+ * Background worker for ChatPanel.rebuildTabLines's "Optimized Loading" offload. Deliberately
+ * simple: take the exact same synchronous work (ChatPanel.buildTabLines) the sync path already does,
+ * snapshot its inputs, run it on a single background thread, and post the result back onto the main
+ * thread via {@link LzClient#send} the instant it's ready — nothing polls this class.
  *
- * One job = one tab's entire history, wrapped in full (same output as the old synchronous rebuild),
- * off the main thread. There's no incremental/partial apply — when a job finishes, the caller
- * ({@link ChatPanel#applyWrapResult}) swaps the whole result in at once. That's a deliberate
- * simplification over a per-message incremental approach: nothing is visible until the whole tab is
- * done, but there's no position bookkeeping to get wrong, and the game would otherwise be frozen for
- * that same duration anyway — this only moves the wait off the render thread, it doesn't remove it.
- *
- * Thread safety: the worker only does pure data work (string wrap/measure via
- * {@link ChatPanel#buildTabLines}, over a plain list snapshot taken at submit time) — no GL calls,
- * no mutation of live ChatPanel/ChatTab state. Watch item: TextRenderer width lookups can trigger
- * lazy glyph-atlas loading on first use of an unfamiliar codepoint, which touches GL state and isn't
- * safe off the main thread. Believed a non-issue in practice (most chat glyphs get warmed on
- * arrival), but unconfirmed — see PERFORMANCE_PLAN.md.
+ * Live messages are NOT intercepted or queued — ChatManager.addNewMessage applies them straight to
+ * the panel's line cache exactly as it always did, unconditionally, whether or not a rebuild is in
+ * flight for that tab. Since a rebuild starts by wiping the panel's cache to a skeleton
+ * (ChatPanel.showLoadingSkeleton) and live adds always prepend (index 0 = newest), anything that
+ * arrives during the build sits in front of the skeleton rows as real, already-correct lines;
+ * ChatPanel.applyWrapResult finds that boundary (a plain scan for the first skeleton row) and keeps
+ * it in front of the finished result instead of discarding it. No separate tracking needed for that.
  */
 public final class WrapCoordinator {
 
-    private record WrapJob(ChatPanel panel, ChatTab tab, long generation,
-                            List<ChatTab.MessageEntry> entries, int baseWidth, boolean isPrimary) {}
+    /** Identifies one tab's line cache on one specific panel — the same tab can be wrapped
+     *  differently on different panels (different width/scale), so the generation guard is keyed on
+     *  the pair, never the tab alone. */
+    private record PanelTab(ChatPanel panel, UUID tabId) {}
 
-    public record WrapResult(ChatPanel panel, ChatTab tab, long generation, List<LzChatLine> lines) {}
-
-    private static final LinkedBlockingDeque<WrapJob> JOBS = new LinkedBlockingDeque<>();
-    private static final ConcurrentLinkedQueue<WrapResult> RESULTS = new ConcurrentLinkedQueue<>();
-    private static volatile Thread worker;
+    private static final Map<PanelTab, Long> GENERATIONS = new ConcurrentHashMap<>();
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "MultiChat-WrapWorker");
+        t.setDaemon(true);
+        return t;
+    });
 
     private WrapCoordinator() {}
 
-    /** {@code priority}: jump this job to the front of the queue instead of the back — for the tab
-     *  actually on screen right now, so it doesn't wait behind every other (currently invisible)
-     *  tab's rebuild. A rebuild trigger (settings/scale/width change) fires one job per tab per
-     *  panel; without this, the one tab the player can actually see could be queued anywhere among
-     *  all of them. */
-    public static void submit(ChatPanel panel, ChatTab tab, long generation,
-                               List<ChatTab.MessageEntry> entries, int baseWidth, boolean isPrimary,
-                               boolean priority) {
-        ensureWorkerRunning();
-        WrapJob job = new WrapJob(panel, tab, generation, entries, baseWidth, isPrimary);
-        if (priority) JOBS.addFirst(job); else JOBS.addLast(job);
-    }
+    /** Starts a background rewrap of {@code tab}'s entire history for {@code panel}. Bumps the
+     *  generation for this (panel, tab) pair first, so a result from a rebuild superseded before it
+     *  finishes is recognized as canceled and dropped when it calls back. {@code snapshot}/
+     *  {@code baseWidth}/{@code isPrimary} must be captured on the main thread before calling this. */
+    public static void submitRebuild(ChatPanel panel, ChatTab tab, List<ChatTab.MessageEntry> snapshot,
+                                      int baseWidth, boolean isPrimary) {
+        PanelTab key = new PanelTab(panel, tab.id());
+        long generation = GENERATIONS.merge(key, 1L, Long::sum);
 
-    /** Applies up to {@code budget} finished results on the calling (main) thread. Called from
-     *  ChatRenderer.render() every frame (not the tick loop) so a finished background rewrap shows
-     *  up on the next frame instead of waiting on a 20Hz tick boundary. Each result is a whole-tab
-     *  swap, not a single line, so this budget is just a safety cap against several rebuilds
-     *  finishing back-to-back in the same frame — not a per-line frame budget. */
-    public static void drain(int budget) {
-        int n = 0;
-        WrapResult r;
-        while (n < budget && (r = RESULTS.poll()) != null) {
-            r.panel().applyWrapResult(r);
-            n++;
-        }
-    }
+        EXECUTOR.execute(() -> {
+            // A rebuild trigger firing repeatedly in a burst (settings/scale/width change touching
+            // every tab on every panel, a resize drag firing every mouse-move frame — see
+            // PERFORMANCE_PLAN.md) queues one job per fire, each superseding the last. The single
+            // worker thread processes them strictly in order; without this check it would burn
+            // through every stale one IN FULL before ever reaching the one that still matters — skip
+            // before spending any compute on a job that's already superseded, checked again below
+            // before applying in case it goes stale while THIS job is mid-flight.
+            if (GENERATIONS.getOrDefault(key, -1L) != generation) return;
 
-    private static synchronized void ensureWorkerRunning() {
-        if (worker != null) return;
-        worker = new Thread(WrapCoordinator::workerLoop, "MultiChat-WrapWorker");
-        worker.setDaemon(true);
-        worker.start();
-    }
-
-    private static void workerLoop() {
-        while (true) {
-            WrapJob job;
+            List<LzChatLine> lines;
             try {
-                job = JOBS.takeFirst();
-            } catch (InterruptedException e) {
-                return;
-            }
-            // A rebuild trigger that fires repeatedly in a burst (e.g. dragging a slider — see
-            // PERFORMANCE_PLAN.md's documented per-frame rebuild triggers) queues one job per fire,
-            // each superseding the last. Without this check the worker would burn through every
-            // stale one in full before ever reaching the job that still matters, which is exactly
-            // what "swap happened but took forever" looks like. applyWrapResult() re-checks this
-            // too (the generation could go stale while THIS job is mid-flight), so this is a cheap
-            // early skip, not the only guard.
-            if (job.generation() != job.panel().currentGeneration(job.tab().id())) continue;
-            try {
-                List<LzChatLine> lines = ChatPanel.buildTabLines(job.entries(), job.baseWidth(), job.isPrimary());
-                RESULTS.add(new WrapResult(job.panel(), job.tab(), job.generation(), lines));
+                lines = ChatPanel.buildTabLines(snapshot, baseWidth, isPrimary);
             } catch (Exception e) {
                 MultichatClient.LOGGER.warn("MultiChat: background wrap job failed", e);
+                return;
             }
-        }
+
+            LzClient.send(() -> {
+                if (GENERATIONS.getOrDefault(key, -1L) != generation) return; // canceled/superseded
+                panel.applyWrapResult(tab, lines);
+            });
+        });
     }
 }

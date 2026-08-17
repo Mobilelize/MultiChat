@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.command.CommandSource;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzClient;
+import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.api.TabActionCallback;
 import net.mobilelize.multichat.client.*;
@@ -371,6 +372,15 @@ public class MultiChatCommand {
             LzText text = LzText.literal("Test message #" + i + " — the quick brown fox jumps over the lazy dog");
             LzChatEntry entry = new LzChatEntry(baseTick - i, text, null);
             synthetic.add(new ChatTab.MessageEntry(text, text, entry));
+            // Debug-only: this text was never rendered anywhere before now, so none of its glyphs
+            // are baked yet. The rebuild resetForRefresh() triggers below can run on
+            // WrapCoordinator's background thread (see ChatPanel.rebuildTabLines), and lazy
+            // glyph-atlas baking touches GL state — safe on the main thread we're already on right
+            // here, an outright crash if it happens to fire on that background thread instead.
+            // Warming it here, once, up front, is exactly the dedicated place for this: real chat
+            // text doesn't need it (it's already rendered live before any rebuild ever sees it), so
+            // this has no business living in the general rebuild path.
+            LzDraw.textWidth(text);
         }
         allTab.messages().addAll(0, synthetic); // index 0 = newest — prepend the whole batch as one shift
         ChatManager.resetForRefresh();
