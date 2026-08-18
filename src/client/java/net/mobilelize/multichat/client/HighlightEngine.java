@@ -42,6 +42,10 @@ public final class HighlightEngine {
     // actionId -> data needed to restore the message this actionId's revert click belongs to
     private static final Map<String, RevertData> pendingReverts = new HashMap<>();
 
+    // Last time the highlight sound actually played — global, not per-keyword/per-tab, so a burst of
+    // matching messages (spam) can't stack the sound faster than highlightSoundCooldownSec allows.
+    private static long lastSoundPlayed = -1;
+
     // touchedTabs is exactly the tabs that ended up storing this message — set once routing
     // finishes (see MessageRouter), so a revert click only ever has to scan those, not every tab.
     private record RevertData(LzChatEntry entry, LzText originalContent, List<ChatTab> touchedTabs) {}
@@ -158,7 +162,12 @@ public final class HighlightEngine {
         if (pool == null) return new HighlightResult(content, rawLzText, null);
 
         if (cfg.highlightSoundEnabled) {
-            LzSound.playMaster(cfg.highlightSound, cfg.highlightSoundPitch, cfg.highlightSoundVolume);
+            long now = System.currentTimeMillis();
+            if (cfg.highlightSoundCooldownSec <= 0 || lastSoundPlayed < 0
+                    || (now - lastSoundPlayed) >= (cfg.highlightSoundCooldownSec * 1000L)) {
+                lastSoundPlayed = now;
+                LzSound.playMaster(cfg.highlightSound, cfg.highlightSoundPitch, cfg.highlightSoundVolume);
+            }
         }
 
         List<String> matched = matchedKeywords(lower, pool, protectedRanges);

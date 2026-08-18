@@ -356,6 +356,15 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.highlightSoundPitch = MultiChatConfig.fromPingPitchPct(v))
                 .build());
 
+        highlight.addEntry(eb.startIntField(
+                LzText.literal("Highlight Sound Cooldown (s)").mc(),
+                MultichatClient.CONFIG.highlightSoundCooldownSec)
+                .setDefaultValue(2)
+                .setMin(0)
+                .setTooltip(LzText.literal("Minimum seconds between highlight sound plays. Keeps a burst of matching messages from spamming the sound. 0 = no cooldown.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.highlightSoundCooldownSec = v)
+                .build());
+
         highlight.addEntry(eb.startBooleanToggle(
                 LzText.literal("Test Highlight Sound").mc(), false)
                 .setDefaultValue(false)

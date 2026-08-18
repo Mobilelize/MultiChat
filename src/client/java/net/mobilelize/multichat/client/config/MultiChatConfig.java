@@ -110,6 +110,7 @@ public class MultiChatConfig extends LzConfig {
     public String          highlightSound        = "minecraft:entity.experience_orb.pickup";
     public float           highlightSoundVolume  = 1.0f;
     public float           highlightSoundPitch   = 1.0f;
+    public int             highlightSoundCooldownSec = 2;
 
     /** Full per-span text formatting, not just color — mirrors every LzStyle.with* toggle. */
     public static class HighlightStyle {
