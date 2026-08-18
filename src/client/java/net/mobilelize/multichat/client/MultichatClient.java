@@ -4,6 +4,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.mobilelize.fabriclib.client.LzAfk;
+import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
@@ -54,6 +55,8 @@ public class MultichatClient implements ClientModInitializer {
             // render-time offset (which reads config live every frame) immediately starts
             // shifting them for the new one: text visibly moves without ever re-wrapping.
             if (ChatHeadsSupport.pollRenderPositionChanged()) ChatManager.resetForRefresh();
+
+            ChatManager.tickPendingTrims(LzChat.ticks());
         });
 
         MessageAddedToTabCallback.EVENT.register((tab, message) -> PingPlayer.playForTab(tab));

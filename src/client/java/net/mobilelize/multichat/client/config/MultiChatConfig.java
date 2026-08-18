@@ -73,6 +73,22 @@ public class MultiChatConfig extends LzConfig {
     // small the resulting filtered tab ends up). See FilterCoordinator / PERFORMANCE_PLAN.md item 3.
     public boolean optimizedRefilterEnabled     = true;
     public int     optimizedRefilterThreshold   = 300;
+    // Caps how many messages the All tab (which every routed message passes through) is allowed to
+    // hold — oldest get evicted once a new message pushes it over. -1 = unlimited.
+    public int     globalMessageCap             = 100000;
+    // Trimming a tab back down to its cap is an O(n) scan over every panel showing it. Below this
+    // many messages that's already instant, so trimming stays exact/immediate (old behavior) — this
+    // is what per-tab caps have always used, since they're normally small enough to never cross it.
+    // At/above it, trimming batches: the tab is allowed to overshoot its cap by a small margin and
+    // gets trimmed back down either once that margin is hit (hard ceiling, guarantees a bound even
+    // during a sustained burst) or once messages stop arriving for a short moment (debounce, trims
+    // early during a lull instead of always waiting for the full margin). See ChatManager.addNewMessage.
+    public boolean optimizedDeletingEnabled     = true;
+    public int     optimizedDeletingThreshold   = 5000;
+    // Separate from debugCommandsEnabled so someone can have the /multichat debug commands without
+    // being spammed by a chat message on every cap trim, or vice versa. Off by default — perf-testing
+    // tool, not something a regular user needs.
+    public boolean trimFeedbackEnabled          = false;
 
     // ── Highlight Words ──────────────────────────────────────────────────────
     // One shared style pair — both Your Keywords and API Words render with the same colors/formatting.

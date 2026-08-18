@@ -488,6 +488,48 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.optimizedRefilterThreshold = Math.max(0, v))
                 .build());
 
+        performance.addEntry(eb.startIntField(
+                LzText.literal("Global Message Cap").mc(),
+                MultichatClient.CONFIG.globalMessageCap)
+                .setDefaultValue(100000)
+                .setMin(-1)
+                .setTooltip(LzText.literal("Maximum number of messages kept in the All tab. Once it's exceeded, " +
+                        "the oldest messages are deleted to make room for new ones. -1 = unlimited.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.globalMessageCap = Math.max(-1, v))
+                .build());
+
+        performance.addEntry(eb.startBooleanToggle(
+                LzText.literal("Optimized Deleting").mc(),
+                MultichatClient.CONFIG.optimizedDeletingEnabled)
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("When a message cap (per-tab or the Global Message Cap above) needs " +
+                        "to trim a large tab, batch the trimming instead of doing it on every single message — " +
+                        "trims once a small overshoot margin is hit, or earlier if messages pause for a moment. " +
+                        "Turn off for the old behavior (trim back to the cap exactly, every message).").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.optimizedDeletingEnabled = v)
+                .build());
+
+        performance.addEntry(eb.startIntField(
+                LzText.literal("Optimized Deleting Threshold").mc(),
+                MultichatClient.CONFIG.optimizedDeletingThreshold)
+                .setDefaultValue(5000)
+                .setMin(0)
+                .setTooltip(LzText.literal("Below this many messages in a tab, always trim it exactly/immediately " +
+                        "regardless of Optimized Deleting above — small tabs are already instant to trim. 0 = " +
+                        "always batch.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.optimizedDeletingThreshold = Math.max(0, v))
+                .build());
+
+        performance.addEntry(eb.startBooleanToggle(
+                LzText.literal("Trim Feedback").mc(),
+                MultichatClient.CONFIG.trimFeedbackEnabled)
+                .setDefaultValue(false)
+                .setTooltip(LzText.literal("Send a chat message (prefixed [MultiChat-Trim], filterable) every " +
+                        "time a message cap trims a tab, showing how many messages were deleted and how long " +
+                        "it took. Separate from the debug commands toggle — perf-testing tool, off by default.").mc())
+                .setSaveConsumer(v -> MultichatClient.CONFIG.trimFeedbackEnabled = v)
+                .build());
+
         // ── Advanced ──────────────────────────────────────────────────────
         ConfigCategory advanced = builder.getOrCreateCategory(LzText.literal("Advanced").mc());
 

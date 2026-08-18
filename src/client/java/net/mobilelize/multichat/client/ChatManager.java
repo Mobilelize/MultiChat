@@ -32,6 +32,13 @@ public class ChatManager {
     ));
     private static final List<ChatPanel> panels = new ArrayList<>();
 
+    // ── Batched message-cap trimming (see addNewMessage) ─────────────────────────
+    // Tabs currently over their cap but under the hard slack ceiling, mapped to the tick their most
+    // recent message arrived — tickPendingTrims trims one once it's been quiet long enough. Weak so a
+    // deleted tab (removed from ChatManager entirely) doesn't keep the debounce state alive.
+    private static final Map<ChatTab, Integer> pendingTrim = new WeakHashMap<>();
+    private static final int TRIM_DEBOUNCE_TICKS = 10; // ~0.5s of no new messages before trimming early
+
     // ── Time tracking ──────────────────────────────────────────────────────────
     private static long wallTimeStart = -1;
     private static int  tickStart     = 0;
@@ -94,28 +101,105 @@ public class ChatManager {
         }
         ChatSelection.shiftLines(tab, selDelta);
 
-        if (tab.messageCap() > 0) {
-            IdentityHashMap<LzChatEntry, Boolean> toRemove = new IdentityHashMap<>();
-            while (tab.messageCount() > tab.messageCap()) {
-                toRemove.put(tab.messages().getLast().entry(), Boolean.TRUE);
-                tab.removeLast();
-            }
-            if (!toRemove.isEmpty()) {
-                for (ChatPanel panel : getAllActivePanels()) {
-                    List<LzChatLine> lines = panel.getTabLines(tab);
-                    if (lines == null) continue;
-                    int before = lines.size();
-                    lines.removeIf(line -> line.entry() != null && toRemove.containsKey(line.entry()));
-                    int linesRemoved = before - lines.size();
-                    int scrolled = panel.getScrolledLines(tab);
-                    if (scrolled > 0) panel.setScrolledLines(tab, Math.max(0, scrolled - linesRemoved));
+        // The All tab isn't user-configurable per-tab (no messageCap UI for it), so it always reports
+        // 0 (unlimited) there — the global cap is what actually bounds it. -1 (or 0) means unlimited.
+        int effectiveCap = (tab.type() == TabType.ALL && MultichatClient.CONFIG.globalMessageCap > 0)
+            ? MultichatClient.CONFIG.globalMessageCap
+            : tab.messageCap();
+        if (effectiveCap > 0 && tab.messageCount() > effectiveCap) {
+            // Trimming is an O(n) scan (removeTabEntry/removeIf below) over every panel showing this
+            // tab. Below the threshold that's already instant, so stay exact/immediate — this is the
+            // behavior per-tab caps have always used, since they're normally small enough to never
+            // cross it. It's not that per-tab caps work differently; they just never hit this branch.
+            if (!MultichatClient.CONFIG.optimizedDeletingEnabled
+                    || tab.messageCount() <= MultichatClient.CONFIG.optimizedDeletingThreshold) {
+                pendingTrim.remove(tab);
+                trimTabToCap(tab, effectiveCap);
+            } else {
+                // Large tab: batch instead of paying that O(n) cost every message during a burst. Let
+                // it overshoot by a slack margin — trimmed the instant that margin's hit (hard ceiling,
+                // bounds memory even through a sustained burst that never lets up), or sooner, the next
+                // tick after messages stop arriving for a moment (debounce — see tickPendingTrims).
+                int trimSlack = Math.max(1, effectiveCap / 20); // ~5% overshoot allowed
+                if (tab.messageCount() > effectiveCap + trimSlack) {
+                    pendingTrim.remove(tab);
+                    trimTabToCap(tab, effectiveCap);
+                } else {
+                    pendingTrim.put(tab, LzChat.ticks());
                 }
-                ChatSelection.clampOrClear(tab);
             }
         }
 
         if (!isTabActiveInAnyPanel(tab)) tab.incrementUnread();
         if (tab.hasMessages()) MessageAddedToTabCallback.EVENT.invoker().onMessageAdded(tab, tab.getFirstMessage());
+    }
+
+    /** Trims the oldest messages off {@code tab} until it's back at {@code cap}, removing the same
+     *  entries from every active panel's line cache and fixing up scroll offsets. Shared by the
+     *  immediate and batched paths in addNewMessage, and by tickPendingTrims's debounce trim. */
+    private static void trimTabToCap(ChatTab tab, int cap) {
+        long startNanos = System.nanoTime();
+        IdentityHashMap<LzChatEntry, Boolean> toRemove = new IdentityHashMap<>();
+        while (tab.messageCount() > cap) {
+            toRemove.put(tab.messages().getLast().entry(), Boolean.TRUE);
+            tab.removeLast();
+        }
+        if (toRemove.isEmpty()) return;
+        for (ChatPanel panel : getAllActivePanels()) {
+            List<LzChatLine> lines = panel.getTabLines(tab);
+            if (lines == null) continue;
+            // The oldest entries are always a contiguous block at the very tail of a panel's line
+            // list — wrapEntryInto only ever prepends, so line order mirrors tab.messages()'s
+            // newest-first order exactly, one entry's lines together, same invariant replaceEntryLines
+            // relies on elsewhere. Trimming is therefore a tail walk, not a full-list removeIf — cost
+            // scales with how many lines are actually being cut, not with the whole tab's size. This
+            // is what made a batched trim on a large tab expensive: a full O(n) scan on every trim
+            // regardless of how little of it was actually being removed.
+            int i = lines.size();
+            while (i > 0) {
+                LzChatEntry e = lines.get(i - 1).entry();
+                if (e == null || !toRemove.containsKey(e)) break;
+                i--;
+            }
+            int linesRemoved = lines.size() - i;
+            if (linesRemoved == 0) continue;
+            lines.subList(i, lines.size()).clear();
+            int scrolled = panel.getScrolledLines(tab);
+            if (scrolled > 0) panel.setScrolledLines(tab, Math.max(0, scrolled - linesRemoved));
+        }
+        ChatSelection.clampOrClear(tab);
+
+        // Debug-only perf visibility into the trimming this whole cap system does — prefixed so it can
+        // be routed to its own tab with a whitelist rule. Goes through the normal chat pipeline (not a
+        // direct tab insert) so it's filterable like any other message. Gated on trimFeedbackEnabled,
+        // separate from debugCommandsEnabled, since this isn't something a regular user needs spammed
+        // on every trim.
+        if (MultichatClient.CONFIG.trimFeedbackEnabled && LzChat.chatHud() != null) {
+            double elapsedMs = (System.nanoTime() - startNanos) / 1_000_000.0;
+            LzText msg = LzText.literal(String.format("[MultiChat-Trim] Deleted %d message(s) from '%s' in %.2fms",
+                toRemove.size(), tab.name(), elapsedMs));
+            LzChat.chatHud().addMessage(msg.mc(), null, null);
+        }
+    }
+
+    /** Called once per client tick (see MultichatClient). Trims any tab that's over its cap but under
+     *  the hard slack ceiling once it's gone TRIM_DEBOUNCE_TICKS without a new message — catches a
+     *  natural lull so the tab doesn't sit at its full overshoot margin until the next burst pushes it
+     *  over the hard ceiling. Cheap: this map is normally empty, and only ever holds tabs that are
+     *  both over-cap and Optimized Deleting-eligible, which is a rare combination in practice. */
+    public static void tickPendingTrims(int currentTick) {
+        if (pendingTrim.isEmpty()) return;
+        Iterator<Map.Entry<ChatTab, Integer>> it = pendingTrim.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<ChatTab, Integer> e = it.next();
+            if (currentTick - e.getValue() < TRIM_DEBOUNCE_TICKS) continue;
+            ChatTab tab = e.getKey();
+            it.remove();
+            int cap = (tab.type() == TabType.ALL && MultichatClient.CONFIG.globalMessageCap > 0)
+                ? MultichatClient.CONFIG.globalMessageCap
+                : tab.messageCap();
+            if (cap > 0) trimTabToCap(tab, cap);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -326,16 +410,25 @@ public class ChatManager {
 
     /** Offloaded path only — {@code panelLines} already holds each panel's finished wrap, built in the
      *  same background job as the filter/collapse pass (see refilterSearch), for the UN-merged {@code r}
-     *  — merging needs tab.collapseCounts() as it stands right now, main thread only, so it happens
-     *  here. collapseIdentical search tabs always start empty (see refilterSearch — a new SearchTab
-     *  every search), so whatever's tracked in tab.collapseCounts() right now is purely "how many
-     *  arrived live during this one scan" — always small. For each background entry whose text matches
-     *  one of those, fold the live count in and re-render with the combined total; texts live-only
-     *  (never in the background snapshot) stay untracked, same as before. Installs the merged data
-     *  model, then patches just the handful of changed entries' lines into each panel's precomputed
-     *  wrap — same one-entry-touch cost as an ordinary live collapse-repeat, not a rewrap of the tab and
-     *  not a second background job. A panel with no entry in {@code panelLines} became active after the
-     *  job was submitted — falls back to a normal (possibly offloaded) rebuild for just that panel. */
+     *  — merging needs tab.collapseCounts()/tab.messages() as they stand right now, main thread only, so
+     *  it happens here. collapseIdentical search tabs always start empty (see refilterSearch — a new
+     *  SearchTab every search), so whatever's in tab.messages()/collapseCounts() right now is purely
+     *  "what arrived live during this one scan" — always small. Two things can happen to a live entry:
+     *  <p>
+     *  1. Its text matches a background entry — fold the live count into that entry and re-render with
+     *     the combined total (the count map was already being merged before this; the actual displayed
+     *     message never got told about it).
+     *  2. Its text matches nothing in the background result — genuinely new, would otherwise be silently
+     *     dropped by the clear+rebuild below. Kept, in its current (already newest-first) order, ahead
+     *     of the background block.
+     *  <p>
+     *  Installs the merged data model, then patches just the handful of changed entries' lines into each
+     *  panel's precomputed wrap — same one-entry-touch cost as an ordinary live collapse-repeat, not a
+     *  rewrap of the tab and not a second background job; live-only entries need no panel patch at all,
+     *  since their lines are already sitting in the panel's cache and applyWrapResult's own live-prefix
+     *  scan preserves them once the matched ones are removed. A panel with no entry in {@code panelLines}
+     *  became active after the job was submitted — falls back to a normal (possibly offloaded) rebuild
+     *  for just that panel. */
     private static void applySearchRefilterResult(SearchTab tab, long generation, SearchRefilterResult r, Map<ChatPanel, List<LzChatLine>> panelLines) {
         if (generation != tab.refilterGeneration()) return;
 
@@ -348,11 +441,13 @@ public class ChatManager {
         List<ChatTab.MessageEntry> finalEntries = new ArrayList<>(r.entries().size());
         Map<LzChatEntry, Integer> finalCounts = new HashMap<>(r.collapseCounts());
         List<SearchMergePatch> patches = new ArrayList<>();
+        IdentityHashMap<LzChatEntry, Boolean> matchedLiveEntries = new IdentityHashMap<>();
         for (ChatTab.MessageEntry me : r.entries()) {
             String text = me.entry().originalContent != null ? me.entry().originalContent.mc().getString() : null;
             ChatTab.MessageEntry liveEntry = text != null ? liveByText.get(text) : null;
             if (liveEntry == null) { finalEntries.add(me); continue; }
 
+            matchedLiveEntries.put(liveEntry.entry(), Boolean.TRUE);
             int liveCount = tab.collapseCounts().getOrDefault(liveEntry.entry(), 1);
             int mergedCount = liveCount + finalCounts.getOrDefault(me.entry(), 1);
             LzText base = tab.showTimestamps()
@@ -364,6 +459,30 @@ public class ChatManager {
             finalEntries.add(mergedEntry);
             finalCounts.put(me.entry(), mergedCount);
             patches.add(new SearchMergePatch(liveEntry, me, mergedEntry));
+        }
+
+        // Live entries that never matched anything in the background result are genuinely new — without
+        // this they'd be silently dropped by clearMessages()+rebuild below (the actual clobber bug).
+        // tab.messages() is already newest-first (live routing only ever addFirst()s), so walking it and
+        // keeping whatever wasn't folded into a match, in that same order, ahead of the background
+        // block, reconstructs the correct final order at effectively zero extra cost.
+        if (!tab.messages().isEmpty()) {
+            List<ChatTab.MessageEntry> liveOnly = new ArrayList<>();
+            for (ChatTab.MessageEntry me : tab.messages()) {
+                if (matchedLiveEntries.containsKey(me.entry())) continue;
+                liveOnly.add(me);
+                // Carry its own live collapse count forward too — otherwise a live-only entry that
+                // already duplicated 2+ times during the scan loses that count on the
+                // clearCollapseCounts()+putAll() below, and the next duplicate resumes from a lower
+                // number than it should (addSearchMessageWithCollapse's getOrDefault(entry, 1) sees
+                // nothing here and restarts from 1).
+                Integer liveOnlyCount = tab.collapseCounts().get(me.entry());
+                if (liveOnlyCount != null) finalCounts.put(me.entry(), liveOnlyCount);
+            }
+            if (!liveOnly.isEmpty()) {
+                liveOnly.addAll(finalEntries);
+                finalEntries = liveOnly;
+            }
         }
 
         tab.clearMessages();
