@@ -322,6 +322,13 @@ public class ChatManager {
     public static void refilterTab(ChatTab tab) {
         if (tab.type() != TabType.FILTERED) return;
         long generation = tab.bumpRefilterGeneration();
+        // Clear now, not at apply — the old content is fully reconstructable from allTab any time, so
+        // there's no reason to hold onto it while the scan runs. Live routing (processMessage) isn't
+        // touched by this — it keeps adding to what's now an empty list, same as always, and its own
+        // collapse-repeat check (text.equals(cs.lastText())) keeps working correctly for whatever
+        // arrives, since nothing clears/resets it again before applyFilterTabResult appends the
+        // background result after it (see there for the other half of this).
+        tab.clearMessages();
         // If this is a multi-tab's sub-tab, live routing only ever lets it see what the parent's own
         // filter already let through (MessageRouter.routeToSubTabs) — refilter needs the same gate,
         // otherwise it'd show messages the parent would have blocked live.
@@ -333,7 +340,7 @@ public class ChatManager {
 
         ChatTab allTab = tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (allTab == null || !allTab.hasMessages()) {
-            applyFilterTabResult(tab, generation, List.of());
+            applyFilterTabResult(tab, generation, new FilterTabResult(List.of(), null, null, 0, 0), null);
             return;
         }
 
@@ -353,7 +360,7 @@ public class ChatManager {
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applyFilterTabResult(tab, generation, computeFilterTab(snapshot, effectiveDiff, cfg));
+            applyFilterTabResult(tab, generation, computeFilterTab(snapshot, effectiveDiff, cfg), null);
             return;
         }
 
@@ -363,24 +370,33 @@ public class ChatManager {
         for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
         List<PanelWrapSpec> panelSpecs = PanelWrapSpec.snapshot(getAllActivePanels());
         FilterCoordinator.submit(tab, generation, () -> {
-            List<ChatTab.MessageEntry> result = computeFilterTab(snapshot, effectiveDiff, cfg);
+            FilterTabResult result = computeFilterTab(snapshot, effectiveDiff, cfg);
             Map<ChatPanel, List<LzChatLine>> panelLines = new HashMap<>();
             for (PanelWrapSpec spec : panelSpecs)
-                panelLines.put(spec.panel(), ChatPanel.buildTabLines(result, spec.width(), spec.primary()));
+                panelLines.put(spec.panel(), ChatPanel.buildTabLines(result.entries(), spec.width(), spec.primary()));
             return () -> applyFilterTabResult(tab, generation, result, panelLines);
         });
     }
+
+    /** {@code entries} — the built list, same as before. The trailing four fields are whatever the
+     *  collapse-run tracking below landed on for the NEWEST included entry (the last one processed,
+     *  since the loop runs oldest-to-newest) — the exact shape of ChatTab.CollapseState. The background
+     *  thread can't touch tab.collapseState() itself, so this carries that state back to the main
+     *  thread instead of it getting thrown away when the loop ends (see applyFilterTabResult). */
+    private record FilterTabResult(List<ChatTab.MessageEntry> entries, @Nullable String lastText,
+                                    @Nullable LzText lastContent, int lastRepeat, int lastTick) {}
 
     /** Pure — reads only the pre-taken rule/config snapshot in {@code cfg}, never touches a live
      *  ChatTab. Safe to run on FilterCoordinator's background thread. Same collapse-run-length logic
      *  refilterTab always used (a repeat replaces the single in-progress entry with an updated
      *  counter), just tracked against a local deque instead of the tab's live one. */
-    private static List<ChatTab.MessageEntry> computeFilterTab(List<ChatTab.MessageEntry> all,
-                                                                 boolean effectiveDiff, RefilterConfig cfg) {
+    private static FilterTabResult computeFilterTab(List<ChatTab.MessageEntry> all,
+                                                      boolean effectiveDiff, RefilterConfig cfg) {
         ArrayDeque<ChatTab.MessageEntry> result = new ArrayDeque<>();
         String collapseLastText   = null;
         LzText collapseLastLzText = null;
         int    collapseRepeat     = 0;
+        int    collapseLastTick   = 0;
 
         for (int i = all.size() - 1; i >= 0; i--) {
             ChatTab.MessageEntry src = all.get(i);
@@ -413,6 +429,7 @@ public class ChatManager {
                 collapseLastText   = fullText;
                 collapseLastLzText = raw;
             }
+            collapseLastTick = src.entry().creationTick;
 
             LzText base = cfg.showTimestamps()
                 ? stampedText(src.entry().creationTick, raw, indicator)
@@ -428,26 +445,103 @@ public class ChatManager {
         List<ChatTab.MessageEntry> list = new ArrayList<>(result);
         if (cfg.messageCap() > 0)
             while (list.size() > cfg.messageCap()) list.remove(list.size() - 1); // trim oldest = tail
-        return list;
+        return new FilterTabResult(list, collapseLastText, collapseLastLzText, collapseRepeat, collapseLastTick);
+    }
+
+    /** Recovers the repeat-count baked into an already-rendered message's counter suffix (e.g. the
+     *  "5" in "message (x5)"), for a run that's no longer the tab's live-tracked one — something else
+     *  arrived after it, so tab.collapseState() moved on and this run's count only still exists baked
+     *  into its own rendered text. Locates the counter format's own plain-text shape once (rendering it
+     *  with a "0" placeholder) instead of assuming any particular literal format, since the format is
+     *  user-configurable. Returns null (caller treats it as "no count to recover", i.e. 1) if the
+     *  rendered text doesn't look like the expected shape — safer to skip the merge than guess wrong. */
+    private static @Nullable Integer parseTrailingCount(ChatTab.MessageEntry entry, String baseText) {
+        String full = entry.rendered().mc().getString();
+        int baseEnd = full.lastIndexOf(baseText);
+        if (baseEnd < 0) return null;
+        String suffix = full.substring(baseEnd + baseText.length());
+        String template = LzText.format(" " + MultichatClient.CONFIG.collapseCounterFormat.replace("{count}", "0")).mc().getString();
+        int digitIdx = template.indexOf('0');
+        if (digitIdx < 0) return null;
+        String prefix = template.substring(0, digitIdx);
+        String tail   = template.substring(digitIdx + 1);
+        if (!suffix.startsWith(prefix) || !suffix.endsWith(tail) || suffix.length() < prefix.length() + tail.length())
+            return null;
+        try {
+            return Integer.parseInt(suffix.substring(prefix.length(), suffix.length() - tail.length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /** Guarded by a generation check — a result from a scan that's since been superseded (filter
      *  rules edited again before this one finished) is dropped instead of overwriting newer content.
-     *  Sync (non-offloaded) path only — see applySearchRefilterResult's 3-arg overload. */
-    private static void applyFilterTabResult(ChatTab tab, long generation, List<ChatTab.MessageEntry> entries) {
+     *  {@code panelLines} is null for the sync (non-offloaded) path, which just routes every panel
+     *  through rebuildTabLines instead. No clearMessages() here — refilterTab already cleared at
+     *  trigger time; clearing again would reset CollapseState a second time and wipe out whatever live
+     *  routing correctly built up while this ran.
+     *  <p>
+     *  Whatever's in tab.messages() right now, before {@code result.entries()} gets appended, is
+     *  entirely live arrivals (see refilterTab's early clear). The one that matters for merging is
+     *  whichever sits at the END of that block (the OLDEST live arrival — adjacent to the seam where
+     *  {@code result.entries()} lands), NOT tab.collapseState()/the newest one: if something else
+     *  arrived live after a repeat run (e.g. a genuinely different message right as the scan finished),
+     *  collapseState moved on to track THAT instead, while the run this refilter actually needs to
+     *  continue is still sitting frozen further back in the list. Three cases:
+     *  <p>
+     *  1. Nothing arrived live (tab still empty) — the background result's own trailing run becomes the
+     *     tab's actual newest content, so its collapse state (computeFilterTab's last-processed-entry
+     *     state, carried in {@code result} since the background thread can't touch tab.collapseState()
+     *     itself) gets adopted for future live messages to continue from, instead of being thrown away.
+     *  2. The seam-adjacent live entry is the SAME run as the background's own newest entry (same text,
+     *     and — respecting collapseMatchFormatting, same "special rule" computeFilterTab itself follows
+     *     — same exact formatting if that's on) — these are one logical run that got split by the scan
+     *     boundary (e.g. "asaab (x19)" then, after the rebuild, a separately-counted "asaab (x2)"
+     *     instead of one "asaab (x21)"). Folded into a single re-rendered entry with the combined count
+     *     instead of shown as two.
+     *  3. The seam-adjacent live entry is a different message — already correct and newer than the
+     *     background result, left alone. */
+    private static void applyFilterTabResult(ChatTab tab, long generation, FilterTabResult result, @Nullable Map<ChatPanel, List<LzChatLine>> panelLines) {
         if (generation != tab.refilterGeneration()) return;
-        tab.clearMessages();
-        for (ChatTab.MessageEntry me : entries) tab.addLast(me); // already newest-first; addLast preserves that order
-        for (ChatPanel panel : getAllActivePanels()) panel.rebuildTabLines(tab);
-    }
+        ChatTab.CollapseState cs = tab.collapseState();
 
-    /** Offloaded path only — see applySearchRefilterResult's 4-arg overload, same shape here. */
-    private static void applyFilterTabResult(ChatTab tab, long generation, List<ChatTab.MessageEntry> entries, Map<ChatPanel, List<LzChatLine>> panelLines) {
-        if (generation != tab.refilterGeneration()) return;
-        tab.clearMessages();
-        for (ChatTab.MessageEntry me : entries) tab.addLast(me); // already newest-first; addLast preserves that order
+        boolean wasOnlyLiveEntry = tab.messageCount() == 1;
+        ChatTab.MessageEntry liveLast = tab.hasMessages() ? tab.messages().get(tab.messageCount() - 1) : null;
+        String liveLastText = liveLast != null && liveLast.entry().originalContent != null
+            ? liveLast.entry().originalContent.mc().getString() : null;
+
+        boolean merge = tab.collapseRepeating() && liveLastText != null && !result.entries().isEmpty()
+            && result.lastText() != null && result.lastText().equals(liveLastText)
+            && (!tab.collapseMatchFormatting() || (result.lastContent() != null
+                && liveLast.entry().originalContent.mc().equals(result.lastContent().mc())));
+
+        List<ChatTab.MessageEntry> toAppend = result.entries();
+        if (merge) {
+            Integer liveCount = wasOnlyLiveEntry ? Integer.valueOf(cs.repeat()) : parseTrailingCount(liveLast, liveLastText);
+            int mergedCount = (liveCount != null ? liveCount : 1) + result.lastRepeat();
+            tab.removeLast(); // the seam-adjacent live entry, folding into the background's matching one
+            ChatTab.MessageEntry bgFirst = result.entries().get(0);
+            LzText raw = bgFirst.entry().originalContent;
+            LzText base = tab.showTimestamps()
+                ? stampedText(bgFirst.entry().creationTick, raw, bgFirst.entry().indicator) : raw;
+            LzText rendered = LzText.wrapMc(base.mc().copy().append(LzText.format(" "
+                + MultichatClient.CONFIG.collapseCounterFormat.replace("{count}", String.valueOf(mergedCount))).mc()));
+            tab.addLast(bgFirst.newRender(rendered));
+            toAppend = result.entries().subList(1, result.entries().size());
+            if (wasOnlyLiveEntry) { // the merged run is (still) the tab's own tracked/frontmost run
+                cs.setRepeat(mergedCount);
+                cs.setLastTick(bgFirst.entry().creationTick);
+            } // else: something else is still the actual frontmost — collapseState already correctly tracks that, untouched
+        } else if (!tab.hasMessages() && result.lastText() != null) {
+            cs.setLastText(result.lastText());
+            cs.setLastContent(result.lastContent());
+            cs.setRepeat(result.lastRepeat());
+            cs.setLastTick(result.lastTick());
+        }
+        for (ChatTab.MessageEntry me : toAppend) tab.addLast(me); // already newest-first; addLast preserves that order
+
         for (ChatPanel panel : getAllActivePanels()) {
-            List<LzChatLine> lines = panelLines.get(panel);
+            List<LzChatLine> lines = panelLines != null ? panelLines.get(panel) : null;
             if (lines != null) panel.applyWrapResult(tab, lines);
             else panel.rebuildTabLines(tab);
         }
