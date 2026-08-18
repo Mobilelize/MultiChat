@@ -299,23 +299,91 @@ public class ChatManager {
         for (ChatPanel panel : getAllActivePanels()) panel.rebuildTabLines(tab);
     }
 
+    /** One background entry (by identity) whose rendering needs replacing because a live-tracked count
+     *  for the same text needs folding into it, plus what to replace it with — see
+     *  applySearchRefilterResult's offloaded overload. */
+    private record SearchMergePatch(ChatTab.MessageEntry liveEntry, ChatTab.MessageEntry originalBgEntry, ChatTab.MessageEntry mergedEntry) {}
+
+    /** Finds the contiguous run of lines belonging to {@code oldEntry} (by identity — buildTabLines
+     *  always wraps one entry's lines together, in order) and swaps it for {@code newLines}. Touches
+     *  only that one entry's slice, not the rest of {@code lines}. Returns {@code lines} unchanged if
+     *  {@code oldEntry} isn't found in it (nothing to swap). */
+    private static List<LzChatLine> replaceEntryLines(List<LzChatLine> lines, LzChatEntry oldEntry, List<LzChatLine> newLines) {
+        int start = -1, end = -1;
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines.get(i).entry() == oldEntry) {
+                if (start < 0) start = i;
+                end = i + 1;
+            } else if (start >= 0) break;
+        }
+        if (start < 0) return lines;
+        List<LzChatLine> result = new ArrayList<>(lines.size() - (end - start) + newLines.size());
+        result.addAll(lines.subList(0, start));
+        result.addAll(newLines);
+        result.addAll(lines.subList(end, lines.size()));
+        return result;
+    }
+
     /** Offloaded path only — {@code panelLines} already holds each panel's finished wrap, built in the
-     *  same background job as the filter/collapse pass (see refilterSearch). Installs the filtered
-     *  data model and every panel's finished lines in one shot via applyWrapResult (which also
-     *  preserves whatever live routing prepended onto the panel's skeleton while the job ran — same
-     *  as WrapCoordinator's own callback), instead of calling rebuildTabLines and triggering a second,
-     *  separate background wrap. A panel with no entry in {@code panelLines} became active after the
+     *  same background job as the filter/collapse pass (see refilterSearch), for the UN-merged {@code r}
+     *  — merging needs tab.collapseCounts() as it stands right now, main thread only, so it happens
+     *  here. collapseIdentical search tabs always start empty (see refilterSearch — a new SearchTab
+     *  every search), so whatever's tracked in tab.collapseCounts() right now is purely "how many
+     *  arrived live during this one scan" — always small. For each background entry whose text matches
+     *  one of those, fold the live count in and re-render with the combined total; texts live-only
+     *  (never in the background snapshot) stay untracked, same as before. Installs the merged data
+     *  model, then patches just the handful of changed entries' lines into each panel's precomputed
+     *  wrap — same one-entry-touch cost as an ordinary live collapse-repeat, not a rewrap of the tab and
+     *  not a second background job. A panel with no entry in {@code panelLines} became active after the
      *  job was submitted — falls back to a normal (possibly offloaded) rebuild for just that panel. */
     private static void applySearchRefilterResult(SearchTab tab, long generation, SearchRefilterResult r, Map<ChatPanel, List<LzChatLine>> panelLines) {
         if (generation != tab.refilterGeneration()) return;
+
+        Map<String, ChatTab.MessageEntry> liveByText = new HashMap<>();
+        if (tab.collapseIdentical())
+            for (ChatTab.MessageEntry me : tab.messages())
+                if (me.entry().originalContent != null)
+                    liveByText.put(me.entry().originalContent.mc().getString(), me);
+
+        List<ChatTab.MessageEntry> finalEntries = new ArrayList<>(r.entries().size());
+        Map<LzChatEntry, Integer> finalCounts = new HashMap<>(r.collapseCounts());
+        List<SearchMergePatch> patches = new ArrayList<>();
+        for (ChatTab.MessageEntry me : r.entries()) {
+            String text = me.entry().originalContent != null ? me.entry().originalContent.mc().getString() : null;
+            ChatTab.MessageEntry liveEntry = text != null ? liveByText.get(text) : null;
+            if (liveEntry == null) { finalEntries.add(me); continue; }
+
+            int liveCount = tab.collapseCounts().getOrDefault(liveEntry.entry(), 1);
+            int mergedCount = liveCount + finalCounts.getOrDefault(me.entry(), 1);
+            LzText base = tab.showTimestamps()
+                ? stampedText(me.entry().creationTick, me.entry().originalContent, me.entry().indicator)
+                : me.entry().originalContent;
+            LzText rendered = LzText.wrapMc(base.mc().copy().append(LzText.format(" "
+                + MultichatClient.CONFIG.collapseCounterFormat.replace("{count}", String.valueOf(mergedCount))).mc()));
+            ChatTab.MessageEntry mergedEntry = me.newRender(rendered);
+            finalEntries.add(mergedEntry);
+            finalCounts.put(me.entry(), mergedCount);
+            patches.add(new SearchMergePatch(liveEntry, me, mergedEntry));
+        }
+
         tab.clearMessages();
         tab.clearCollapseCounts();
-        for (ChatTab.MessageEntry me : r.entries()) tab.addLast(me); // already newest-first; addLast preserves that order
-        tab.collapseCounts().putAll(r.collapseCounts());
+        for (ChatTab.MessageEntry me : finalEntries) tab.addLast(me); // already newest-first; addLast preserves that order
+        tab.collapseCounts().putAll(finalCounts);
+
         for (ChatPanel panel : getAllActivePanels()) {
             List<LzChatLine> lines = panelLines.get(panel);
-            if (lines != null) panel.applyWrapResult(tab, lines);
-            else panel.rebuildTabLines(tab);
+            if (lines == null) { panel.rebuildTabLines(tab); continue; }
+            if (!patches.isEmpty()) {
+                int width = panel.resolveWidth();
+                boolean primary = panel.primary();
+                for (SearchMergePatch p : patches) {
+                    panel.removeTabEntry(tab, p.liveEntry());
+                    List<LzChatLine> newLines = ChatPanel.buildTabLines(List.of(p.mergedEntry()), width, primary);
+                    lines = replaceEntryLines(lines, p.originalBgEntry().entry(), newLines);
+                }
+            }
+            panel.applyWrapResult(tab, lines);
         }
     }
 
@@ -516,17 +584,21 @@ public class ChatManager {
                 && liveLast.entry().originalContent.mc().equals(result.lastContent().mc())));
 
         List<ChatTab.MessageEntry> toAppend = result.entries();
+        ChatTab.MessageEntry removedSeamEntry = null;
+        ChatTab.MessageEntry mergedEntry       = null;
         if (merge) {
             Integer liveCount = wasOnlyLiveEntry ? Integer.valueOf(cs.repeat()) : parseTrailingCount(liveLast, liveLastText);
             int mergedCount = (liveCount != null ? liveCount : 1) + result.lastRepeat();
-            tab.removeLast(); // the seam-adjacent live entry, folding into the background's matching one
+            removedSeamEntry = liveLast;
             ChatTab.MessageEntry bgFirst = result.entries().get(0);
             LzText raw = bgFirst.entry().originalContent;
             LzText base = tab.showTimestamps()
                 ? stampedText(bgFirst.entry().creationTick, raw, bgFirst.entry().indicator) : raw;
             LzText rendered = LzText.wrapMc(base.mc().copy().append(LzText.format(" "
                 + MultichatClient.CONFIG.collapseCounterFormat.replace("{count}", String.valueOf(mergedCount))).mc()));
-            tab.addLast(bgFirst.newRender(rendered));
+            mergedEntry = bgFirst.newRender(rendered);
+            tab.removeLast(); // the seam-adjacent live entry, folding into the background's matching one
+            tab.addLast(mergedEntry);
             toAppend = result.entries().subList(1, result.entries().size());
             if (wasOnlyLiveEntry) { // the merged run is (still) the tab's own tracked/frontmost run
                 cs.setRepeat(mergedCount);
@@ -542,6 +614,28 @@ public class ChatManager {
 
         for (ChatPanel panel : getAllActivePanels()) {
             List<LzChatLine> lines = panelLines != null ? panelLines.get(panel) : null;
+            if (merge && lines != null) {
+                // Touch exactly ONE entry, same cost as an ordinary live collapse-repeat — not a rebuild
+                // of anything, not the whole tab, not a background job. `lines` was wrapped from the
+                // un-merged result before the seam check ran, so its first entry (bgFirst) still shows
+                // the OLD count — swap just that entry's lines for a fresh wrap of mergedEntry (same
+                // underlying LzChatEntry, new text) before installing. removeTabEntry drops the
+                // seam-adjacent live line still sitting in this panel's own cache (never part of `lines`
+                // to begin with); applyWrapResult then keeps whatever real line is still in front of it
+                // (e.g. an unrelated message that arrived after the seam entry) ahead of the patched
+                // result, exactly like it always does — so the merged entry lands in the right position
+                // whether or not anything interrupted the run.
+                panel.removeTabEntry(tab, removedSeamEntry);
+                int width = panel.resolveWidth();
+                boolean primary = panel.primary();
+                int origFirstLineCount = ChatPanel.buildTabLines(List.of(result.entries().get(0)), width, primary).size();
+                List<LzChatLine> mergedFirstLines = ChatPanel.buildTabLines(List.of(mergedEntry), width, primary);
+                List<LzChatLine> patched = new ArrayList<>(mergedFirstLines.size() + lines.size() - origFirstLineCount);
+                patched.addAll(mergedFirstLines);
+                patched.addAll(lines.subList(origFirstLineCount, lines.size()));
+                panel.applyWrapResult(tab, patched);
+                continue;
+            }
             if (lines != null) panel.applyWrapResult(tab, lines);
             else panel.rebuildTabLines(tab);
         }
