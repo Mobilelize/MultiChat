@@ -21,6 +21,11 @@ public class ChatPanel {
 
     private transient Map<UUID, List<LzChatLine>> tabMessages;
     private transient Map<UUID, List<LzChatLine>> customTabLines;
+    // Bumped every time this panel's line cache for a tab is about to be wholesale-replaced, sync or
+    // background (see showLoadingSkeleton/rebuildTabLines) — the single source of truth both
+    // WrapCoordinator and FilterCoordinator check before installing a background result, so whichever
+    // job started last always wins and an earlier-started one is dropped instead of appending/clobbering.
+    private transient Map<UUID, Long> lineGeneration;
 
     private int     margin             = 0;
     private int activeTabId = 0;
@@ -85,6 +90,31 @@ public class ChatPanel {
     private Map<UUID, List<LzChatLine>> customTabLines() {
         if (customTabLines == null) customTabLines = new HashMap<>();
         return customTabLines;
+    }
+
+    private Map<UUID, Long> lineGeneration() {
+        if (lineGeneration == null) lineGeneration = new HashMap<>();
+        return lineGeneration;
+    }
+
+    /** Current line-cache generation for {@code tab} on this panel — a background job's result is only
+     *  applied if this still matches the value it captured at submit time (see WrapCoordinator,
+     *  ChatManager's PanelWrapSpec/refilterTab/refilterSearch). */
+    long currentLineGeneration(ChatTab tab) {
+        return lineGeneration().getOrDefault(tab.id(), 0L);
+    }
+
+    private long bumpLineGeneration(ChatTab tab) {
+        return lineGeneration().merge(tab.id(), 1L, Long::sum);
+    }
+
+    /** Invalidates any WrapCoordinator job already in flight for {@code tab} on this panel and drops
+     *  its line cache — call this when {@code tab} is being deleted so a result computed before the
+     *  delete doesn't land afterward and write into an orphaned cache entry (see ChatManager's
+     *  matching {@code refilterGeneration} bump on the tab itself for FilterCoordinator jobs). */
+    public void invalidateTabJobs(ChatTab tab) {
+        bumpLineGeneration(tab);
+        clearTabLines(tab);
     }
 
     private Map<ChatTab, Integer> scrollPositions() {
@@ -210,13 +240,16 @@ public class ChatPanel {
         boolean worthOffloading = MultichatClient.CONFIG.optimizedLoadingEnabled
             && tab.messageCount() >= MultichatClient.CONFIG.optimizedLoadingThreshold;
         if (worthOffloading) {
-            showLoadingSkeleton(tab);
+            long generation = showLoadingSkeleton(tab);
             // Snapshot — the background thread must never read tab.messages() live while the main
             // thread keeps mutating it (new messages, evictions) for the duration of the wrap.
             List<ChatTab.MessageEntry> snapshot = new ArrayList<>(tab.messages());
-            WrapCoordinator.submitRebuild(this, tab, snapshot, resolveWidth(), primary);
+            WrapCoordinator.submitRebuild(this, tab, snapshot, resolveWidth(), primary, generation);
         } else {
             tabMessages().put(tab.id(), buildTabLines(tab.messages(), resolveWidth(), primary));
+            // Bump even on the synchronous path so a background job started earlier (now stale) can't
+            // land afterward and clobber this fresh result — see currentLineGeneration.
+            bumpLineGeneration(tab);
         }
         buildCustomRawLines(tab);
     }
@@ -225,12 +258,13 @@ public class ChatPanel {
      *  whatever this tab currently shows on this panel. Shared by the wrap-offload path above and
      *  ChatManager's search/filter refilter offload — anywhere a tab's content is about to be
      *  recomputed off the main thread should show this in the meantime. */
-    void showLoadingSkeleton(ChatTab tab) {
+    long showLoadingSkeleton(ChatTab tab) {
         List<LzChatLine> skeleton = new ArrayList<>();
         int skeletonRows = Math.max(1, resolveLines());
         int now = ChatRenderer.currentTick;
         for (int i = 0; i < skeletonRows; i++) skeleton.add(LzChatLine.createSkeleton(now));
         tabMessages().put(tab.id(), skeleton);
+        return bumpLineGeneration(tab);
     }
 
     /** Installs a finished background rebuild's lines — called by WrapCoordinator via LzClient.send()
@@ -240,6 +274,16 @@ public class ChatPanel {
      *  through a path that doesn't go through WrapCoordinator's live-message handoff (e.g. custom
      *  content) — kept in front of the fresh result rather than discarded, just in case. */
     void applyWrapResult(ChatTab tab, List<LzChatLine> lines) {
+        // The snapshot this result was built from was taken before submission — if a cap-trim (or an
+        // explicit delete) removed entries from tab.messages() while the job was in flight, this result
+        // still contains lines for them. Drop those now instead of letting a stale result resurrect
+        // already-deleted messages; tab.messages() is the live, authoritative set at this exact instant.
+        IdentityHashMap<LzChatEntry, Boolean> stillPresent = new IdentityHashMap<>();
+        for (ChatTab.MessageEntry me : tab.messages()) stillPresent.put(me.entry(), Boolean.TRUE);
+        List<LzChatLine> pruned = new ArrayList<>(lines.size());
+        for (LzChatLine ln : lines) if (ln.entry() == null || stillPresent.containsKey(ln.entry())) pruned.add(ln);
+        lines = pruned;
+
         List<LzChatLine> current = tabMessages().get(tab.id());
         int livePrefix = 0;
         while (current != null && livePrefix < current.size() && !current.get(livePrefix).isSkeleton()) livePrefix++;

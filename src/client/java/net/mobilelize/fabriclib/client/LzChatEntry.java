@@ -13,11 +13,21 @@ public final class LzChatEntry {
     public final int                creationTick;
     public final LzText             originalContent;
     @Nullable public final LzMessageIndicator indicator;
+    /** Whether this message matched a Highlight Words keyword at the moment it was live-routed —
+     *  baked in at construction since a refilter's offline rescan has no live highlight pass to
+     *  redo (recomputing it would re-trigger sounds/revert-action registration). */
+    public final boolean            highlightMatched;
 
     public LzChatEntry(int creationTick, LzText originalContent,
                        @Nullable LzMessageIndicator indicator) {
-        this.creationTick    = creationTick;
-        this.originalContent = originalContent;
-        this.indicator       = indicator;
+        this(creationTick, originalContent, indicator, false);
+    }
+
+    public LzChatEntry(int creationTick, LzText originalContent,
+                       @Nullable LzMessageIndicator indicator, boolean highlightMatched) {
+        this.creationTick     = creationTick;
+        this.originalContent  = originalContent;
+        this.indicator        = indicator;
+        this.highlightMatched = highlightMatched;
     }
 }

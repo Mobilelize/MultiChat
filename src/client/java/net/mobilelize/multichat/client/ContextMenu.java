@@ -317,6 +317,7 @@ public class ContextMenu {
                         }
                     }
                 }
+                ChatManager.invalidateTabJobs(tab);
                 ChatManager.getTabs().remove(tab);
             }
         }

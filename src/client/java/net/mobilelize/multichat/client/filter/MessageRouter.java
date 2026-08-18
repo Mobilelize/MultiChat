@@ -54,17 +54,19 @@ public class MessageRouter {
                 diffByLayer.computeIfAbsent(tab.differenceLayerIndex(), k -> new ArrayList<>()).add(tab);
         }
 
-        final LzChatEntry sharedEntry = new LzChatEntry(tick, rawLzText, indicator);
-        ChatHeadsSupport.attach(sharedEntry, pendingHeadRef);
-        pendingHeadRef = ChatHeadsSupport.HeadRef.NONE;
-
         // Highlight Words applies after filter/routing decisions (which stay based on the untouched
         // originals above) so recoloring a message can never change which tab it lands in. ALL tab
         // renders from `content`, every other tab type renders from `rawLzText` (see ChatManager.processMessage)
         // so both need their own highlighted copy for the highlight to actually show up everywhere.
-        final HighlightEngine.HighlightResult highlighted = HighlightEngine.apply(content, rawLzText, sharedEntry);
+        // Run before sharedEntry exists (its `entry` param is unused) so the match result can be baked
+        // into the entry itself — see LzChatEntry.highlightMatched.
+        final HighlightEngine.HighlightResult highlighted = HighlightEngine.apply(content, rawLzText, null);
         final LzText highlightedContent = highlighted.content;
         final LzText highlightedRaw     = highlighted.raw;
+
+        final LzChatEntry sharedEntry = new LzChatEntry(tick, rawLzText, indicator, highlighted.actionId != null);
+        ChatHeadsSupport.attach(sharedEntry, pendingHeadRef);
+        pendingHeadRef = ChatHeadsSupport.HeadRef.NONE;
 
         // Tabs that actually end up storing this message — recorded so a later Highlight Words
         // revert click only has to touch these tabs instead of scanning every tab in the mod.

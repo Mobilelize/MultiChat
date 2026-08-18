@@ -286,6 +286,7 @@ public class MultiChatCommand {
         if (tab.type() != TabType.FILTERED && tab.type() != TabType.NOTES && tab.type() != TabType.SEARCH && !apiDeletable) {
             feedback(ctx, "Cannot remove tab [" + tab.name() + "]."); return 0;
         }
+        ChatManager.invalidateTabJobs(tab);
         ChatManager.getTabs().remove(tab);
         if (tab.type() == TabType.NOTES && ChatManager.activeNoteTab == tab) {
             ChatManager.activeNoteTab = (NoteTab) ChatManager.getTabs().stream()

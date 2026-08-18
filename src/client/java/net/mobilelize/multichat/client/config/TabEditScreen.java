@@ -67,10 +67,24 @@ public class TabEditScreen {
     }
 
     public static Screen create(Screen parent, ChatTab tab) {
+        // Cloth Config's Save runs every entry's own setSaveConsumer in per-CATEGORY order (verified
+        // against cloth-config-fabric's actual saveAll: it iterates categorizedEntries, a
+        // LinkedHashMap keyed by category-creation order, calling every entry in one category before
+        // the next starts) — never whole-screen add-order. "Settings" is the first category created
+        // on this screen, before Whitelist/Blacklist/Style Whitelist/Style Blacklist, so a
+        // setSaveConsumer on the "Refilter on Save" toggle (which lives in Settings) would always run
+        // before those categories' consumers write their rule edits, no matter where within Settings
+        // it's placed. setSavingRunnable is the one hook Cloth Config calls strictly after every
+        // category's every entry has saved (AbstractConfigScreen.saveAll -> save() -> savingRunnable),
+        // so the refilter is deferred into this closure instead and only fires if the toggle was on.
+        boolean[] refilterOnSave = {false};
         ConfigBuilder builder = ConfigBuilder.create()
             .setParentScreen(parent)
             .setTitle(LzText.literal("Edit Tab: " + tab.name()).mc())
-            .setSavingRunnable(MultichatClient::saveTabsToConfig);
+            .setSavingRunnable(() -> {
+                MultichatClient.saveTabsToConfig();
+                if (refilterOnSave[0]) ChatManager.refilterTab(tab);
+            });
 
         ConfigEntryBuilder eb = builder.entryBuilder();
 
@@ -484,15 +498,13 @@ public class TabEditScreen {
         }));
 
         if (tab.type() == TabType.FILTERED) {
-            // Must be the LAST entry added on this screen: Cloth Config runs every entry's
-            // setSaveConsumer in add-order when Save is clicked, and this one needs to run the
-            // refilter AFTER every whitelist/blacklist/style-rule save-consumer above has already
-            // written its edits to tab.filterRules()/styleRules() — otherwise it scans against the
-            // rules as they were before this save, not the ones just changed.
+            // Just captures the toggle's value — the actual refilter runs from setSavingRunnable
+            // above, after every category (including Whitelist/Blacklist/Style rules below) has
+            // already saved its own edits. See the comment on builder's setSavingRunnable for why.
             settings.addEntry(eb.startBooleanToggle(LzText.literal("Refilter on Save").mc(), false)
                 .setDefaultValue(false)
                 .setTooltip(LzText.literal("Rescan all messages and rebuild this tab on save.").mc())
-                .setSaveConsumer(v -> { if (v) ChatManager.refilterTab(tab); })
+                .setSaveConsumer(v -> refilterOnSave[0] = v)
                 .build());
         }
 

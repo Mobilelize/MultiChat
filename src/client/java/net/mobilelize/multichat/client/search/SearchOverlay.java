@@ -119,6 +119,8 @@ public class SearchOverlay extends LzScreen {
         String name = "Search: " + (query.isEmpty() ? "(all)"
                       : query.length() > 14 ? query.substring(0, 14) + "…" : query);
 
+        for (ChatTab t : ChatManager.getTabs())
+            if (t.type() == net.mobilelize.multichat.client.TabType.SEARCH) ChatManager.invalidateTabJobs(t);
         ChatManager.getTabs().removeIf(t -> t.type() == net.mobilelize.multichat.client.TabType.SEARCH);
 
         java.util.Set<Integer> allPanelIds = new java.util.LinkedHashSet<>();

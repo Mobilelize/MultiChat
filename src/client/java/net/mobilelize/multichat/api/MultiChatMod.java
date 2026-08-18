@@ -84,6 +84,7 @@ public class MultiChatMod {
     public void unregisterTab(String name) {
         TabHandle handle = handles.remove(name);
         if (handle == null) return;
+        ChatManager.invalidateTabJobs(handle.getTab());
         ChatManager.getTabs().remove(handle.getTab());
         MultichatClient.saveTabsToConfig();
         handle.fireRemoved();

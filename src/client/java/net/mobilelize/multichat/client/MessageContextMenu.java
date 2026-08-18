@@ -221,19 +221,26 @@ public class MessageContextMenu {
         }
         if (idx < 0) return;
 
-        java.util.Map<ChatPanel, Integer> preSizes = new java.util.HashMap<>();
+        // Count the deleted entry's own visual line-span per panel BEFORE rebuilding — rebuildTabLines
+        // can offload to a background rewrap on large tabs and return immediately with a loading
+        // skeleton in place, so comparing before/after cache sizes right after calling it would measure
+        // the skeleton's row count instead of the real number of lines removed. The deleted entry's own
+        // line count is knowable synchronously and doesn't change across the rebuild.
+        java.util.Map<ChatPanel, Integer> removedCounts = new java.util.HashMap<>();
         for (ChatPanel p : ChatManager.getAllPanels()) {
-            if (p.getScrolledLines(active) > 0)
-                { List<LzChatLine> _l = p.getTabLines(active); preSizes.put(p, _l != null ? _l.size() : 0); }
+            if (p.getScrolledLines(active) <= 0) continue;
+            List<LzChatLine> _l = p.getTabLines(active);
+            int count = 0;
+            if (_l != null) for (LzChatLine ln : _l) if (ln.entry() == targetEntry) count++;
+            removedCounts.put(p, count);
         }
         messages.remove(idx);
         for (ChatPanel p : ChatManager.getAllActivePanels()) p.rebuildTabLines(active);
-        for (ChatPanel p : ChatManager.getAllPanels()) {
+        for (java.util.Map.Entry<ChatPanel, Integer> e : removedCounts.entrySet()) {
+            ChatPanel p = e.getKey();
+            int removed = e.getValue();
             int scrolled = p.getScrolledLines(active);
-            if (scrolled <= 0 || !preSizes.containsKey(p)) continue;
-            List<LzChatLine> _l = p.getTabLines(active);
-            int removed = preSizes.get(p) - (_l != null ? _l.size() : 0);
-            if (removed > 0) p.setScrolledLines(active, Math.max(0, scrolled - removed));
+            if (removed > 0 && scrolled > 0) p.setScrolledLines(active, Math.max(0, scrolled - removed));
         }
         ChatSelection.clampOrClear(active);
     }

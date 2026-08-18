@@ -137,6 +137,13 @@ public class ChatManager {
     /** Trims the oldest messages off {@code tab} until it's back at {@code cap}, removing the same
      *  entries from every active panel's line cache and fixing up scroll offsets. Shared by the
      *  immediate and batched paths in addNewMessage, and by tickPendingTrims's debounce trim. */
+    // Guards trimFeedbackEnabled's own chat message from re-triggering itself: that message routes
+    // back through the normal chat pipeline (ChatHudMixin -> MessageRouter -> addNewMessage), which
+    // can push the same tab over its cap again and call trimTabToCap right back from inside this
+    // method's own call stack. Suppressing the feedback send (not the trim itself) while one is
+    // already in flight breaks the cycle after one message instead of recursing forever.
+    private static boolean sendingTrimFeedback = false;
+
     private static void trimTabToCap(ChatTab tab, int cap) {
         long startNanos = System.nanoTime();
         IdentityHashMap<LzChatEntry, Boolean> toRemove = new IdentityHashMap<>();
@@ -174,11 +181,16 @@ public class ChatManager {
         // direct tab insert) so it's filterable like any other message. Gated on trimFeedbackEnabled,
         // separate from debugCommandsEnabled, since this isn't something a regular user needs spammed
         // on every trim.
-        if (MultichatClient.CONFIG.trimFeedbackEnabled && LzChat.chatHud() != null) {
+        if (MultichatClient.CONFIG.trimFeedbackEnabled && !sendingTrimFeedback && LzChat.chatHud() != null) {
             double elapsedMs = (System.nanoTime() - startNanos) / 1_000_000.0;
             LzText msg = LzText.literal(String.format("[MultiChat-Trim] Deleted %d message(s) from '%s' in %.2fms",
                 toRemove.size(), tab.name(), elapsedMs));
-            LzChat.chatHud().addMessage(msg.mc(), null, null);
+            sendingTrimFeedback = true;
+            try {
+                LzChat.chatHud().addMessage(msg.mc(), null, null);
+            } finally {
+                sendingTrimFeedback = false;
+            }
         }
     }
 
@@ -236,12 +248,13 @@ public class ChatManager {
     private record RefilterConfig(boolean stripObjectContent, boolean normalizeFilterText,
                                    String collapseCounterFormat, boolean showTimestamps, int messageCap,
                                    boolean collapseRepeating, boolean collapseMatchFormatting,
+                                   boolean forceHighlightMatches,
                                    TabRuleSnapshot ownRules, @Nullable TabRuleSnapshot parentGateRules,
                                    List<TabRuleSnapshot> higherDiffRules) {
         static RefilterConfig snapshot(ChatTab tab, @Nullable ChatTab parentGate, List<ChatTab> higherDiffTabs) {
             return new RefilterConfig(MultichatClient.CONFIG.stripObjectContent, MultichatClient.CONFIG.normalizeFilterText,
                 MultichatClient.CONFIG.collapseCounterFormat, tab.showTimestamps(), tab.messageCap(),
-                tab.collapseRepeating(), tab.collapseMatchFormatting(),
+                tab.collapseRepeating(), tab.collapseMatchFormatting(), tab.forceHighlightMatches(),
                 TabRuleSnapshot.of(tab),
                 parentGate != null ? TabRuleSnapshot.of(parentGate) : null,
                 higherDiffTabs.stream().map(TabRuleSnapshot::of).toList());
@@ -257,9 +270,13 @@ public class ChatManager {
      *  every other "snapshot inputs" spot in this file. Lets the background job build each active
      *  panel's finished lines itself instead of the main thread having to bounce out to a second
      *  background job (WrapCoordinator) afterward — see refilterSearch/refilterTab. */
-    private record PanelWrapSpec(ChatPanel panel, int width, boolean primary) {
-        static List<PanelWrapSpec> snapshot(List<ChatPanel> panels) {
-            return panels.stream().map(p -> new PanelWrapSpec(p, p.resolveWidth(), p.primary())).toList();
+    /** {@code lineGeneration} is captured from {@code panel.showLoadingSkeleton(tab)} — the same
+     *  counter WrapCoordinator checks before applying a rewrap — so a refilter superseded by an
+     *  unrelated background rewrap (or a second refilter) started on the same panel/tab before this
+     *  one lands is recognized as stale and dropped instead of appending onto newer content. */
+    private record PanelWrapSpec(ChatPanel panel, int width, boolean primary, long lineGeneration) {
+        static List<PanelWrapSpec> snapshot(ChatTab tab, List<ChatPanel> panels) {
+            return panels.stream().map(p -> new PanelWrapSpec(p, p.resolveWidth(), p.primary(), p.showLoadingSkeleton(tab))).toList();
         }
     }
 
@@ -296,14 +313,16 @@ public class ChatManager {
         // refilter — not a filter job followed by a second, separate wrap job (which used to re-show
         // the skeleton and leave a window where tab.messages() had already moved on but nothing on
         // screen reflected it — results flashing in and then vanishing).
-        for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
-        List<PanelWrapSpec> panelSpecs = PanelWrapSpec.snapshot(getAllActivePanels());
+        List<PanelWrapSpec> panelSpecs = PanelWrapSpec.snapshot(tab, getAllActivePanels());
         FilterCoordinator.submit(tab, generation, () -> {
             SearchRefilterResult r = computeSearchRefilter(tab, snapshot, collapseIdentical, sourceRules, cfg);
             Map<ChatPanel, List<LzChatLine>> panelLines = new HashMap<>();
-            for (PanelWrapSpec spec : panelSpecs)
+            Map<ChatPanel, Long> panelGenerations = new HashMap<>();
+            for (PanelWrapSpec spec : panelSpecs) {
                 panelLines.put(spec.panel(), ChatPanel.buildTabLines(r.entries(), spec.width(), spec.primary()));
-            return () -> applySearchRefilterResult(tab, generation, r, panelLines);
+                panelGenerations.put(spec.panel(), spec.lineGeneration());
+            }
+            return () -> applySearchRefilterResult(tab, generation, r, panelLines, panelGenerations);
         });
     }
 
@@ -429,7 +448,9 @@ public class ChatManager {
      *  scan preserves them once the matched ones are removed. A panel with no entry in {@code panelLines}
      *  became active after the job was submitted — falls back to a normal (possibly offloaded) rebuild
      *  for just that panel. */
-    private static void applySearchRefilterResult(SearchTab tab, long generation, SearchRefilterResult r, Map<ChatPanel, List<LzChatLine>> panelLines) {
+    private static void applySearchRefilterResult(SearchTab tab, long generation, SearchRefilterResult r,
+                                                    Map<ChatPanel, List<LzChatLine>> panelLines,
+                                                    Map<ChatPanel, Long> panelGenerations) {
         if (generation != tab.refilterGeneration()) return;
 
         Map<String, ChatTab.MessageEntry> liveByText = new HashMap<>();
@@ -493,6 +514,11 @@ public class ChatManager {
         for (ChatPanel panel : getAllActivePanels()) {
             List<LzChatLine> lines = panelLines.get(panel);
             if (lines == null) { panel.rebuildTabLines(tab); continue; }
+            // A different background job already bumped this panel's line-cache generation since this
+            // one was submitted — drop this stale result instead of duplicating/clobbering (see
+            // applyFilterTabResult's identical guard / applyWrapResult).
+            Long expected = panelGenerations.get(panel);
+            if (expected != null && panel.currentLineGeneration(tab) != expected) continue;
             if (!patches.isEmpty()) {
                 int width = panel.resolveWidth();
                 boolean primary = panel.primary();
@@ -527,7 +553,7 @@ public class ChatManager {
 
         ChatTab allTab = tabs.stream().filter(t -> t.type() == TabType.ALL).findFirst().orElse(null);
         if (allTab == null || !allTab.hasMessages()) {
-            applyFilterTabResult(tab, generation, new FilterTabResult(List.of(), null, null, 0, 0), null);
+            applyFilterTabResult(tab, generation, new FilterTabResult(List.of(), null, null, 0, 0), null, null);
             return;
         }
 
@@ -547,21 +573,23 @@ public class ChatManager {
             && snapshot.size() >= MultichatClient.CONFIG.optimizedRefilterThreshold;
 
         if (!worthOffloading) {
-            applyFilterTabResult(tab, generation, computeFilterTab(snapshot, effectiveDiff, cfg), null);
+            applyFilterTabResult(tab, generation, computeFilterTab(snapshot, effectiveDiff, cfg), null, null);
             return;
         }
 
         // Same reasoning as refilterSearch's offloaded path — fold filtering AND every active panel's
         // line-wrap into one background job, so there's one skeleton and one main-thread callback
         // instead of a filter job bouncing to the main thread only to kick off a second, separate wrap.
-        for (ChatPanel panel : getAllActivePanels()) panel.showLoadingSkeleton(tab);
-        List<PanelWrapSpec> panelSpecs = PanelWrapSpec.snapshot(getAllActivePanels());
+        List<PanelWrapSpec> panelSpecs = PanelWrapSpec.snapshot(tab, getAllActivePanels());
         FilterCoordinator.submit(tab, generation, () -> {
             FilterTabResult result = computeFilterTab(snapshot, effectiveDiff, cfg);
             Map<ChatPanel, List<LzChatLine>> panelLines = new HashMap<>();
-            for (PanelWrapSpec spec : panelSpecs)
+            Map<ChatPanel, Long> panelGenerations = new HashMap<>();
+            for (PanelWrapSpec spec : panelSpecs) {
                 panelLines.put(spec.panel(), ChatPanel.buildTabLines(result.entries(), spec.width(), spec.primary()));
-            return () -> applyFilterTabResult(tab, generation, result, panelLines);
+                panelGenerations.put(spec.panel(), spec.lineGeneration());
+            }
+            return () -> applyFilterTabResult(tab, generation, result, panelLines, panelGenerations);
         });
     }
 
@@ -596,10 +624,14 @@ public class ChatManager {
                 ? FilterRule.normalizeFilterText(objText) : objText;
             LzMessageIndicator indicator = src.entry().indicator;
 
-            boolean include = effectiveDiff
+            // Mirrors MessageRouter's FILTERED case: a diff-mode tab without its exception never gets
+            // live messages through this simple bypass at all (it's driven by the diff branch below
+            // instead), so the bypass only applies to the plain, non-diff match check — same as live.
+            boolean forcedByHighlight = !effectiveDiff && cfg.forceHighlightMatches() && src.entry().highlightMatched;
+            boolean include = forcedByHighlight ? true : (effectiveDiff
                 ? cfg.higherDiffRules().stream().noneMatch(r -> r.matches(filterText, indicator, raw))
                   && cfg.ownRules().matches(filterText, indicator, raw)
-                : cfg.ownRules().matches(filterText, indicator, raw);
+                : cfg.ownRules().matches(filterText, indicator, raw));
             if (include && cfg.parentGateRules() != null && !cfg.parentGateRules().matches(filterText, indicator, raw))
                 include = false;
             if (!include) continue;
@@ -688,7 +720,9 @@ public class ChatManager {
      *     instead of shown as two.
      *  3. The seam-adjacent live entry is a different message — already correct and newer than the
      *     background result, left alone. */
-    private static void applyFilterTabResult(ChatTab tab, long generation, FilterTabResult result, @Nullable Map<ChatPanel, List<LzChatLine>> panelLines) {
+    private static void applyFilterTabResult(ChatTab tab, long generation, FilterTabResult result,
+                                              @Nullable Map<ChatPanel, List<LzChatLine>> panelLines,
+                                              @Nullable Map<ChatPanel, Long> panelGenerations) {
         if (generation != tab.refilterGeneration()) return;
         ChatTab.CollapseState cs = tab.collapseState();
 
@@ -733,6 +767,14 @@ public class ChatManager {
 
         for (ChatPanel panel : getAllActivePanels()) {
             List<LzChatLine> lines = panelLines != null ? panelLines.get(panel) : null;
+            if (lines != null && panelGenerations != null) {
+                // A different background job (this coordinator's own or WrapCoordinator's) already
+                // bumped this panel's line-cache generation since this one was submitted — it either
+                // already landed newer content or is about to; either way this result is stale, so
+                // drop it instead of duplicating/clobbering whatever's current (see applyWrapResult).
+                Long expected = panelGenerations.get(panel);
+                if (expected != null && panel.currentLineGeneration(tab) != expected) continue;
+            }
             if (merge && lines != null) {
                 // Touch exactly ONE entry, same cost as an ordinary live collapse-repeat — not a rebuild
                 // of anything, not the whole tab, not a background job. `lines` was wrapped from the
@@ -934,6 +976,16 @@ public class ChatManager {
     public static List<ChatPanel> getAllPanels() { return panels; }
     public static List<ChatTab>   getTabs()      { return tabs; }
 
+    /** Invalidates any WrapCoordinator/FilterCoordinator job already in flight for {@code tab} (and its
+     *  sub-tabs, if it's a multi-tab) — call this right before deleting a tab so a background result
+     *  computed against it doesn't land afterward and write into an orphaned line cache (nothing else
+     *  cancels those jobs; the tab's removal from the tab list alone doesn't touch them). */
+    public static void invalidateTabJobs(ChatTab tab) {
+        tab.bumpRefilterGeneration();
+        for (ChatPanel panel : panels) panel.invalidateTabJobs(tab);
+        if (tab.isMultiTab()) for (ChatTab sub : tab.subTabs()) invalidateTabJobs(sub);
+    }
+
     /** The multi-tab that owns the given sub-tab, or null if it isn't anyone's sub (including if it's
      *  a regular top-level tab). Sub-tabs aren't in the global tabs list, so this is the only way to
      *  find "who owns this" — used for sibling-scoped name clashes and gate-aware refiltering. */
@@ -1012,21 +1064,26 @@ public class ChatManager {
             }
             if (idx < 0) continue;
 
-            Map<ChatPanel, Integer> preSizes = new HashMap<>();
+            // Count the deleted entry's own visual line-span per panel BEFORE rebuilding — rebuildTabLines
+            // can offload to a background rewrap on large tabs and return immediately with a loading
+            // skeleton in place, so comparing before/after cache sizes right after calling it would
+            // measure the skeleton's row count instead of the real number of lines removed. The deleted
+            // entry's own line count is knowable synchronously and doesn't change across the rebuild.
+            Map<ChatPanel, Integer> removedCounts = new HashMap<>();
             for (ChatPanel p : getAllPanels()) {
-                if (p.getScrolledLines(tab) > 0) {
-                    List<LzChatLine> l = p.getTabLines(tab);
-                    preSizes.put(p, l != null ? l.size() : 0);
-                }
+                if (p.getScrolledLines(tab) <= 0) continue;
+                List<LzChatLine> l = p.getTabLines(tab);
+                int count = 0;
+                if (l != null) for (LzChatLine ln : l) if (ln.entry() == targetEntry) count++;
+                removedCounts.put(p, count);
             }
             messages.remove(idx);
             for (ChatPanel p : getAllActivePanels()) p.rebuildTabLines(tab);
-            for (ChatPanel p : getAllPanels()) {
+            for (Map.Entry<ChatPanel, Integer> e : removedCounts.entrySet()) {
+                ChatPanel p = e.getKey();
+                int removed = e.getValue();
                 int scrolled = p.getScrolledLines(tab);
-                if (scrolled <= 0 || !preSizes.containsKey(p)) continue;
-                List<LzChatLine> l = p.getTabLines(tab);
-                int removed = preSizes.get(p) - (l != null ? l.size() : 0);
-                if (removed > 0) p.setScrolledLines(tab, Math.max(0, scrolled - removed));
+                if (removed > 0 && scrolled > 0) p.setScrolledLines(tab, Math.max(0, scrolled - removed));
             }
             ChatSelection.clampOrClear(tab);
         }

@@ -564,6 +564,7 @@ public class TabListScreen extends ConfigScreen {
         if (idx == selectedIdx) selectedIdx = -1;
         else if (idx < selectedIdx) selectedIdx--;
         swapPending = false;
+        ChatManager.invalidateTabJobs(tab);
         ChatManager.getTabs().remove(tab);
         if (tab.type() == TabType.NOTES) {
             if (ChatManager.activeNoteTab == tab) {

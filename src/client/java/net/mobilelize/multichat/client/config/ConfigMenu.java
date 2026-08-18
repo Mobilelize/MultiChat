@@ -494,7 +494,7 @@ public class ConfigMenu {
                 .setDefaultValue(100000)
                 .setMin(-1)
                 .setTooltip(LzText.literal("Maximum number of messages kept in the All tab. Once it's exceeded, " +
-                        "the oldest messages are deleted to make room for new ones. -1 = unlimited.").mc())
+                        "the oldest messages are deleted to make room for new ones. -1 or 0 = unlimited.").mc())
                 .setSaveConsumer(v -> MultichatClient.CONFIG.globalMessageCap = Math.max(-1, v))
                 .build());
 
