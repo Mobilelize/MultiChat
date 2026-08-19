@@ -195,7 +195,10 @@ public class HelpScreen {
                           &fAPI Words&r&7 — keywords other installed mods have registered (read-only list, shown
                             for visibility). Mute all of them at once with the &fEnable API Words&r&7 toggle.
                         Hover a highlighted message to see which keyword(s) matched. Click it to revert that one
-                        message back to its original formatting."""
+                        message back to its original formatting.
+                          &fPlay Sound on Match&r&7 — optional sound (own volume/pitch) on every match.
+                          &fHighlight Sound Cooldown&r&7 — minimum seconds between sound plays, so a burst of
+                            matching messages can't spam it. 0 = no cooldown."""
         ).mc()).build());
 
         help.addEntry(eb.startTextDescription(LzText.format(
