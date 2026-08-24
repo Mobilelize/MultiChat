@@ -206,14 +206,15 @@ public final class HighlightEngine {
                 LzText rendered = tab.showTimestamps()
                     ? ChatManager.stampedText(data.entry().creationTick, base, data.entry().indicator)
                     : base;
-                msgs.set(i, new ChatTab.MessageEntry(rendered, data.originalContent(), data.entry()));
+                ChatTab.MessageEntry reverted = new ChatTab.MessageEntry(rendered, data.originalContent(), data.entry());
+                msgs.set(i, reverted);
+                // Re-wrap just this one entry in each panel's cache instead of rebuildTabLines — a full
+                // rebuild would offload to a background rewrap and skeleton-flash the whole tab on large
+                // tabs, just to swap one message's formatting back.
+                for (ChatPanel panel : ChatManager.getAllActivePanels()) panel.replaceTabEntry(tab, reverted);
                 break; // identity is unique within a tab's message list — no need to keep scanning
             }
         }
-
-        for (ChatPanel panel : ChatManager.getAllActivePanels())
-            for (ChatTab tab : data.touchedTabs())
-                panel.rebuildTabLines(tab);
     }
 
     /** Your Exceptions, API Exceptions, and mod-registered exceptions are separate lists purely for

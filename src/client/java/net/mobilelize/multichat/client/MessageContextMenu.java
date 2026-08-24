@@ -221,11 +221,8 @@ public class MessageContextMenu {
         }
         if (idx < 0) return;
 
-        // Count the deleted entry's own visual line-span per panel BEFORE rebuilding — rebuildTabLines
-        // can offload to a background rewrap on large tabs and return immediately with a loading
-        // skeleton in place, so comparing before/after cache sizes right after calling it would measure
-        // the skeleton's row count instead of the real number of lines removed. The deleted entry's own
-        // line count is knowable synchronously and doesn't change across the rebuild.
+        // Count the deleted entry's own visual line-span per panel BEFORE removing it from the
+        // per-panel line caches below, since that's the only place the count is still knowable.
         java.util.Map<ChatPanel, Integer> removedCounts = new java.util.HashMap<>();
         for (ChatPanel p : ChatManager.getAllPanels()) {
             if (p.getScrolledLines(active) <= 0) continue;
@@ -234,8 +231,12 @@ public class MessageContextMenu {
             if (_l != null) for (LzChatLine ln : _l) if (ln.entry() == targetEntry) count++;
             removedCounts.put(p, count);
         }
+        ChatTab.MessageEntry removedEntry = messages.get(idx);
         messages.remove(idx);
-        for (ChatPanel p : ChatManager.getAllActivePanels()) p.rebuildTabLines(active);
+        // Surgically drop just this entry's lines from each panel's cache instead of going through
+        // rebuildTabLines — a full rebuild would offload to a background rewrap and flash a loading
+        // skeleton over the whole tab on large tabs, just to remove one message.
+        for (ChatPanel p : ChatManager.getAllActivePanels()) p.removeTabEntry(active, removedEntry);
         for (java.util.Map.Entry<ChatPanel, Integer> e : removedCounts.entrySet()) {
             ChatPanel p = e.getKey();
             int removed = e.getValue();

@@ -228,6 +228,23 @@ public class ChatPanel {
         if (panelLines != null) panelLines.removeIf(line -> line.entry() == entry.entry());
     }
 
+    /** Re-wraps a single already-cached entry in place (same identity, new rendered text — e.g. a
+     *  highlight revert) without touching any other entry's lines. Swaps its existing lines for
+     *  freshly-built ones at the same position instead of routing through rebuildTabLines, which
+     *  would rewrap (and, above the offload threshold, skeleton-flash) the whole tab for a one-entry
+     *  formatting change. */
+    public void replaceTabEntry(ChatTab tab, ChatTab.MessageEntry newEntry) {
+        List<LzChatLine> panelLines = tabMessages().get(tab.id());
+        if (panelLines == null) return;
+        int insertAt = -1;
+        for (int i = 0; i < panelLines.size(); i++) {
+            if (panelLines.get(i).entry() == newEntry.entry()) { insertAt = i; break; }
+        }
+        if (insertAt < 0) return;
+        panelLines.removeIf(line -> line.entry() == newEntry.entry());
+        panelLines.addAll(insertAt, buildEntryLines(newEntry, computeEntryWidth(newEntry, resolveWidth(), primary)));
+    }
+
     public void clearTabLines(ChatTab tab) {
         tabMessages().remove(tab.id());
     }
