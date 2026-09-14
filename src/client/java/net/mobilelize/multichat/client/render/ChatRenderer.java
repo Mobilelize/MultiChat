@@ -363,10 +363,16 @@ public class ChatRenderer {
                     // Whole tab is wrapping on a background thread (see WrapCoordinator) — draw a
                     // plain loading bar instead of real text. Width is a deterministic pseudo-random
                     // spread (keyed off the row) so a block of placeholders doesn't read as one
-                    // solid rectangle.
+                    // solid rectangle. Alpha pulses (wall-clock, not tick, so it stays smooth
+                    // regardless of tick rate/freeze) with the phase offset keyed off row.s() itself
+                    // (row order, NOT the scrambled width-seed) — that's what makes it travel down
+                    // the rows in sequence like one wave/snake instead of each row pulsing on its own
+                    // unrelated schedule, which read as noise rather than motion.
                     int seed = row.s() * 0x9E3779B1;
                     int barW = 30 + Math.floorMod(seed, Math.max(1, chatWidth - 40));
-                    int barAlpha = (int)(textAlpha * 0.35);
+                    double phase = (System.currentTimeMillis() % 1500) / 1500.0 * (Math.PI * 2) + row.s() * 0.4;
+                    double pulse = 0.75 + 0.25 * Math.sin(phase);
+                    int barAlpha = (int)(textAlpha * 0.35 * pulse);
                     if (barAlpha > 2)
                         LzDraw.fill(context, 0, textY, barW, textY + 8, (barAlpha << 24) | (theme.messageTextRgb & 0xFFFFFF));
                     continue;
