@@ -108,6 +108,20 @@ public class ChatPanel {
         return lineGeneration().merge(tab.id(), 1L, Long::sum);
     }
 
+    // Tracks the last tick a synchronous (under-threshold) rebuild ran for a tab. Render-frame-driven
+    // callers (a slider drag fires every frame, not every tick) can land several ticks apart, so a
+    // same-tick-only check would miss most of a drag — instead this is a rolling debounce: any call
+    // within REBUILD_BURST_WINDOW_TICKS of the previous one counts as "still bursting" and restarts
+    // the window, routing through WrapCoordinator instead of paying full main-thread cost again. Once
+    // a gap longer than the window passes with no calls, the burst is over and the next call is cheap
+    // sync again, same as before a burst ever started.
+    private static final int REBUILD_BURST_WINDOW_TICKS = 20;
+    private transient Map<UUID, Integer> lastRebuildTick;
+    private Map<UUID, Integer> lastRebuildTick() {
+        if (lastRebuildTick == null) lastRebuildTick = new HashMap<>();
+        return lastRebuildTick;
+    }
+
     /** Invalidates any WrapCoordinator job already in flight for {@code tab} on this panel and drops
      *  its line cache — call this when {@code tab} is being deleted so a result computed before the
      *  delete doesn't land afterward and write into an orphaned cache entry (see ChatManager's
@@ -142,6 +156,8 @@ public class ChatPanel {
     }
 
     public boolean isExpanded() { return expandedParent != null; }
+
+    public ChatTab expandedParent() { return expandedParent; }
 
     /** Called once after loading from disk: expandedParent is transient and always null at this point,
      *  but activeTabId may still hold a raw sub-list index left over from before the client closed —
@@ -254,8 +270,13 @@ public class ChatPanel {
      *  threshold ("Optimized Loading"). Single entry point: every caller (settings/scale/width
      *  changes, refilter, delete, popout) goes through here. */
     public void rebuildTabLines(ChatTab tab) {
+        int nowTick = ChatRenderer.currentTick;
+        Integer lastTick = lastRebuildTick().get(tab.id());
+        boolean inBurst = lastTick != null && (nowTick - lastTick) <= REBUILD_BURST_WINDOW_TICKS;
+        lastRebuildTick().put(tab.id(), nowTick);
+
         boolean worthOffloading = MultichatClient.CONFIG.optimizedLoadingEnabled
-            && tab.messageCount() >= MultichatClient.CONFIG.optimizedLoadingThreshold;
+            && (tab.messageCount() >= MultichatClient.CONFIG.optimizedLoadingThreshold || inBurst);
         if (worthOffloading) {
             long generation = showLoadingSkeleton(tab);
             // Snapshot — the background thread must never read tab.messages() live while the main
@@ -263,12 +284,20 @@ public class ChatPanel {
             List<ChatTab.MessageEntry> snapshot = new ArrayList<>(tab.messages());
             WrapCoordinator.submitRebuild(this, tab, snapshot, resolveWidth(), primary, generation);
         } else {
-            tabMessages().put(tab.id(), buildTabLines(tab.messages(), resolveWidth(), primary));
-            // Bump even on the synchronous path so a background job started earlier (now stale) can't
-            // land afterward and clobber this fresh result — see currentLineGeneration.
-            bumpLineGeneration(tab);
+            forceSyncRebuild(tab);
         }
         buildCustomRawLines(tab);
+    }
+
+    /** Same work as rebuildTabLines's non-offloaded branch, forced — used by the stuck-skeleton
+     *  watchdog (ChatManager.tickSkeletonWatchdog) to guarantee a recovery attempt can't strand a
+     *  second time on the same background-thread failure mode (WrapCoordinator's job silently
+     *  hanging/erroring never routes back through here). */
+    void forceSyncRebuild(ChatTab tab) {
+        tabMessages().put(tab.id(), buildTabLines(tab.messages(), resolveWidth(), primary));
+        // Bump even on the synchronous path so a background job started earlier (now stale) can't
+        // land afterward and clobber this fresh result — see currentLineGeneration.
+        bumpLineGeneration(tab);
     }
 
     /** Installs a generic skeleton block (sized to the panel's own visible area) in place of

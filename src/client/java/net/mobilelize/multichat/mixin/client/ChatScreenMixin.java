@@ -400,7 +400,7 @@ public abstract class ChatScreenMixin {
 
             if (button == 0) {
                 if (hasLeft) {
-                    double leftArrowEnd = (ChatRenderer.ARROW_W + xOffset) * (double) scale;
+                    double leftArrowEnd = (backW + ChatRenderer.ARROW_W + xOffset) * (double) scale;
                     if (mouseX < leftArrowEnd) {
                         panel.setTabScrollOffset(Math.max(0, panel.tabScrollOffset() - 1));
                         cir.setReturnValue(true);

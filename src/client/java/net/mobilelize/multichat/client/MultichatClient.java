@@ -57,6 +57,7 @@ public class MultichatClient implements ClientModInitializer {
             if (ChatHeadsSupport.pollRenderPositionChanged()) ChatManager.resetForRefresh();
 
             ChatManager.tickPendingTrims(LzChat.ticks());
+            ChatManager.tickSkeletonWatchdog(LzChat.ticks());
         });
 
         MessageAddedToTabCallback.EVENT.register((tab, message) -> PingPlayer.playForTab(tab));

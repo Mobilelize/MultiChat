@@ -214,6 +214,41 @@ public class ChatManager {
         }
     }
 
+    // ── Stuck-skeleton watchdog ───────────────────────────────────────────────
+    // Backstop for WrapCoordinator/FilterCoordinator's background-handback shape: a job that never
+    // reports back (silent hang, or a Throwable that's already logged-and-dropped) strands a tab on
+    // its loading skeleton forever with nothing to re-trigger it. Doesn't try to catch every possible
+    // cause — just watches the observable symptom (a tab's cached lines being ALL skeleton rows for
+    // way longer than any real rebuild should take) and forces a synchronous recovery rebuild. Weak so
+    // a deleted tab doesn't keep debounce state alive, same as pendingTrim above.
+    private static final Map<ChatTab, Integer> skeletonSince = new WeakHashMap<>();
+    private static final int SKELETON_WATCHDOG_TICKS = 200; // ~10s — generous vs. any real rebuild
+
+    public static void tickSkeletonWatchdog(int currentTick) {
+        for (ChatPanel panel : getAllActivePanels()) {
+            for (ChatTab tab : getTabs()) {
+                checkSkeletonWatchdog(panel, tab, currentTick);
+                if (tab.isMultiTab()) for (ChatTab sub : tab.subTabs()) checkSkeletonWatchdog(panel, sub, currentTick);
+            }
+        }
+    }
+
+    private static void checkSkeletonWatchdog(ChatPanel panel, ChatTab tab, int currentTick) {
+        List<LzChatLine> lines = panel.getTabLines(tab);
+        boolean allSkeleton = lines != null && !lines.isEmpty() && lines.stream().allMatch(LzChatLine::isSkeleton);
+        if (!allSkeleton) { skeletonSince.remove(tab); return; } // real content landed — nothing to track
+        int since = skeletonSince.computeIfAbsent(tab, t -> currentTick);
+        if (currentTick - since >= SKELETON_WATCHDOG_TICKS) {
+            MultichatClient.LOGGER.warn("MultiChat: tab '{}' stuck on loading skeleton for {}+ ticks — forcing recovery rebuild", tab.name(), SKELETON_WATCHDOG_TICKS);
+            skeletonSince.remove(tab);
+            try {
+                panel.forceSyncRebuild(tab);
+            } catch (Throwable t) {
+                MultichatClient.LOGGER.warn("MultiChat: forced recovery rebuild for tab '{}' also failed", tab.name(), t);
+            }
+        }
+    }
+
     // ------------------------------------------------------------------
     // Refilter
     // ------------------------------------------------------------------
@@ -557,7 +592,7 @@ public class ChatManager {
             return;
         }
 
-        boolean effectiveDiff = tab.differenceMode() && !tab.differenceException();
+        boolean effectiveDiff = parentGate == null && tab.differenceMode() && !tab.differenceException();
         List<ChatTab> higherDiffTabs = effectiveDiff
             ? tabs.stream()
                 .filter(t -> t != tab && t.type() == TabType.FILTERED
@@ -942,6 +977,7 @@ public class ChatManager {
     public static boolean isTabActiveInAnyPanel(ChatTab tab) {
         for (ChatPanel panel : getAllActivePanels()) {
             if (panel.getActiveTab() == tab) return true;
+            if (panel.expandedParent() == tab) return true; // drilled into tab's own sub-tabs still counts as "on it"
         }
         return false;
     }

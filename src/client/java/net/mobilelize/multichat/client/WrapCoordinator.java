@@ -53,8 +53,12 @@ public final class WrapCoordinator {
             List<LzChatLine> lines;
             try {
                 lines = ChatPanel.buildTabLines(snapshot, baseWidth, isPrimary);
-            } catch (Exception e) {
-                MultichatClient.LOGGER.warn("MultiChat: background wrap job failed", e);
+            } catch (Throwable t) {
+                // Throwable, not Exception: an Error here (e.g. from a resource-reload race with
+                // vanilla's font/glyph state, which this thread reads via LzChat.breakLines with no
+                // synchronization) must still be caught and logged, not silently kill this one job
+                // and leave the tab's skeleton stuck forever with no trace of why.
+                MultichatClient.LOGGER.warn("MultiChat: background wrap job failed", t);
                 return;
             }
 

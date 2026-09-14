@@ -368,7 +368,7 @@ public class TabEditScreen {
                 .build());
 
         // ── Difference Mode ────────────────────────────────────────────────
-        if (tab.type() == TabType.FILTERED) {
+        if (tab.type() == TabType.FILTERED && ChatManager.findParentOf(tab) == null) {
             ConfigCategory diffCat = builder.getOrCreateCategory(LzText.literal("Difference Mode").mc());
 
             diffCat.addEntry(eb.startBooleanToggle(LzText.literal("Difference Mode").mc(), tab.differenceMode())
