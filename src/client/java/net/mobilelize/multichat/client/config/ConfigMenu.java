@@ -1,12 +1,12 @@
 package net.mobilelize.multichat.client.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.impl.builders.DropdownMenuBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.client.LzSound;
-import net.mobilelize.fabriclib.input.LzInputUtil;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.MultichatClient;
 import net.mobilelize.multichat.client.ping.PingPlayer;
@@ -222,11 +222,11 @@ public class ConfigMenu {
 
         search.addEntry(eb.startKeyCodeField(
                 LzText.literal("Search Key").mc(),
-                LzInputUtil.fromKeyCode(MultichatClient.CONFIG.searchKeybindKey, 0))
-                .setDefaultValue(LzInputUtil.fromKeyCode(70, 0))
+                InputConstants.getKey(MultichatClient.CONFIG.searchKeybindKey))
+                .setDefaultValue(InputConstants.getKey(MultiChatConfig.SEARCH_KEY_DEFAULT))
                 .setAllowModifiers(false)
                 .setTooltip(LzText.literal("Key to open search (combine with Require Ctrl for e.g. Ctrl+F).").mc())
-                .setKeySaveConsumer(key -> MultichatClient.CONFIG.searchKeybindKey = key.getValue())
+                .setKeySaveConsumer(key -> MultichatClient.CONFIG.searchKeybindKey = key.getName())
                 .build());
 
         search.addEntry(eb.startBooleanToggle(
@@ -306,11 +306,11 @@ public class ConfigMenu {
 
         quickActions.addEntry(eb.startKeyCodeField(
                 LzText.literal("Quick Action Key").mc(),
-                LzInputUtil.fromKeyCode(MultichatClient.CONFIG.quickActionKeybindKey, 0))
-                .setDefaultValue(LzInputUtil.fromKeyCode(81, 0))
+                InputConstants.getKey(MultichatClient.CONFIG.quickActionKeybindKey))
+                .setDefaultValue(InputConstants.getKey(MultiChatConfig.QUICK_ACTION_KEY_DEFAULT))
                 .setAllowModifiers(false)
                 .setTooltip(LzText.literal("Key to open Quick Actions (default: Q, combine with Require Ctrl for Ctrl+Q).").mc())
-                .setKeySaveConsumer(key -> MultichatClient.CONFIG.quickActionKeybindKey = key.getValue())
+                .setKeySaveConsumer(key -> MultichatClient.CONFIG.quickActionKeybindKey = key.getName())
                 .build());
 
         quickActions.addEntry(eb.startBooleanToggle(

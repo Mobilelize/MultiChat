@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -239,7 +240,7 @@ public class PanelLayoutScreen extends LzScreen {
     public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
-        if (button != 0) return false;
+        if (button != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         // Resize handles take priority over drag
         for (ChatPanel panel : ChatManager.getAllPanels()) {
@@ -304,7 +305,7 @@ public class PanelLayoutScreen extends LzScreen {
     @Override
     public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
-        if (unfocusedLineDragging != null && button == 0) {
+        if (unfocusedLineDragging != null && button == InputConstants.MOUSE_BUTTON_LEFT) {
             float scale      = unfocusedLineDragging.resolveScale();
             int   lineHeight = unfocusedLineDragging.resolveLineHeight();
             int   topY       = focusedTopY(unfocusedLineDragging);
@@ -315,7 +316,7 @@ public class PanelLayoutScreen extends LzScreen {
             return true;
         }
 
-        if (resizing != null && button == 0) {
+        if (resizing != null && button == InputConstants.MOUSE_BUTTON_LEFT) {
             float scale = resizing.resolveScale();
 
             if (resizeDir == ResizeDir.WIDTH) {
@@ -333,7 +334,7 @@ public class PanelLayoutScreen extends LzScreen {
             return true;
         }
 
-        if (dragging != null && button == 0) {
+        if (dragging != null && button == InputConstants.MOUSE_BUTTON_LEFT) {
             float scale     = dragging.resolveScale();
             int   chatWidth = dragging.resolveWidth();
             int   rawCX     = (int) mouseX - dragOffsetX;

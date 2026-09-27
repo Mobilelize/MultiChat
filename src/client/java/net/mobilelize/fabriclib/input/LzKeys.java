@@ -1,9 +1,11 @@
 package net.mobilelize.fabriclib.input;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.mobilelize.fabriclib.client.LzClient;
 
 /**
- * Common GLFW key code constants and keyboard modifier queries.
+ * Common key code constants and keyboard modifier queries.
+ * 26.3: key codes are SDL scancodes — always alias InputConstants, never hardcode ints.
  * 1.21 (Yarn): Screen.hasControlDown() / hasShiftDown() / hasAltDown()
  * 26.1 (Mojang): same methods, different package (VERIFY 26.1)
  */
@@ -13,26 +15,26 @@ public final class LzKeys {
 
     // ── Navigation ────────────────────────────────────────────────────────
 
-    public static final int BACKSPACE = 259;
-    public static final int TAB       = 258;
-    public static final int ENTER     = 257;
-    public static final int KP_ENTER  = 335;
-    public static final int ESCAPE    = 256;
-    public static final int DELETE    = 261;
-    public static final int RIGHT     = 262;
-    public static final int LEFT      = 263;
-    public static final int DOWN      = 264;
-    public static final int UP        = 265;
-    public static final int HOME      = 268;
-    public static final int END       = 269;
+    public static final int BACKSPACE = InputConstants.KEY_BACKSPACE;
+    public static final int TAB       = InputConstants.KEY_TAB;
+    public static final int ENTER     = InputConstants.KEY_RETURN;
+    public static final int KP_ENTER  = InputConstants.KEY_NUMPADENTER;
+    public static final int ESCAPE    = InputConstants.KEY_ESCAPE;
+    public static final int DELETE    = InputConstants.KEY_DELETE;
+    public static final int RIGHT     = InputConstants.KEY_RIGHT;
+    public static final int LEFT      = InputConstants.KEY_LEFT;
+    public static final int DOWN      = InputConstants.KEY_DOWN;
+    public static final int UP        = InputConstants.KEY_UP;
+    public static final int HOME      = InputConstants.KEY_HOME;
+    public static final int END       = InputConstants.KEY_END;
 
     // ── Common letter keys ────────────────────────────────────────────────
 
-    public static final int KEY_A = 65;
-    public static final int KEY_C = 67;
-    public static final int KEY_V = 86;
-    public static final int KEY_X = 88;
-    public static final int KEY_Z = 90;
+    public static final int KEY_A = InputConstants.KEY_A;
+    public static final int KEY_C = InputConstants.KEY_C;
+    public static final int KEY_V = InputConstants.KEY_V;
+    public static final int KEY_X = InputConstants.KEY_X;
+    public static final int KEY_Z = InputConstants.KEY_Z;
 
     // ── Modifier queries ──────────────────────────────────────────────────
 

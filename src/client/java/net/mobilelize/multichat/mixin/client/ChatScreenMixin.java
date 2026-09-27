@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.mixin.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
@@ -13,6 +14,7 @@ import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.input.LzKeys;
+import net.mobilelize.multichat.client.config.MultiChatConfig;
 import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
@@ -72,9 +74,7 @@ public abstract class ChatScreenMixin {
         if (MultichatClient.CONFIG.modDisabled) return;
         LzDrawContext lzCtx = LzDrawContext.wrap(context);
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
-            long handle = LzClient.windowHandle();
-            boolean held = org.lwjgl.glfw.GLFW.glfwGetMouseButton(handle,
-                org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            boolean held = net.mobilelize.fabriclib.input.LzInputUtil.isLeftMouseDown();
             if (held) {
                 ChatPanel selPanel = ChatSelection.getPanel();
                 if (selPanel != null && selPanel.isEnabled()) {
@@ -133,7 +133,7 @@ public abstract class ChatScreenMixin {
                                CallbackInfoReturnable<Boolean> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
         if (MultichatClient.CONFIG.selectionEnabled
-                && input.key() == Keys.C && (input.modifiers() & 2) != 0 && ChatSelection.hasSelection()) {
+                && input.key() == Keys.C && input.hasControlDown() && ChatSelection.hasSelection()) {
             String text = ChatSelection.getSelectedText();
             if (!text.isEmpty()) {
                 LzClient.setClipboard(text);
@@ -143,8 +143,8 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.searchKeybindEnabled
-                && input.key() == MultichatClient.CONFIG.searchKeybindKey
-                && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
+                && input.key() == MultiChatConfig.keyCode(MultichatClient.CONFIG.searchKeybindKey)
+                && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || input.hasControlDown())) {
             String selText = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", "").trim() : "";
             LzClient.mc().gui.setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
@@ -153,8 +153,8 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.quickActionKeybindEnabled
-                && input.key() == MultichatClient.CONFIG.quickActionKeybindKey
-                && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
+                && input.key() == MultiChatConfig.keyCode(MultichatClient.CONFIG.quickActionKeybindKey)
+                && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || input.hasControlDown())) {
             String sel = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
             LzClient.mc().gui.setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
@@ -166,7 +166,7 @@ public abstract class ChatScreenMixin {
                 && (input.key() == Keys.RIGHT || input.key() == Keys.LEFT)
                 && this.input.getValue().isEmpty()) {
             boolean goRight   = input.key() == Keys.RIGHT;
-            boolean ctrlHeld  = (input.modifiers() & 2) != 0;
+            boolean ctrlHeld  = input.hasControlDown();
 
             if (ctrlHeld) {
                 // Ctrl+Arrow → cycle focused panel
@@ -225,21 +225,21 @@ public abstract class ChatScreenMixin {
         double mouseX = (int) click.x(); double mouseY = (int) click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
         if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
-        if (button == 0 && ContextMenu.isOpen()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && ContextMenu.isOpen()) {
             cir.setReturnValue(ContextMenu.handleClick((int) mouseX, (int) mouseY));
             return;
         }
-        if (button == 0 && MessageContextMenu.isOpen()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && MessageContextMenu.isOpen()) {
             cir.setReturnValue(MessageContextMenu.handleClick((int) mouseX, (int) mouseY));
             return;
         }
 
-        if (button == 0) ChatSelection.clear();
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) ChatSelection.clear();
 
         int windowHeight = LzClient.scaledWindowHeight();
         int windowWidth  = LzClient.scaledWindowWidth();
 
-        if (button == 1) {
+        if (button == InputConstants.MOUSE_BUTTON_RIGHT) {
             for (ChatPanel panel : ChatManager.getAllPanels()) {
                 if (!panel.isEnabled()) continue;
                 float scale = panel.resolveScale();
@@ -267,7 +267,7 @@ public abstract class ChatScreenMixin {
             }
         }
 
-        if (MultichatClient.CONFIG.selectionEnabled && button == 0) {
+        if (MultichatClient.CONFIG.selectionEnabled && button == InputConstants.MOUSE_BUTTON_LEFT) {
             long now = System.currentTimeMillis();
             boolean isDoubleClick = MultichatClient.CONFIG.doubleClickSelectEnabled
                 && now - lastClickTime < 400
@@ -368,7 +368,7 @@ public abstract class ChatScreenMixin {
 
             if (mouseX < panelLeftScreen || mouseX >= panelRightScreen) continue;
 
-            if (button == 0) {
+            if (button == InputConstants.MOUSE_BUTTON_LEFT) {
                 if (hasLeft) {
                     double leftArrowEnd = (ChatRenderer.ARROW_W + xOffset) * (double) scale;
                     if (mouseX < leftArrowEnd) {
@@ -404,7 +404,7 @@ public abstract class ChatScreenMixin {
                 if (!fits && (!hasRight || i != panel.tabLastRendered() + 1)) break;
 
                 if (mouseX >= screenStart && mouseX < screenEnd) {
-                    if (button == 0) {
+                    if (button == InputConstants.MOUSE_BUTTON_LEFT) {
                         boolean wasSameTab  = (i == panel.activeTabIndex());
                         boolean wasFocused  = (ChatManager.focusedPanel == panel);
                         panel.setActiveTabId(i);
@@ -430,7 +430,7 @@ public abstract class ChatScreenMixin {
                                 ChatManager.contextTab = tab;
                             }
                         }
-                    } else if (button == 1) {
+                    } else if (button == InputConstants.MOUSE_BUTTON_RIGHT) {
                         MessageContextMenu.close();
                         ContextMenu.open(panel, tab, (int) mouseX, (int) mouseY);
                     }

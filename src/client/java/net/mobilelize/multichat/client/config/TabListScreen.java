@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -373,7 +374,7 @@ public class TabListScreen extends ConfigScreen {
         int lx = width / 2 - 200;
 
         // Control buttons
-        if (button == 0 && mx >= ctrlBtnX1() && mx < ctrlBtnX2()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && mx >= ctrlBtnX1() && mx < ctrlBtnX2()) {
             List<ChatTab> tabs = allTabs();
             boolean hasSelected = selectedIdx >= 0 && selectedIdx < tabs.size()
                                   && isMoveable(tabs.get(selectedIdx));
@@ -394,7 +395,7 @@ public class TabListScreen extends ConfigScreen {
         // Scrollbar
         int lxSb = lx + 405;
         int max  = maxScroll();
-        if (button == 0 && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
             int trackH = listBottom() - LIST_TOP;
             int totalH = allTabs().size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
@@ -452,7 +453,7 @@ public class TabListScreen extends ConfigScreen {
         }
 
         // Row click — select / swap
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             if (swapPending && idx != selectedIdx && isMoveable(tab)) {
                 Collections.swap(tabs, selectedIdx, idx);
                 selectedIdx = idx;

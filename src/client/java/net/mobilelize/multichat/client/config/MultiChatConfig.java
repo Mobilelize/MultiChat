@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.mobilelize.fabriclib.config.LzConfig;
 import net.mobilelize.multichat.client.ChatPanel;
 import net.mobilelize.multichat.client.ChatTab;
@@ -12,6 +13,48 @@ public class MultiChatConfig extends LzConfig {
 
     @Override
     public String directory() { return "config/multichat"; }
+
+    // Keybinds are stored by vanilla key name (as in options.txt), not by numeric code —
+    // the numbering changed from GLFW key codes to SDL scancodes in 26.3.
+    public static final String QUICK_ACTION_KEY_DEFAULT = "key.keyboard.q";
+    public static final String SEARCH_KEY_DEFAULT       = "key.keyboard.f";
+
+    @Override
+    protected void onLoad() {
+        quickActionKeybindKey = migrateKeyName(quickActionKeybindKey, QUICK_ACTION_KEY_DEFAULT);
+        searchKeybindKey      = migrateKeyName(searchKeybindKey, SEARCH_KEY_DEFAULT);
+    }
+
+    /** Current key code for a stored key name, comparable with {@code KeyEvent.key()}. */
+    public static int keyCode(String keyName) {
+        return InputConstants.getKey(keyName).getValue();
+    }
+
+    // Pre-26.3 configs saved raw GLFW key codes (Gson reads them into these fields as "81" etc.)
+    private static String migrateKeyName(String stored, String fallback) {
+        if (stored == null || stored.isBlank()) return fallback;
+        if (!stored.chars().allMatch(Character::isDigit)) return stored;
+        String name = glfwKeyName(Integer.parseInt(stored));
+        return name != null ? name : fallback;
+    }
+
+    private static String glfwKeyName(int glfw) {
+        if (glfw >= 65 && glfw <= 90)   return "key.keyboard." + (char) ('a' + glfw - 65);   // A-Z
+        if (glfw >= 48 && glfw <= 57)   return "key.keyboard." + (char) ('0' + glfw - 48);   // 0-9
+        if (glfw >= 290 && glfw <= 314) return "key.keyboard.f" + (glfw - 289);              // F1-F25
+        return switch (glfw) {
+            case 32  -> "key.keyboard.space";
+            case 258 -> "key.keyboard.tab";
+            case 262 -> "key.keyboard.right";
+            case 263 -> "key.keyboard.left";
+            case 264 -> "key.keyboard.down";
+            case 265 -> "key.keyboard.up";
+            case 268 -> "key.keyboard.home";
+            case 269 -> "key.keyboard.end";
+            case 96  -> "key.keyboard.grave.accent";
+            default  -> null;
+        };
+    }
 
     // ── Panels / Tabs ─────────────────────────────────────────────────────────
     public List<ChatPanel> panels          = new ArrayList<>();
@@ -49,7 +92,7 @@ public class MultiChatConfig extends LzConfig {
     // ── Quick Actions ─────────────────────────────────────────────────────────
     public boolean quickActionPasteToChat        = false;
     public boolean quickActionKeybindEnabled     = true;
-    public int     quickActionKeybindKey         = 81; // GLFW_KEY_Q
+    public String  quickActionKeybindKey         = QUICK_ACTION_KEY_DEFAULT;
     public boolean quickActionKeybindRequireCtrl = true;
     public List<QuickActionConfig> quickActions  = newDefaultQuickActions();
 
@@ -64,7 +107,7 @@ public class MultiChatConfig extends LzConfig {
 
     // ── Search ────────────────────────────────────────────────────────────────
     public boolean    searchKeybindEnabled           = true;
-    public int        searchKeybindKey               = 70; // GLFW_KEY_F
+    public String     searchKeybindKey               = SEARCH_KEY_DEFAULT;
     public boolean    searchKeybindRequireCtrl       = true;
     public SearchMode searchDefaultMode              = SearchMode.CONTAINS;
     public boolean    searchDefaultCase              = false;

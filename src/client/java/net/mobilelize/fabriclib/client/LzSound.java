@@ -7,7 +7,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.mobilelize.fabriclib.registry.LzId;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Client-side sound playback utilities.
@@ -18,9 +17,9 @@ public final class LzSound {
 
     private LzSound() {}
 
-    // 1.21: GLFW.GLFW_FOCUSED via glfwGetWindowAttrib   26.1: VERIFY
+    // 1.21: GLFW.GLFW_FOCUSED via glfwGetWindowAttrib   26.3: GLFW removed (SDL3), use Window.isFocused()
     public static boolean isWindowFocused() {
-        return GLFW.glfwGetWindowAttrib(LzClient.windowHandle(), GLFW.GLFW_FOCUSED) != 0;
+        return LzClient.mc().getWindow().isFocused();
     }
 
     // 1.21: SoundManager.play(PositionedSoundInstance.master)   26.1: VERIFY method names

@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.quickaction;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -185,7 +186,7 @@ public class QuickActionsOverlay extends LzScreen {
             onClose(); return true;
         }
 
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             List<MultiChatConfig.QuickActionConfig> list = actions();
             int listStart = listStartY();
             int listClipEnd = listStart + cappedListH();
