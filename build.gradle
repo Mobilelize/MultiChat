@@ -19,6 +19,15 @@ loom {
             sourceSet sourceSets.client
         }
     }
+
+    runs {
+        configureEach {
+            // 26.3+: official launcher passes this; without it the game dies with 0xC0000005
+            // during the first resource reload (native stack overflow, no hs_err log)
+            vmArg "-XX:StackShadowPages=32"
+            vmArg "--enable-native-access=ALL-UNNAMED"
+        }
+    }
 }
 
 
