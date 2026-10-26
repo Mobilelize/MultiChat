@@ -244,6 +244,34 @@ public class ChatPanel {
         if (panelLines != null) panelLines.removeIf(line -> line.entry() == entry.entry());
     }
 
+    /** removeTabEntry, but keeps whatever's on screen where it is. Scroll counts lines up from the
+     *  newest (vanilla's model), so only the part of the entry sitting BELOW the view moves anything
+     *  on screen — scroll drops by just that overlap. Lines in or above the view leave it untouched,
+     *  same as vanilla, which never shifts scroll on a removal and only clamps it back into range. */
+    public void removeTabEntryAnchored(ChatTab tab, ChatTab.MessageEntry entry) {
+        List<LzChatLine> panelLines = tabMessages().get(tab.id());
+        if (panelLines == null) return;
+        int start = -1;
+        for (int i = 0; i < panelLines.size(); i++) {
+            if (panelLines.get(i).entry() == entry.entry()) { start = i; break; }
+        }
+        if (start < 0) return;
+        int before = panelLines.size();
+        panelLines.removeIf(line -> line.entry() == entry.entry());
+        int removed = before - panelLines.size();
+        int scrolled = getScrolledLines(tab);
+        if (scrolled > 0 && start < scrolled) setScrolledLines(tab, scrolled - Math.min(removed, scrolled - start));
+        clampScroll(tab);
+    }
+
+    /** Vanilla's ChatHud.scroll clamp: never scrolled further back than the oldest line allows. */
+    public void clampScroll(ChatTab tab) {
+        int scrolled = getScrolledLines(tab);
+        if (scrolled <= 0) return;
+        int max = Math.max(0, tabLineCount(tab) - resolveLines());
+        if (scrolled > max) setScrolledLines(tab, max);
+    }
+
     /** Re-wraps a single already-cached entry in place (same identity, new rendered text — e.g. a
      *  highlight revert) without touching any other entry's lines. Swaps its existing lines for
      *  freshly-built ones at the same position instead of routing through rebuildTabLines, which

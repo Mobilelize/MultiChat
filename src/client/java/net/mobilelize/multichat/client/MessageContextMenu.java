@@ -221,28 +221,13 @@ public class MessageContextMenu {
         }
         if (idx < 0) return;
 
-        // Count the deleted entry's own visual line-span per panel BEFORE removing it from the
-        // per-panel line caches below, since that's the only place the count is still knowable.
-        java.util.Map<ChatPanel, Integer> removedCounts = new java.util.HashMap<>();
-        for (ChatPanel p : ChatManager.getAllPanels()) {
-            if (p.getScrolledLines(active) <= 0) continue;
-            List<LzChatLine> _l = p.getTabLines(active);
-            int count = 0;
-            if (_l != null) for (LzChatLine ln : _l) if (ln.entry() == targetEntry) count++;
-            removedCounts.put(p, count);
-        }
         ChatTab.MessageEntry removedEntry = messages.get(idx);
         messages.remove(idx);
         // Surgically drop just this entry's lines from each panel's cache instead of going through
         // rebuildTabLines — a full rebuild would offload to a background rewrap and flash a loading
-        // skeleton over the whole tab on large tabs, just to remove one message.
-        for (ChatPanel p : ChatManager.getAllActivePanels()) p.removeTabEntry(active, removedEntry);
-        for (java.util.Map.Entry<ChatPanel, Integer> e : removedCounts.entrySet()) {
-            ChatPanel p = e.getKey();
-            int removed = e.getValue();
-            int scrolled = p.getScrolledLines(active);
-            if (removed > 0 && scrolled > 0) p.setScrolledLines(active, Math.max(0, scrolled - removed));
-        }
+        // skeleton over the whole tab on large tabs, just to remove one message. Anchored: the
+        // entry's position relative to each panel's view decides whether scroll moves at all.
+        for (ChatPanel p : ChatManager.getAllActivePanels()) p.removeTabEntryAnchored(active, removedEntry);
         ChatSelection.clampOrClear(active);
     }
 

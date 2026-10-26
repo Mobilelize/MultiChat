@@ -178,6 +178,12 @@ public class TabEditScreen {
                 .setTooltip(LzText.literal("ON: sent as command. OFF: sent as chat text.").mc())
                 .setSaveConsumer(tab::setContextCommandMode)
                 .build());
+
+            settings.addEntry(eb.startBooleanToggle(LzText.literal("Context Prefix Space").mc(), !tab.contextNoSpace())
+                .setDefaultValue(true)
+                .setTooltip(LzText.literal("ON: a space is added between the prefix and your message. OFF: message is appended directly after the prefix.").mc())
+                .setSaveConsumer(v -> tab.setContextNoSpace(!v))
+                .build());
         }
 
         if (tab.type() == TabType.FILTERED) {

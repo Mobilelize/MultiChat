@@ -622,6 +622,12 @@ public class TabHandle {
         return this;
     }
 
+    /** When false, no space is inserted between the context prefix and the typed message. Default true. */
+    public TabHandle setContextPrefixSpace(boolean space) {
+        tab.setContextNoSpace(!space);
+        return this;
+    }
+
     public String getContextPrefix() { return tab.contextPrefix(); }
 
     // ------------------------------------------------------------------

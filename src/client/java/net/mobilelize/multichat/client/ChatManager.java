@@ -86,7 +86,7 @@ public class ChatManager {
         if (prevEntry != null) {
             tab.removeFirst();
             for (ChatPanel panel : getAllActivePanels())
-                panel.removeTabEntry(tab, prevEntry);
+                panel.removeTabEntryAnchored(tab, prevEntry);
         }
 
         tab.addFirst(entry);
@@ -113,6 +113,13 @@ public class ChatManager {
             // cross it. It's not that per-tab caps work differently; they just never hit this branch.
             if (!MultichatClient.CONFIG.optimizedDeletingEnabled
                     || tab.messageCount() <= MultichatClient.CONFIG.optimizedDeletingThreshold) {
+                pendingTrim.remove(tab);
+                trimTabToCap(tab, effectiveCap);
+            } else if (isScrolledBackInAnyPanel(tab)) {
+                // Someone is reading back through this tab: batching here would freeze their view (no
+                // per-message scroll as old messages fall off) and then lurch it by the whole batch at
+                // once. Trim per message instead, same as small tabs — the tail walk in trimTabToCap
+                // only costs what's actually cut, so this stays cheap.
                 pendingTrim.remove(tab);
                 trimTabToCap(tab, effectiveCap);
             } else {
@@ -171,8 +178,10 @@ public class ChatManager {
             int linesRemoved = lines.size() - i;
             if (linesRemoved == 0) continue;
             lines.subList(i, lines.size()).clear();
-            int scrolled = panel.getScrolledLines(tab);
-            if (scrolled > 0) panel.setScrolledLines(tab, Math.max(0, scrolled - linesRemoved));
+            // Same as vanilla's 100-line trim: the oldest lines are above the view, so removing them
+            // never moves what's on screen — shiftScrollForAdd already anchored the view for the new
+            // message. Only clamp, so a view parked at the very top slides along as the top falls off.
+            panel.clampScroll(tab);
         }
         ChatSelection.clampOrClear(tab);
 
@@ -204,14 +213,21 @@ public class ChatManager {
         Iterator<Map.Entry<ChatTab, Integer>> it = pendingTrim.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<ChatTab, Integer> e = it.next();
-            if (currentTick - e.getValue() < TRIM_DEBOUNCE_TICKS) continue;
             ChatTab tab = e.getKey();
+            // Don't make someone who just scrolled back sit on the stale overshoot until the lull —
+            // flush it now so the top of the tab is the real cap boundary while they read.
+            if (currentTick - e.getValue() < TRIM_DEBOUNCE_TICKS && !isScrolledBackInAnyPanel(tab)) continue;
             it.remove();
             int cap = (tab.type() == TabType.ALL && MultichatClient.CONFIG.globalMessageCap > 0)
                 ? MultichatClient.CONFIG.globalMessageCap
                 : tab.messageCap();
             if (cap > 0) trimTabToCap(tab, cap);
         }
+    }
+
+    private static boolean isScrolledBackInAnyPanel(ChatTab tab) {
+        for (ChatPanel panel : getAllActivePanels()) if (panel.getScrolledLines(tab) > 0) return true;
+        return false;
     }
 
     // ── Stuck-skeleton watchdog ───────────────────────────────────────────────
@@ -1100,28 +1116,13 @@ public class ChatManager {
             }
             if (idx < 0) continue;
 
-            // Count the deleted entry's own visual line-span per panel BEFORE removing it from the
-            // per-panel line caches below, since that's the only place the count is still knowable.
-            Map<ChatPanel, Integer> removedCounts = new HashMap<>();
-            for (ChatPanel p : getAllPanels()) {
-                if (p.getScrolledLines(tab) <= 0) continue;
-                List<LzChatLine> l = p.getTabLines(tab);
-                int count = 0;
-                if (l != null) for (LzChatLine ln : l) if (ln.entry() == targetEntry) count++;
-                removedCounts.put(p, count);
-            }
             ChatTab.MessageEntry removedEntry = messages.get(idx);
             messages.remove(idx);
             // Surgically drop just this entry's lines from each panel's cache instead of going through
             // rebuildTabLines — a full rebuild would offload to a background rewrap and flash a loading
-            // skeleton over the whole tab on large tabs, just to remove one message.
-            for (ChatPanel p : getAllActivePanels()) p.removeTabEntry(tab, removedEntry);
-            for (Map.Entry<ChatPanel, Integer> e : removedCounts.entrySet()) {
-                ChatPanel p = e.getKey();
-                int removed = e.getValue();
-                int scrolled = p.getScrolledLines(tab);
-                if (removed > 0 && scrolled > 0) p.setScrolledLines(tab, Math.max(0, scrolled - removed));
-            }
+            // skeleton over the whole tab on large tabs, just to remove one message. Anchored: the
+            // entry's position relative to each panel's view decides whether scroll moves at all.
+            for (ChatPanel p : getAllActivePanels()) p.removeTabEntryAnchored(tab, removedEntry);
             ChatSelection.clampOrClear(tab);
         }
     }

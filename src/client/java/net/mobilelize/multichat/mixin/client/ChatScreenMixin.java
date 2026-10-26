@@ -113,7 +113,7 @@ public abstract class ChatScreenMixin {
         ChatTab ctxTab = ChatManager.contextTab;
         if (ctxTab != null && !ctxTab.contextPrefix().isEmpty()
                 && MultichatClient.CONFIG.showContextDisplay) {
-            String status = ctxTab.name() + " ▶ " + (ctxTab.contextCommandMode() ? "/" : "") + ctxTab.contextPrefix() + " <message>";
+            String status = ctxTab.name() + " ▶ " + (ctxTab.contextCommandMode() ? "/" : "") + ctxTab.contextPrefixJoined() + "<message>";
             int screenH = LzDraw.scaledHeight(lzCtx);
             LzDraw.drawText(lzCtx, status, 4, screenH - 26, Colors.TEXT_STATUS);
         }
@@ -650,7 +650,7 @@ public abstract class ChatScreenMixin {
         ChatTab ctxTab = ChatManager.contextTab;
         if (ctxTab == null || ctxTab.contextPrefix().isEmpty()) return;
 
-        String full = ctxTab.contextPrefix() + " " + text;
+        String full = ctxTab.contextPrefixJoined() + text;
         ci.cancel();
         if (addToHistory) LzChat.addToMessageHistory(full);
         if (ctxTab.contextCommandMode()) {

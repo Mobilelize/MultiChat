@@ -61,6 +61,9 @@ public class ChatTab {
     private int              messageCap              = 0;
     private String           contextPrefix           = "";
     private boolean          contextCommandMode      = true;
+    // Inverted (false = add the space) so tabs saved before this field existed keep the old behavior —
+    // Gson builds ChatTab without running field initializers, so a missing boolean reads as false.
+    private boolean          contextNoSpace          = false;
     private boolean          pingEnabled             = false;
     private String           pingSound               = "";
     private float            pingVolume              = -1f;
@@ -188,6 +191,10 @@ public class ChatTab {
     public void    setContextPrefix(String v)        { contextPrefix = v != null ? v : ""; }
     public boolean contextCommandMode()              { return contextCommandMode; }
     public void    setContextCommandMode(boolean v)  { contextCommandMode = v; }
+    public boolean contextNoSpace()                  { return contextNoSpace; }
+    public void    setContextNoSpace(boolean v)      { contextNoSpace = v; }
+    /** Prefix as it's actually prepended to a message: the prefix plus a separating space unless disabled. */
+    public String  contextPrefixJoined()             { return contextNoSpace ? contextPrefix : contextPrefix + " "; }
 
     // ── Messages ───────────────────────────────────────────────────────────────
     private List<MessageEntry> msgs() {

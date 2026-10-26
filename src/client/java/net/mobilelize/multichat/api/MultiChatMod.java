@@ -53,6 +53,7 @@ public class MultiChatMod {
             tab.filterRules().blacklist().addAll(saved.filterRules().blacklist());
             tab.setContextPrefix(saved.contextPrefix());
             tab.setContextCommandMode(saved.contextCommandMode());
+            tab.setContextNoSpace(saved.contextNoSpace());
             tab.setPingEnabled(saved.pingEnabled());
             tab.setPingSound(saved.pingSound());
             tab.setPingVolume(saved.pingVolume());
