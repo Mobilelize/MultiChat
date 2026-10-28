@@ -363,16 +363,8 @@ public class ChatRenderer {
                     continue;
                 }
 
-                // chat_heads' BEFORE_LINE head texture (if any) only ever sits on the entry's
-                // first wrapped line — see ChatHeadsSupport's BEFORE_LINE support section. But the
-                // reserved INDENT applies per-line, independent of whether that specific line has
-                // a head: every continuation line of a wrapped message gets the same "no head of
-                // my own" offset any headless message's first line would (emptyLineWidth()),
-                // driven purely by chat_heads' "offset non-player text" alignment setting, so a
-                // multi-line message's lines all stay flush with each other and with the head.
-                // Gated on the entry having gone through chat_heads' pipeline at all (get() !=
-                // NONE) — MultiChat's own synthetic lines (Notes/Info tabs, custom raw text) never
-                // do, and shouldn't pick up alignment padding meant for real chat messages.
+                // chat_heads 0.15: BEFORE_LINE text shift + drawn head; BEFORE_NAME head is drawn by
+                // chat_heads' font hook inside the text below (see ChatHeadsSupport).
                 int headOffset = ChatHeadsSupport.lineOffset(visible);
                 ChatHeadsSupport.renderHead(context.mc(), 0, textY, visible, textAlpha / 255.0f);
 
