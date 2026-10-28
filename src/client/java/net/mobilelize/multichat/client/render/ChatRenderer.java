@@ -379,28 +379,10 @@ public class ChatRenderer {
                     continue;
                 }
 
-                // chat_heads' BEFORE_LINE head texture (if any) only ever sits on the entry's
-                // first wrapped line — see ChatHeadsSupport's BEFORE_LINE support section. But the
-                // reserved INDENT applies per-line, independent of whether that specific line has
-                // a head: every continuation line of a wrapped message gets the same "no head of
-                // my own" offset any headless message's first line would (emptyLineWidth()),
-                // driven purely by chat_heads' "offset non-player text" alignment setting, so a
-                // multi-line message's lines all stay flush with each other and with the head.
-                // Gated on the entry having gone through chat_heads' pipeline at all (get() !=
-                // NONE) — MultiChat's own synthetic lines (Notes/Info tabs, custom raw text) never
-                // do, and shouldn't pick up alignment padding meant for real chat messages.
-                ChatHeadsSupport.HeadRef headRef = ChatHeadsSupport.get(visible.entry());
-                int headOffset = 0;
-                if (headRef != ChatHeadsSupport.HeadRef.NONE) {
-                    if (visible.startOfEntry()) {
-                        headOffset = ChatHeadsSupport.headWidth(headRef);
-                        if (headOffset > 0) {
-                            ChatHeadsSupport.renderHead(context.mc(), 0, textY, headRef, textAlpha / 255.0f);
-                        }
-                    } else {
-                        headOffset = ChatHeadsSupport.emptyLineWidth();
-                    }
-                }
+                // chat_heads BEFORE_LINE: per-line text shift (chat_heads' getChatOffset), plus the
+                // drawn head for chat_heads 1.2.x (1.3+ has the head in the text) — see ChatHeadsSupport.
+                int headOffset = ChatHeadsSupport.lineOffset(visible);
+                if (headOffset > 0) ChatHeadsSupport.renderHead(context.mc(), 0, textY, visible, textAlpha / 255.0f);
 
                 if (MultichatClient.CONFIG.showIndicators) {
                     LzMessageIndicator indicator = visible.indicator();

@@ -926,6 +926,10 @@ public class ChatManager {
 
     public static LzText stampedText(int creationTick, LzText originalContent, @Nullable LzMessageIndicator indicator) {
         String ts = formatTimestamp(MultichatClient.CONFIG.timestampFormat, getWallTime(creationTick));
+        // A chat_heads BEFORE_LINE head stays at the very front, ahead of the timestamp.
+        net.minecraft.network.chat.Component[] head = net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport.splitLeadingHead(originalContent.mc());
+        if (head != null)
+            return LzText.empty().append(LzText.wrapMc(head[0])).append(LzText.format(ts + " ")).append(LzText.wrapMc(head[1]));
         return LzText.empty().append(LzText.format(ts + " ")).append(originalContent);
     }
 
