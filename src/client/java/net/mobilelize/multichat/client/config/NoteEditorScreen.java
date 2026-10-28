@@ -66,7 +66,7 @@ public class NoteEditorScreen extends LzScreen {
         scrollOffset = Math.min(scrollOffset, maxScroll());
         if (selectedIdx >= notes().size()) selectedIdx = -1;
         addRenderableWidget(LzButton.of("Add Note", width / 2 - 60, height - 26, 58, 18, b -> {
-            LzClient.mc().setScreen(new NoteEditScreen(this, noteTab, -1));
+            LzClient.mc().gui.setScreen(new NoteEditScreen(this, noteTab, -1));
         }));
         addRenderableWidget(LzButton.of("Done", width / 2 + 2, height - 26, 50, 18, b -> onClose()));
         addRenderableWidget(LzButton.of(
@@ -255,7 +255,7 @@ public class NoteEditorScreen extends LzScreen {
                     int capturedI = i;
                     String label  = list.get(i).content().mc().getString();
                     if (label.length() > 20) label = label.substring(0, 18) + "…";
-                    LzClient.mc().setScreen(new DeleteConfirmScreen(this,
+                    LzClient.mc().gui.setScreen(new DeleteConfirmScreen(this,
                         "Delete note: \"" + label + "\"?",
                         () -> doRemove(capturedI)));
                 }
@@ -266,7 +266,7 @@ public class NoteEditorScreen extends LzScreen {
             int ex = dx - ACT_W - 4;
             if (mouseX >= ex && mouseX < ex + ACT_W && mouseY >= ry + 2 && mouseY < ry + ROW_H - 2) {
                 swapPending = false;
-                LzClient.mc().setScreen(new NoteEditScreen(this, noteTab, i));
+                LzClient.mc().gui.setScreen(new NoteEditScreen(this, noteTab, i));
                 return true;
             }
 
@@ -345,5 +345,5 @@ public class NoteEditorScreen extends LzScreen {
     }
 
     @Override
-    public void onClose() { LzClient.mc().setScreen(parent); }
+    public void onClose() { LzClient.mc().gui.setScreen(parent); }
 }

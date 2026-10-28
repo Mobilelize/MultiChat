@@ -20,6 +20,6 @@ public enum StyleColor {
     /** RGB for this color, or null for NONE. */
     @Nullable
     public Integer rgb() {
-        return formatting != null ? formatting.mc().getColor() : null;
+        return formatting != null ? formatting.rgb() : null;
     }
 }

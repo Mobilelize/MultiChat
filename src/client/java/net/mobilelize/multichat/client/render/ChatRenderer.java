@@ -428,7 +428,7 @@ public class ChatRenderer {
             ChatHeadsSupport.endHeadRendering();
         }
 
-        long queueCount = LzClient.mc().getChatListener().queueSize();
+        long queueCount = LzClient.mc().gui.chatListener().queueSize();
         if (queueCount > 0L) {
             int queueTextAlpha = (int)(128.0 * chatOpacity);
             int queueBgAlpha   = (int)(255.0 * bgOpacity);

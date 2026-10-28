@@ -40,6 +40,18 @@ public enum LzFormatting {
     /** Raw MC ChatFormatting — escape hatch. */
     public ChatFormatting mc() { return formatting; }
 
+    // 1.21: formatting.getColor()   26.2: ChatFormatting.getColor() removed — TextColor.fromLegacyFormat
+    /** RGB for a color code, or null for style codes (bold, reset, ...). */
+    @Nullable
+    public static Integer rgbOf(@Nullable ChatFormatting f) {
+        if (f == null) return null;
+        net.minecraft.network.chat.TextColor c = net.minecraft.network.chat.TextColor.fromLegacyFormat(f);
+        return c != null ? c.getValue() : null;
+    }
+
+    @Nullable
+    public Integer rgb() { return rgbOf(formatting); }
+
     /**
      * Applies a single lowercase format code character to the given style.
      * Color codes 0-9 / a-f map to ChatFormatting constants.
@@ -65,7 +77,7 @@ public enum LzFormatting {
     @Nullable
     public static Integer colorRgbForCode(char code) {
         ChatFormatting f = fromColorCode(Character.toLowerCase(code));
-        return f != null ? f.getColor() : null;
+        return rgbOf(f);
     }
 
     // 1.21: Formatting.XXX   26.1: ChatFormatting.XXX

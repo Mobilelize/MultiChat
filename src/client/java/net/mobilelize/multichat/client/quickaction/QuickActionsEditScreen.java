@@ -295,7 +295,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
                     doRemoveAction(list, i);
                 } else {
                     int capturedI = i;
-                    LzClient.mc().setScreen(new DeleteConfirmScreen(this,
+                    LzClient.mc().gui.setScreen(new DeleteConfirmScreen(this,
                         "Delete \"" + list.get(capturedI).name + "\"?",
                         () -> doRemoveAction(list, capturedI)));
                 }

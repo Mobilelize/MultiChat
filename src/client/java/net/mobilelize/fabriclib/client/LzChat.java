@@ -33,7 +33,7 @@ public final class LzChat {
     @Nullable
     public static ChatComponent chatHud() {
         var g = gui();
-        return g == null ? null : g.getChat();
+        return g == null ? null : g.hud.getChat();
     }
 
     // 1.21.11: getChatScale() — read option directly
@@ -57,7 +57,7 @@ public final class LzChat {
     // 1.21: inGameHud.getTicks()   26.1: client.gui.getGuiTicks()
     public static int ticks() {
         var g = gui();
-        return g == null ? 0 : g.getGuiTicks();
+        return g == null ? 0 : g.hud.getGuiTicks();
     }
 
     // 1.21: inGameHud.getChatHud().addToMessageHistory(msg)   26.1: VERIFY

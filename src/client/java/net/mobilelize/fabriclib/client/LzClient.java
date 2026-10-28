@@ -11,7 +11,7 @@ public final class LzClient {
     public static Minecraft mc() { return Minecraft.getInstance(); }
 
     // 1.21: client.worldRenderer.reload()   26.1: client.levelRenderer.allChanged()
-    public static void reloadRenderer() { mc().levelRenderer.allChanged(); }
+    public static void reloadRenderer() { mc().levelExtractor.allChanged(); }
 
     // unchanged: client.execute(r)
     public static void execute(Runnable runnable) { mc().execute(runnable); }
@@ -19,7 +19,7 @@ public final class LzClient {
     // 1.21: client.runDirectory   26.1: client.gameDirectory
     public static java.io.File runDir() { return mc().gameDirectory; }
 
-    public static void openScreen(@Nullable LzScreen screen) { mc().setScreen(screen); }
+    public static void openScreen(@Nullable LzScreen screen) { mc().gui.setScreen(screen); }
 
     public static boolean hasPlayer() { return mc().player != null; }
     // 1.21: mc().world   26.1: mc().level
@@ -45,7 +45,7 @@ public final class LzClient {
     // 1.21: client.currentScreen   26.1: client.screen
     @Nullable
     public static net.minecraft.client.gui.screens.Screen currentScreen() {
-        return mc().screen;
+        return mc().gui.screen();
     }
 
     // 1.21: client.getWindow().getScaledWidth()   26.1: VERIFY

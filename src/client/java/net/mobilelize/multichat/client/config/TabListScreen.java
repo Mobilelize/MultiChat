@@ -487,9 +487,9 @@ public class TabListScreen extends ConfigScreen {
         // Edit button — works the same for a sub-tab as any other FILTERED tab
         if (mx >= lx + 322 && mx < lx + 358) {
             if (tab.type() == TabType.FILTERED || tab.type() == TabType.API || tab.type() == TabType.ALL)
-                LzClient.mc().setScreen(TabEditScreen.create(this, tab));
+                LzClient.mc().gui.setScreen(TabEditScreen.create(this, tab));
             else if (tab.type() == TabType.NOTES)
-                LzClient.mc().setScreen(new NoteEditorScreen(this, (NoteTab) tab));
+                LzClient.mc().gui.setScreen(new NoteEditorScreen(this, (NoteTab) tab));
             return true;
         }
 
@@ -502,7 +502,7 @@ public class TabListScreen extends ConfigScreen {
             if (quickDeleteMode || LzKeys.isCtrlDown()) {
                 doRemoveTab(topIdx, tab);
             } else {
-                LzClient.mc().setScreen(new DeleteConfirmScreen(this,
+                LzClient.mc().gui.setScreen(new DeleteConfirmScreen(this,
                     "Delete tab \"" + tab.name() + "\"?",
                     () -> doRemoveTab(topIdx, tab)));
             }

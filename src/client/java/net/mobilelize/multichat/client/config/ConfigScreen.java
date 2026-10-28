@@ -40,11 +40,11 @@ public abstract class ConfigScreen extends LzScreen {
     protected void addConfigNav(int width, int height, NavPage current) {
         int sx = width / 2 - 136;
         var tabs = addRenderableWidget(LzButton.of("Tabs",
-            sx, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new TabListScreen(parent)); }));
+            sx, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().gui.setScreen(new TabListScreen(parent)); }));
         var panels = addRenderableWidget(LzButton.of("Panels",
-            sx + 92, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new PanelListScreen(parent)); }));
+            sx + 92, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().gui.setScreen(new PanelListScreen(parent)); }));
         var qa = addRenderableWidget(LzButton.of("Quick Actions",
-            sx + 184, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().setScreen(new QuickActionsEditScreen(parent)); }));
+            sx + 184, height - 48, 88, 20, b -> { beforeNavigate(); LzClient.mc().gui.setScreen(new QuickActionsEditScreen(parent)); }));
         if (current == NavPage.TABS)          tabs.active   = false;
         if (current == NavPage.PANELS)        panels.active = false;
         if (current == NavPage.QUICK_ACTIONS) qa.active     = false;
@@ -54,13 +54,13 @@ public abstract class ConfigScreen extends LzScreen {
                 b.setMessage(LzText.literal(TabListScreen.quickDeleteMode ? "Del: ON" : "Del: OFF"));
             }));
         addRenderableWidget(LzButton.of("Settings",
-            sx + 92, height - 24, 88, 20, b -> LzClient.mc().setScreen(ConfigMenu.create(this))));
+            sx + 92, height - 24, 88, 20, b -> LzClient.mc().gui.setScreen(ConfigMenu.create(this))));
         addRenderableWidget(LzButton.of("Done", sx + 184, height - 24, 88, 20, b -> onClose()));
     }
 
     @Override
     public void onClose() {
         beforeClose();
-        LzClient.mc().setScreen(parent);
+        LzClient.mc().gui.setScreen(parent);
     }
 }
