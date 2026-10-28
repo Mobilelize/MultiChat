@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
@@ -163,7 +164,7 @@ public class NoteEditScreen extends LzScreen {
     public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
-        if (button != 0) return false;
+        if (button != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int swX0 = px1() + 36, swY = cy() - 53;
 

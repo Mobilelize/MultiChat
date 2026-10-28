@@ -1,63 +1,48 @@
 package net.mobilelize.multichat.client.mouse;
 
+import com.mojang.blaze3d.platform.cursor.CursorType;
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.mobilelize.fabriclib.client.LzClient;
-import org.lwjgl.glfw.GLFW;
 
+// 26.3: GLFW removed (SDL3) — cursors go through vanilla Window.selectCursor(CursorType)
 public class MouseClient {
 
-    private static long arrowCursor;
-    private static long handCursor;
-    private static long ibeamCursor;
-    private static long crosshairCursor;
-
-    private static long currentCursor;
+    private static CursorType currentCursor = CursorTypes.ARROW;
 
     public static void init() {
-        arrowCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_ARROW_CURSOR);
-        handCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_HAND_CURSOR);
-        ibeamCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_IBEAM_CURSOR);
-        crosshairCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_CROSSHAIR_CURSOR);
-
-        currentCursor = arrowCursor;
+        currentCursor = CursorTypes.ARROW;
     }
 
     public static void setArrowCursor() {
-        setCursor(arrowCursor);
+        setCursor(CursorTypes.ARROW);
     }
 
     public static void setHandCursor() {
-        setCursor(handCursor);
+        setCursor(CursorTypes.POINTING_HAND);
     }
 
     public static void setIBeamCursor() {
-        setCursor(ibeamCursor);
+        setCursor(CursorTypes.IBEAM);
     }
 
     public static void setCrosshairCursor() {
-        setCursor(crosshairCursor);
+        setCursor(CursorTypes.CROSSHAIR);
     }
 
     public static void resetCursor() {
         setArrowCursor();
     }
 
-    private static void setCursor(long cursor) {
+    private static void setCursor(CursorType cursor) {
         if (currentCursor == cursor) {
             return;
         }
 
         currentCursor = cursor;
 
-        GLFW.glfwSetCursor(
-                LzClient.mc().getWindow().handle(),
-                cursor
-        );
+        LzClient.mc().getWindow().selectCursor(cursor);
     }
 
-    public static void cleanup() {
-        GLFW.glfwDestroyCursor(arrowCursor);
-        GLFW.glfwDestroyCursor(handCursor);
-        GLFW.glfwDestroyCursor(ibeamCursor);
-        GLFW.glfwDestroyCursor(crosshairCursor);
-    }
+    // Vanilla owns the cursor handles now; nothing to free
+    public static void cleanup() {}
 }

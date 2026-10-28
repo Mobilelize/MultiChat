@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -159,7 +160,7 @@ public class PanelTabsScreen extends LzScreen {
     public boolean mouseClicked(MouseButtonEvent click, boolean isDoubleClick) {
         double mx = click.x(); double my = click.y(); int button = click.button();
         if (super.mouseClicked(click, isDoubleClick)) return true;
-        if (button != 0) return false;
+        if (button != InputConstants.MOUSE_BUTTON_LEFT) return false;
 
         int lx = width / 2 - 130;
 

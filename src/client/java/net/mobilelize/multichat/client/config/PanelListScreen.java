@@ -1,5 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -182,7 +183,7 @@ public class PanelListScreen extends ConfigScreen {
         int max  = maxScroll();
 
         // Scrollbar
-        if (button == 0 && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && max > 0 && mx >= lxSb && mx < lxSb + SB_W && my >= LIST_TOP && my < listBottom()) {
             int trackH = listBottom() - LIST_TOP;
             int totalH = panels().size() * ROW_HEIGHT;
             int thumbH = Math.max(20, trackH * trackH / totalH);
