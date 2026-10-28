@@ -2,7 +2,6 @@ package net.mobilelize.multichat.client.render;
 
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.text.Style;
-import net.minecraft.util.profiler.Profilers;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -70,7 +69,7 @@ public class ChatRenderer {
         boolean anyVisible = ChatManager.getAllPanels().stream().anyMatch(p -> p.isVisibleInChat(focused));
         if (!anyVisible) return;
 
-        Profilers.get().push("multichat");
+        LzClient.mc().getProfiler().push("multichat");
 
         int windowHeight   = LzDraw.scaledHeight(context);
         int windowWidth    = LzDraw.scaledWidth(context);
@@ -127,7 +126,7 @@ public class ChatRenderer {
             lastHoveredIndicator = resolveIndicatorAt(mouseX, mouseY, windowWidth, windowHeight);
         }
 
-        Profilers.get().pop();
+        LzClient.mc().getProfiler().pop();
     }
 
     private static void renderTabBar(LzDrawContext context,
