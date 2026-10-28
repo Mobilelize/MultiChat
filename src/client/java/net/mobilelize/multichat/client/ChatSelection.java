@@ -322,6 +322,32 @@ public class ChatSelection {
         return arr;
     }
 
+    /** Style at a given local x on a line — same glyph-walk geometry (and chat_heads offset) as
+     *  charIndexAtX/xOfChar. {@code line} may be null. */
+    public static LzStyle styleAtX(LzChatLine line, float targetX) {
+        if (line == null) return null;
+        float adjusted = targetX - headOffset(line);
+        if (adjusted < 0f) return null;
+        LzOrderedText text = line.content();
+        ChatHeadsSupport.beginHeadRendering();
+        try {
+        float[]  cumX  = {0f};
+        LzStyle[] found = {null};
+        visitVisible(text, (idx, style, cp) -> {
+            float w = glyphWidth(style, cp);
+            if (adjusted < cumX[0] + w) {
+                found[0] = style;
+                return false;
+            }
+            cumX[0] += w;
+            return true;
+        });
+        return found[0];
+        } finally {
+            ChatHeadsSupport.endHeadRendering();
+        }
+    }
+
     /** {@code line} may be null (callers pass a possibly-null list lookup straight through). */
     public static int charIndexAtX(LzChatLine line, float targetX) {
         if (line == null) return 0;

@@ -5,13 +5,13 @@ import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.profiling.Profiler;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
+import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
@@ -536,23 +536,13 @@ public class ChatRenderer {
             int lineIdx = LzMath.floor(chatY + panel.getScrolledLines(active));
             if (lineIdx < 0 || lineIdx >= msgs.size()) continue;
 
-            Style style = getStyleAt(msgs.get(lineIdx).content().mc(), LzMath.floor(localChatX));
-            if (style != null) return style;
+            // Same glyph walk as selection, so the chat_heads BEFORE_LINE offset is accounted for.
+            LzStyle style = ChatSelection.styleAtX(msgs.get(lineIdx), (float) localChatX);
+            if (style != null) return style.mc();
         }
         return null;
     }
 
-    private static @org.jetbrains.annotations.Nullable Style getStyleAt(FormattedCharSequence text, int x) {
-        StringSplitter handler = LzDraw.textHandler();
-        float[] w = { 0 };
-        Style[] out = { null };
-        text.accept((index, style, codePoint) -> {
-            w[0] += handler.stringWidth(v -> v.accept(0, style, codePoint));
-            if (w[0] > x) { out[0] = style; return false; }
-            return true;
-        });
-        return out[0];
-    }
 
     public static IndicatorResult resolveIndicatorAt(double mouseX, double mouseY,
                                                       int windowWidth, int windowHeight) {
