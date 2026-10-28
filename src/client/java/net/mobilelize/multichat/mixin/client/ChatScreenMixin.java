@@ -495,7 +495,8 @@ public abstract class ChatScreenMixin {
             if (localX < -4.0 || localX > chatWidth + 8) continue; // see ChatSelection.hitLine
 
             // Clickable text under the mouse: leave it to vanilla, which resolves the style through
-            // ChatHudMixin's getTextStyleAt hook (MC 1.21.9 has no Screen-level click-event invoker).
+            // ChatHudMixin's getTextStyleAt hook — this branch's click path since 1.0.1 (1.21.11 instead
+            // invokes the click event itself via ScreenInvoker).
             var hovered = ChatRenderer.lastHoveredStyle;
             if (hovered != null && hovered.getClickEvent() != null
                     && !(MultichatClient.CONFIG.selectionCtrlSkipsClicks && LzKeys.isCtrlDown())) return;
