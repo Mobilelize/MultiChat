@@ -57,7 +57,8 @@ public class TabHandle {
         if (addToAll) {
             MessageRouter.skipTabOnRoute = tab;
             try {
-                LzChat.chatHud().addPlayerMessage(message.mc(), null, null);
+                ((net.mobilelize.multichat.mixin.client.ChatHudAccessor) LzChat.chatHud()).invokeAddMessage(
+                    message.mc(), null, net.minecraft.client.multiplayer.chat.GuiMessageSource.SYSTEM_CLIENT, null);
             } finally {
                 MessageRouter.skipTabOnRoute = null;
             }
