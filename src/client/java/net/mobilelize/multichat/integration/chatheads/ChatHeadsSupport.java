@@ -37,6 +37,29 @@ public final class ChatHeadsSupport {
     // no synchronization needed.
     private static int depth = 0;
 
+    // chat_heads 1.3.0+ also puts the BEFORE_LINE head into the message text itself: an inline
+    // object prepended while ChatComponent.addMessage builds the GuiMessage
+    // (ComponentProcessor.prependChatHead). MultiChat already draws that object as part of the text,
+    // so in that case it must not draw its own head beside the line too (that showed two heads) or
+    // shift the head line for one. 1.2.x and older only draw the head beside the line, which is what
+    // the BEFORE_LINE support below does for them. Checked by mod version (1.2.9 doesn't prepend,
+    // 1.3.0 does) rather than reflection, which can't fail on an unresolvable signature type.
+    private static final boolean headsInText = present && detectHeadsInText();
+
+    private static boolean detectHeadsInText() {
+        try {
+            var mod = FabricLoader.getInstance().getModContainer("chat_heads");
+            if (mod.isEmpty()) return false;
+            boolean inText = mod.get().getMetadata().getVersion()
+                .compareTo(net.fabricmc.loader.api.SemanticVersion.parse("1.3.0")) >= 0;
+            if (inText) MultichatClient.LOGGER.info("[MultiChat] Chat Heads 1.3+: \"Before Line\" heads are drawn inline with the text");
+            return inText;
+        } catch (Throwable t) {
+            MultichatClient.LOGGER.warn("[MultiChat] Could not read the Chat Heads version", t);
+            return false;
+        }
+    }
+
     private ChatHeadsSupport() {}
 
     private static boolean detect() {
@@ -154,6 +177,10 @@ public final class ChatHeadsSupport {
     public static int headWidth(HeadRef ref) {
         if (!present || ref == HeadRef.NONE) return 0;
         try {
+            // Head already sits at the start of the text (see headsInText) — nothing to make room for.
+            // A message with no head still gets the "offset non-player text" alignment, like chat_heads
+            // 1.3's own getChatOffset(line) (offset unless the line starts with a head).
+            if (headsInText && ref.data != dzwdz.chat_heads.HeadData.EMPTY) return 0;
             return chatOffset(ref.data);
         } catch (Throwable t) {
             present = false;
@@ -214,7 +241,7 @@ public final class ChatHeadsSupport {
      *  "offset non-player text" alignment option reserves the space without a texture to fill
      *  it, matching real chat_heads' own {@code headData != HeadData.EMPTY} guard). */
     public static void renderHead(GuiGraphicsExtractor context, int x, int y, HeadRef ref, float opacity) {
-        if (!present || ref == HeadRef.NONE) return;
+        if (!present || ref == HeadRef.NONE || headsInText) return;
         try {
             if (ref.data == dzwdz.chat_heads.HeadData.EMPTY) return;
             dzwdz.chat_heads.ChatHeads.renderChatHead(context, x, y, ref.data.playerInfo(), opacity);
