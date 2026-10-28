@@ -73,36 +73,62 @@ public class ChatSelection {
         int tl = n[0], bl = n[1], tc = n[2], bc = n[3];
         if (lineIdx < bl || lineIdx > tl) return null;
 
-        LzOrderedText content = line.content();
         int off = headOffset(line);
         int x0, x1;
         if (tl == bl) {
-            x0 = off + (int) xOfChar(content, tc);
-            x1 = off + (int) xOfChar(content, bc);
+            x0 = off + (int) xOfChar(line, tc);
+            x1 = off + (int) xOfChar(line, bc);
         } else if (lineIdx == tl) {
-            x0 = off + (int) xOfChar(content, tc);
-            x1 = off + LzDraw.textWidth(content);
+            x0 = off + (int) xOfChar(line, tc);
+            x1 = off + lineTextWidth(line);
         } else if (lineIdx == bl) {
             x0 = off;
-            x1 = off + (int) xOfChar(content, bc);
+            x1 = off + (int) xOfChar(line, bc);
         } else {
             x0 = off;
-            x1 = off + LzDraw.textWidth(content);
+            x1 = off + lineTextWidth(line);
         }
 
         if (x1 <= x0) return null;
         return new int[]{x0, x1};
     }
 
-    /** Pixels of chat_heads' BEFORE_LINE indent reserved before this line's text. 0 unless the
-     *  entry went through chat_heads' pipeline at all (excludes MultiChat's own synthetic lines —
-     *  Notes/Info tabs, custom raw text). The entry's own head-derived width on its first wrapped
-     *  line; every continuation line uses the same "no head of my own" alignment width, matching
-     *  ChatRenderer's render-time offset exactly. See ChatHeadsSupport's BEFORE_LINE section. */
+    /** chat_heads BEFORE_LINE text shift of this line — the same value ChatRenderer draws it at
+     *  (ChatHeadsSupport.lineOffset). */
     private static int headOffset(LzChatLine line) {
-        ChatHeadsSupport.HeadRef ref = ChatHeadsSupport.get(line.entry());
-        if (ref == ChatHeadsSupport.HeadRef.NONE) return 0;
-        return line.startOfEntry() ? ChatHeadsSupport.headWidth(ref) : ChatHeadsSupport.emptyLineWidth();
+        return ChatHeadsSupport.lineOffset(line);
+    }
+
+    // MC-VERSION-SENSITIVE (chat_heads 0.15): in BEFORE_NAME the head isn't in the text. chat_heads'
+    // font hook draws it in front of one codepoint and moves everything after it right by
+    // headWidth(), so text geometry here has that gap too. Returns the gap's visible index (the
+    // index visitVisible hands out), or -1.
+    private static int nameGap(LzChatLine line) {
+        int raw = ChatHeadsSupport.nameHeadIndex(line);
+        if (raw < 0) return -1;
+        List<Integer> cps = new java.util.ArrayList<>();
+        line.content().lzAccept((i, style, cp) -> { cps.add(cp); return true; });
+        int out = 0;
+        for (int i = 0; i < cps.size(); i++) {
+            if (i >= raw) return out;
+            int cp = cps.get(i);
+            if (cp == SECTION_SIGN) {
+                if (i + 1 < cps.size() && isFormatCode(cps.get(i + 1))) i++;
+                continue;
+            }
+            out++;
+        }
+        return out;
+    }
+
+    /** Right edge of a line's drawn text in line-local x: chat_heads shift + text + head gap. */
+    public static int lineTextRight(LzChatLine line) {
+        return headOffset(line) + lineTextWidth(line);
+    }
+
+    /** Drawn width of a line's text, including a BEFORE_NAME head gap. */
+    private static int lineTextWidth(LzChatLine line) {
+        return LzDraw.textWidth(line.content()) + (nameGap(line) >= 0 ? ChatHeadsSupport.nameHeadWidth() : 0);
     }
 
     // -----------------------------------------------------------------------
@@ -329,11 +355,17 @@ public class ChatSelection {
         float adjusted = targetX - headOffset(line);
         if (adjusted < 0f) return null;
         LzOrderedText text = line.content();
+        int gap = nameGap(line);
+        int gapW = gap >= 0 ? ChatHeadsSupport.nameHeadWidth() : 0;
         ChatHeadsSupport.beginHeadRendering();
         try {
         float[]  cumX  = {0f};
         LzStyle[] found = {null};
         visitVisible(text, (idx, style, cp) -> {
+            if (idx == gap) {
+                if (adjusted < cumX[0] + gapW) return false; // on the head itself
+                cumX[0] += gapW;
+            }
             float w = glyphWidth(style, cp);
             if (adjusted < cumX[0] + w) {
                 found[0] = style;
@@ -354,11 +386,17 @@ public class ChatSelection {
         float adjusted = targetX - headOffset(line);
         if (adjusted <= 0f) return 0;
         LzOrderedText text = line.content();
+        int gap = nameGap(line);
+        int gapW = gap >= 0 ? ChatHeadsSupport.nameHeadWidth() : 0;
         ChatHeadsSupport.beginHeadRendering();
         try {
         int[]   count = {0};
         float[] cumX  = {0f};
         visitVisible(text, (idx, style, cp) -> {
+            if (idx == gap) {
+                if (cumX[0] + gapW * 0.5f >= adjusted) return false;
+                cumX[0] += gapW;
+            }
             float w = glyphWidth(style, cp);
             if (cumX[0] + w * 0.5f >= adjusted) return false;
             cumX[0] += w;
@@ -386,12 +424,14 @@ public class ChatSelection {
         }
     }
 
-    private static float xOfChar(LzOrderedText text, int charIdx) {
+    private static float xOfChar(LzChatLine line, int charIdx) {
         if (charIdx <= 0) return 0f;
+        int gap = nameGap(line);
         float[] x     = {0f};
         int[]   count = {0};
-        visitVisible(text, (idx, style, cp) -> {
+        visitVisible(line.content(), (idx, style, cp) -> {
             if (count[0] >= charIdx) return false;
+            if (idx == gap) x[0] += ChatHeadsSupport.nameHeadWidth();
             x[0] += glyphWidth(style, cp);
             count[0]++;
             return true;
