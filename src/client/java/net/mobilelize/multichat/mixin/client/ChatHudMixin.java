@@ -149,7 +149,9 @@ public class ChatHudMixin {
         at = @At("HEAD")
     )
     private void captureRaw(Component message, @Nullable MessageSignature sig, GuiMessageSource source, @Nullable GuiMessageTag tag, CallbackInfo ci) {
-        MessageRouter.pendingRaw = LzText.wrapMc(message);
+        // chat_heads 1.3+ BEFORE_LINE adds the head to the stored GuiMessage only (after this HEAD);
+        // give MultiChat's copy the same head so every tab shows it, not just All.
+        MessageRouter.pendingRaw = LzText.wrapMc(ChatHeadsSupport.withBeforeLineHead(message));
         // Same instant chat_heads' own ChatListenerMixin has just set ChatHeads.lastSenderData
         // for this exact message (its @ModifyArg fires immediately before this vanilla method
         // runs) — see ChatHeadsSupport's BEFORE_LINE support section for the full trace.
