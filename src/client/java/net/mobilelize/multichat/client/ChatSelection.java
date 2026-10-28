@@ -94,15 +94,10 @@ public class ChatSelection {
         return new int[]{x0, x1};
     }
 
-    /** Pixels of chat_heads' BEFORE_LINE indent reserved before this line's text. 0 unless the
-     *  entry went through chat_heads' pipeline at all (excludes MultiChat's own synthetic lines —
-     *  Notes/Info tabs, custom raw text). The entry's own head-derived width on its first wrapped
-     *  line; every continuation line uses the same "no head of my own" alignment width, matching
-     *  ChatRenderer's render-time offset exactly. See ChatHeadsSupport's BEFORE_LINE section. */
+    /** chat_heads BEFORE_LINE text shift of this line — the same value ChatRenderer draws it at
+     *  (ChatHeadsSupport.lineOffset). */
     private static int headOffset(LzChatLine line) {
-        ChatHeadsSupport.HeadRef ref = ChatHeadsSupport.get(line.entry());
-        if (ref == ChatHeadsSupport.HeadRef.NONE) return 0;
-        return line.startOfEntry() ? ChatHeadsSupport.headWidth(ref) : ChatHeadsSupport.emptyLineWidth();
+        return ChatHeadsSupport.lineOffset(line);
     }
 
     // -----------------------------------------------------------------------
@@ -175,6 +170,16 @@ public class ChatSelection {
         int[] raw   = stripNewlines(collectCodepoints(LzOrderedText.of(entry.originalContent)));
         int[] group = groupCodepoints(msgs, groupTop, groupBottom);
 
+        // A chat_heads BEFORE_LINE head is kept in front of MultiChat's timestamp
+        // (ChatManager.stampedText), so raw's leading head can sit before the timestamp prefix
+        // instead of right after it and raw no longer matches as one contiguous run. Leave that head
+        // out of raw; group's own head then falls inside the prefix, which is copied from group.
+        if (raw.length > 1 && raw[0] == OBJECT_PLACEHOLDER && group.length > 0 && group[0] == OBJECT_PLACEHOLDER
+                && !matchesAt(group, 0, raw)) {
+            int[] rest = java.util.Arrays.copyOfRange(raw, 1, raw.length);
+            if (findRawStart(group, rest) > 0) raw = rest;
+        }
+
         int prefixLen = findRawStart(group, raw);
         int suffixLen = Math.max(0, group.length - prefixLen - raw.length);
 
@@ -224,6 +229,14 @@ public class ChatSelection {
             return i;
         }
         return 0;
+    }
+
+    /** Whether raw's anchor (its first codepoints, as in findRawStart) matches group at {@code i}. */
+    private static boolean matchesAt(int[] group, int i, int[] raw) {
+        int anchor = Math.min(raw.length, 8);
+        if (i + anchor > group.length) return false;
+        for (int k = 0; k < anchor; k++) if (group[i + k] != raw[k]) return false;
+        return true;
     }
 
     /** Sums codepoint lengths of lines with index in (boundaryIdx, groupTop]. */

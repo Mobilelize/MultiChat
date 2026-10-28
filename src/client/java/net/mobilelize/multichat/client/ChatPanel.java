@@ -182,16 +182,9 @@ public class ChatPanel {
     private static int computeEntryWidth(ChatTab.MessageEntry entry, int baseWidth, boolean isPrimary) {
         int width = baseWidth - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
         if (!isPrimary) {
-            // Reserve only what this entry will actually use — headWidth() for a real head on
-            // line 0, emptyLineWidth() for the "offset non-player text" alignment case on every
-            // other line, both correctly 0 when neither applies (e.g. no head found AND that
-            // alignment setting is off). Blindly reserving maxHeadWidth() for every entry that
-            // merely participated in chat_heads' pipeline wrapped messages a line early even when
-            // nothing was ever going to render an offset for them.
-            ChatHeadsSupport.HeadRef ref = ChatHeadsSupport.get(entry.entry());
-            if (ref != ChatHeadsSupport.HeadRef.NONE) {
-                width -= Math.max(ChatHeadsSupport.headWidth(ref), ChatHeadsSupport.emptyLineWidth());
-            }
+            // Reserve only what this entry's lines can actually be shifted by (0 when nothing
+            // applies) — see ChatHeadsSupport.wrapReserve.
+            width -= ChatHeadsSupport.wrapReserve(entry.entry());
         }
         return width;
     }

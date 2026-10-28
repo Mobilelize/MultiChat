@@ -56,7 +56,7 @@ public class MultichatClient implements ClientModInitializer {
             // otherwise every panel's already-wrapped lines stay wrapped for the OLD mode while
             // render-time offset (which reads config live every frame) immediately starts
             // shifting them for the new one: text visibly moves without ever re-wrapping.
-            if (ChatHeadsSupport.pollRenderPositionChanged()) ChatManager.resetForRefresh();
+            if (ChatHeadsSupport.pollLayoutChanged()) ChatManager.resetForRefresh();
 
             ChatManager.tickPendingTrims(LzChat.ticks());
             ChatManager.tickSkeletonWatchdog(LzChat.ticks());
