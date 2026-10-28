@@ -184,24 +184,24 @@ public class MultichatClient implements ClientModInitializer {
     // Text helpers (used by NoteTab.NoteEntry)
     // ------------------------------------------------------------------
 
-    static String textToJson(LzText text) {
+    private static net.minecraft.registry.RegistryWrapper.WrapperLookup LOOKUP = null;
+    private static net.minecraft.registry.RegistryWrapper.WrapperLookup lookup() {
+        if (LOOKUP == null) LOOKUP = net.minecraft.registry.BuiltinRegistries.createWrapperLookup();
+        return LOOKUP;
+    }
+
+    public static String textToJson(LzText text) {
         try {
-            com.google.gson.JsonElement el = net.minecraft.text.TextCodecs.CODEC
-                    .encodeStart(com.mojang.serialization.JsonOps.INSTANCE, text.mc())
-                    .getOrThrow();
-            return el.toString();
+            return net.minecraft.text.Text.Serialization.toJsonString(text.mc(), lookup());
         } catch (Exception e) {
             return "\"" + text.mc().getString().replace("\"", "\\\"") + "\"";
         }
     }
 
-    static LzText textFromJson(String json) {
+    public static LzText textFromJson(String json) {
         try {
-            com.google.gson.JsonElement el = com.google.gson.JsonParser.parseString(json);
-            net.minecraft.text.Text t = net.minecraft.text.TextCodecs.CODEC
-                    .parse(com.mojang.serialization.JsonOps.INSTANCE, el)
-                    .getOrThrow();
-            return LzText.wrapMc(t);
+            net.minecraft.text.Text t = net.minecraft.text.Text.Serialization.fromJson(json, lookup());
+            return t != null ? LzText.wrapMc(t) : LzText.literal(json);
         } catch (Exception e) {
             return LzText.literal(json);
         }

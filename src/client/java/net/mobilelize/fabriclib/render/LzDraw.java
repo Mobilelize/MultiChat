@@ -32,9 +32,9 @@ public final class LzDraw {
         ctx.mc().fillGradient(x1, y1, x2, y2, colourTop, colourBottom);
     }
 
-    // 1.21.6: z-indexed fill removed — z ignored, use LzHudOverlay for layering
+    // 1.21: ctx.fill(x1, y1, x2, y2, z, colour)   26.1: VERIFY (z-indexed fill for layering)
     public static void fill(LzDrawContext ctx, int x1, int y1, int x2, int y2, int z, int colour) {
-        ctx.mc().fill(x1, y1, x2, y2, colour);
+        ctx.mc().fill(x1, y1, x2, y2, z, colour);
     }
 
     // ── Borders & dividers ────────────────────────────────────────────────
@@ -71,24 +71,24 @@ public final class LzDraw {
 
     // ── Matrix transforms ─────────────────────────────────────────────────
 
-    // 1.21.6: MatrixStack -> Matrix3x2fStack, push/pop renamed
-    public static void pushMatrix(LzDrawContext ctx) { ctx.mc().getMatrices().pushMatrix(); }
+    // 1.21: ctx.getMatrices().push()   26.1: VERIFY MatrixStack method name
+    public static void pushMatrix(LzDrawContext ctx) { ctx.mc().getMatrices().push(); }
 
-    // 1.21.6: MatrixStack -> Matrix3x2fStack, push/pop renamed
-    public static void popMatrix(LzDrawContext ctx) { ctx.mc().getMatrices().popMatrix(); }
+    // 1.21: ctx.getMatrices().pop()   26.1: VERIFY MatrixStack method name
+    public static void popMatrix(LzDrawContext ctx) { ctx.mc().getMatrices().pop(); }
 
-    // 1.21.6: Matrix3x2f is 2D-only — no z component
-    public static void translate(LzDrawContext ctx, float x, float y) { ctx.mc().getMatrices().translate(x, y); }
+    // 1.21: ctx.getMatrices().translate(x, y, 0)   26.1: VERIFY signature
+    public static void translate(LzDrawContext ctx, float x, float y) { ctx.mc().getMatrices().translate(x, y, 0); }
 
-    // 1.21.6: z ignored — Matrix3x2f has no z axis
-    public static void translate(LzDrawContext ctx, float x, float y, float z) { ctx.mc().getMatrices().translate(x, y); }
+    // 1.21: ctx.getMatrices().translate(x, y, z)   26.1: VERIFY signature
+    public static void translate(LzDrawContext ctx, float x, float y, float z) { ctx.mc().getMatrices().translate(x, y, z); }
 
-    // 1.21.6: ctx.getMatrices().scale(sx, sy)
-    public static void scale(LzDrawContext ctx, float sx, float sy) { ctx.mc().getMatrices().scale(sx, sy); }
+    // 1.21: ctx.getMatrices().scale(sx, sy, 1)   26.1: VERIFY signature
+    public static void scale(LzDrawContext ctx, float sx, float sy) { ctx.mc().getMatrices().scale(sx, sy, 1); }
 
-    // 1.21.6: Matrix3x2fStack.rotate(radians) — screen space is Y-down, so a positive angle here
-    // reads as visually clockwise, not the counterclockwise you'd expect from plain math convention.
-    public static void rotate(LzDrawContext ctx, float radians) { ctx.mc().getMatrices().rotate(radians); }
+    // 1.21: MatrixStack has no 2D rotate — multiply by a Z-axis quaternion. Screen space is Y-down,
+    // so a positive angle reads as visually clockwise.
+    public static void rotate(LzDrawContext ctx, float radians) { ctx.mc().getMatrices().multiply(new org.joml.Quaternionf().rotateZ(radians)); }
 
     // ── Text ──────────────────────────────────────────────────────────────
 

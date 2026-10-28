@@ -208,7 +208,13 @@ public class ChatRenderer {
                 int tabWidth = LzDraw.textWidth(label) + 8;
                 boolean active = (lastRendered + 1 == panel.activeTabIndex());
 
-                LzDraw.enableScissor(context, x, topY, tabAreaEnd, topY + TAB_HEIGHT);
+                // MC-VERSION-SENSITIVE: 1.21.5 scissor takes screen coords (ignores the pose matrix).
+                int sx1 = Math.round((x + xOffset) * scale);
+                int sy1 = Math.round(topY * scale);
+                int sx2 = Math.round((tabAreaEnd + xOffset) * scale);
+                int sy2 = Math.round((topY + TAB_HEIGHT) * scale);
+
+                LzDraw.enableScissor(context, sx1, sy1, sx2, sy2);
                 LzDraw.fill(context, x, topY, x + tabWidth, topY + TAB_HEIGHT, tabBgColor(nextTab, active, panel));
                 LzDraw.drawText(context, label, x, topY + 1, tabFgColor(nextTab, active, panel));
                 LzDraw.disableScissor(context);
