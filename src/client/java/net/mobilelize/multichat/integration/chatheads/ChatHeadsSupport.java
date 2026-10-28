@@ -2,9 +2,17 @@ package net.mobilelize.multichat.integration.chatheads;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.ObjectTextContent;
+import net.minecraft.text.PlainTextContent;
+import net.minecraft.text.StyleSpriteSource;
+import net.minecraft.text.Text;
 import net.mobilelize.fabriclib.client.LzChatEntry;
+import net.mobilelize.fabriclib.client.LzChatLine;
+import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.multichat.client.MultichatClient;
 
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -12,53 +20,42 @@ import java.util.WeakHashMap;
  * Compatibility shim for dzwdz/chat_heads. Only this class touches chat_heads classes —
  * MultiChat internals must never import dzwdz.chat_heads.* directly.
  * <p>
- * chat_heads' default {@code renderPosition = BEFORE_NAME} bakes the head as a real vanilla
- * {@code ObjectTextContent} node inside the message {@code Text} — nothing to render or
- * suppress here, MultiChat's normal text drawing already paints it. The one thing that
- * doesn't come for free: {@code dzwdz.chat_heads.ChatHeads.customHeadRendering} is a public
- * static flag chat_heads' own glyph-provider mixins ({@code PaddedChatGlyph},
- * {@code PlayerGlyphProviderInstanceMixin}) read to decide whether to reserve/draw the extra
- * padding their "3D-ness" head effect needs. It's only ever flipped {@code true} by chat_heads'
- * own mixins bracketing specific render methods it knows about (vanilla {@code ChatComponent},
- * plus its own opt-in {@code render_targets} list for GuiRenderer/books/Cloth Config) — never
- * for MultiChat's separate render path, so the glyph reports too-narrow an advance there and
- * the head visually overlaps/squishes into the next character. This mirrors that same
- * bracket-a-render-target pattern for MultiChat's own line width/draw calls.
+ * Built against chat_heads 1.3.x (github.com/dzwdz/chat_heads, tag 1.3.2-1.21.11). Both render
+ * positions put the head into the message {@code Text} as a vanilla {@code ObjectTextContent}
+ * player sprite, so MultiChat's normal text drawing paints it in every tab:
+ * <ul>
+ *   <li>BEFORE_NAME: ChatListenerMixin rewrites the {@code addMessage} argument, which
+ *       ChatHudMixin.captureRaw then captures as-is.</li>
+ *   <li>BEFORE_LINE: ChatComponentMixin2.prependChatHead only rewrites the text of the
+ *       {@code GuiMessage} vanilla stores — later than captureRaw — so
+ *       {@link #withBeforeLineHead} applies the same step to MultiChat's copy.</li>
+ * </ul>
+ * BEFORE_LINE alignment is chat_heads' {@code getChatOffset(line)}: with "offset non-player text"
+ * on, every line that doesn't start with a head is shifted right by {@code headWidth()}
+ * ({@link #lineOffset}).
+ * <p>
+ * Glyph padding and 3D-ness ({@code PaddedChatGlyph}, {@code PlayerGlyphProviderInstanceMixin})
+ * only apply while {@code ChatHeads.customHeadRendering} is true. chat_heads sets it for vanilla
+ * chat and for GuiRenderer.prepare (where queued text is actually drawn); MultiChat brackets its
+ * own width measurements the same way ({@link #beginHeadRendering}) so they match what's drawn.
+ * <p>
+ * chat_heads 1.2.x (before 1.3.0) drew BEFORE_LINE heads beside the line instead of in the text;
+ * that path is kept ({@link #headsInText} false) so an older install still works.
  */
 public final class ChatHeadsSupport {
 
     private static volatile boolean present = detect();
 
-    // Callers (ChatPanel's wrap, ChatRenderer's draw loop, ChatSelection's click/highlight math)
-    // each bracket their own width-sensitive work independently and can nest (e.g. selection
-    // math running inside a render pass). A plain boolean would let an inner endHeadRendering()
-    // turn the flag off while an outer caller is still relying on it — depth-count instead so
-    // only the outermost begin/end pair actually flips dzwdz's flag. Single-threaded render/tick,
-    // no synchronization needed.
+    // Callers (ChatRenderer's draw loop, ChatSelection's click/highlight math, resolveStyleAt) each
+    // bracket their own width-sensitive work independently and can nest (e.g. selection math running
+    // inside a render pass). Depth-count so only the outermost begin/end pair flips chat_heads' flag.
+    // Single-threaded render/tick, no synchronization needed.
     private static int depth = 0;
 
-    // chat_heads 1.3.0+ also puts the BEFORE_LINE head into the message text itself: an inline
-    // object prepended while ChatComponent.addMessage builds the GuiMessage
-    // (ComponentProcessor.prependChatHead). MultiChat already draws that object as part of the text,
-    // so in that case it must not draw its own head beside the line too (that showed two heads) or
-    // shift the head line for one. 1.2.x and older only draw the head beside the line, which is what
-    // the BEFORE_LINE support below does for them. Checked by mod version (1.2.9 doesn't prepend,
-    // 1.3.0 does) rather than reflection, which can't fail on an unresolvable signature type.
+    // chat_heads 1.3.0 (commit a0ae814) made BEFORE_LINE "work like BEFORE_NAME": the head is put
+    // into the text instead of drawn beside the line. 1.2.9 doesn't, 1.3.0 does. Read from the mod
+    // version so no chat_heads class has to be loaded to find out.
     private static final boolean headsInText = present && detectHeadsInText();
-
-    private static boolean detectHeadsInText() {
-        try {
-            var mod = FabricLoader.getInstance().getModContainer("chat_heads");
-            if (mod.isEmpty()) return false;
-            boolean inText = mod.get().getMetadata().getVersion()
-                .compareTo(net.fabricmc.loader.api.SemanticVersion.parse("1.3.0")) >= 0;
-            if (inText) MultichatClient.LOGGER.info("[MultiChat] Chat Heads 1.3+: \"Before Line\" heads are drawn inline with the text");
-            return inText;
-        } catch (Throwable t) {
-            MultichatClient.LOGGER.warn("[MultiChat] Could not read the Chat Heads version", t);
-            return false;
-        }
-    }
 
     private ChatHeadsSupport() {}
 
@@ -73,90 +70,94 @@ public final class ChatHeadsSupport {
         }
     }
 
-    /** Call once from {@code onInitializeClient} so the detect log line lands at startup,
-     *  not whenever the first chat line happens to render. Detection itself is lazy-safe
-     *  either way (isModLoaded only reads Fabric's static mod list) — this just moves *when*
-     *  it's first touched. */
-    public static void init() {}
-
-    public static boolean isPresent() { return present; }
-
-    // Last renderPosition seen by pollRenderPositionChanged(). chat_heads' config screen has no
-    // save callback we can hook (checked its source — nothing calls a chat refresh/reset on
-    // save), so detecting a mode switch means polling this once a tick and comparing. Everything
-    // downstream (wrapWidth reservation, render-time offset) already reads config live and
-    // reacts instantly on its own — the one thing that DOESN'T self-correct is wrap-time
-    // reservation baked into already-built LzChatLines on non-primary panels (§0c), which needs
-    // an explicit rebuild when the mode actually changes, not just a live re-read.
-    private static dzwdz.chat_heads.config.RenderPosition lastKnownRenderPosition = null;
-
-    /** Call once a tick (see MultichatClient). Returns true (and updates the cached value) the
-     *  moment chat_heads' renderPosition differs from what it was last tick — callers should
-     *  rebuild every panel's wrapped lines in response (ChatManager.resetForRefresh()). Never
-     *  fires on the very first call (nothing to compare against yet), so mod startup doesn't
-     *  trigger a spurious rebuild. */
-    public static boolean pollRenderPositionChanged() {
-        if (!present) return false;
+    private static boolean detectHeadsInText() {
         try {
-            var current = dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition();
-            boolean changed = lastKnownRenderPosition != null && current != lastKnownRenderPosition;
-            lastKnownRenderPosition = current;
-            return changed;
+            var mod = FabricLoader.getInstance().getModContainer("chat_heads");
+            if (mod.isEmpty()) return false;
+            return mod.get().getMetadata().getVersion()
+                .compareTo(net.fabricmc.loader.api.SemanticVersion.parse("1.3.0")) >= 0;
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            MultichatClient.LOGGER.warn("[MultiChat] Could not read the Chat Heads version", t);
             return false;
         }
     }
 
-    // ── BEFORE_LINE support ──────────────────────────────────────────────────
+    /** Call once from {@code onInitializeClient} so the detect log line lands at startup,
+     *  not whenever the first chat line happens to render. */
+    public static void init() {}
+
+    public static boolean isPresent() { return present; }
+
+    // Everything that decides wrap-time widths, sampled once a tick by pollLayoutChanged(). chat_heads'
+    // config screen has no save callback we can hook, so a change is only noticed by comparing. Render
+    // offsets read config live; only widths baked into already-wrapped lines need a rebuild.
+    private static String lastLayoutKey = null;
+
+    /** Call once a tick (see MultichatClient). True the moment render position, the "offset non-player
+     *  text" state or the head width (right padding / 3D-ness) changed since last tick — callers
+     *  rebuild every panel's wrapped lines (ChatManager.resetForRefresh()). Never fires on the first
+     *  call, so mod startup doesn't trigger a spurious rebuild. */
+    public static boolean pollLayoutChanged() {
+        if (!present) return false;
+        try {
+            String key = dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() + "|" + offsetEnabled()
+                + "|" + dzwdz.chat_heads.ChatHeads.headWidth();
+            boolean changed = lastLayoutKey != null && !key.equals(lastLayoutKey);
+            lastLayoutKey = key;
+            return changed;
+        } catch (Throwable t) {
+            disable(t);
+            return false;
+        }
+    }
+
+    // ── Capture (ChatHudMixin.captureRaw, HEAD of ChatHud.addMessage) ────────────────────────────
     //
-    // chat_heads' non-default renderPosition = BEFORE_LINE mode embeds nothing in the message
-    // Text at all — instead ChatListenerMixin sets the static ChatHeads.lastSenderData right
-    // before vanilla ChatComponent.addMessage(...) runs (the exact method ChatHudMixin.captureRaw
-    // already hooks at HEAD, same call stack, so capturing it there is race-free), and chat_heads'
-    // own mixins transfer that onto the first wrapped GuiMessage.Line of the message — objects
-    // MultiChat never creates. So MultiChat has to capture the head data itself at message-add
-    // time, remember which LzChatEntry it belongs to, and do chat_heads' own draw+offset job
-    // (ChatHeads.renderChatHead / getChatOffset) manually for its own LzChatLines.
+    // chat_heads' ChatListenerMixin sets ChatHeads.lastSenderData right before vanilla addMessage
+    // runs and ChatComponentMixin2 resets it at addMessage's RETURN, so at HEAD it belongs to exactly
+    // this message.
 
     /** Opaque handle to a chat_heads HeadData — lets code outside this package hold a reference
-     *  without importing chat_heads types. {@link #NONE} means "no head for this message". */
+     *  without importing chat_heads types. {@link #NONE} means "never went through chat_heads". */
     public static final class HeadRef {
         public static final HeadRef NONE = new HeadRef(null);
         private final dzwdz.chat_heads.HeadData data;
         private HeadRef(dzwdz.chat_heads.HeadData data) { this.data = data; }
     }
 
-    // Self-cleans as entries scroll out of every tab's history and become unreachable — no
-    // explicit trim/removal hook needed. Single-threaded render/tick, no synchronization needed.
+    // Self-cleans as entries scroll out of every tab's history and become unreachable.
     private static final Map<LzChatEntry, HeadRef> headByEntry = new WeakHashMap<>();
 
-    /** Call from ChatHudMixin.captureRaw, at HEAD of ChatHud.addMessage — same instant chat_heads'
-     *  own ChatListenerMixin has just set ChatHeads.lastSenderData for this exact message. Always
-     *  wraps whatever value that is (including HeadData.EMPTY, for a message with no real head) —
-     *  NOT pre-filtered by whether it currently produces a nonzero offset. headWidth()/renderHead()
-     *  re-derive that live from current config on every call, so a config change (e.g. toggling
-     *  "offset non-player text") takes effect instantly for every message already in history, the
-     *  same way real chat_heads re-evaluates it fresh every render frame. Pre-filtering here would
-     *  freeze that decision at message-arrival time and never revisit it.
-     *  <p>
-     *  Gated on being in BEFORE_LINE mode right now, though — unlike the rest of this class, that
-     *  one check IS frozen at capture time, deliberately. Under BEFORE_NAME the head is a real
-     *  ObjectTextContent baked into the message Text itself (§ above), fully self-contained; if we
-     *  attached a real HeadRef for it too and the user later switches to BEFORE_LINE, this old
-     *  message would get a second head drawn (our own offset-based one) on top of the one already
-     *  permanently embedded in its text. Only messages that arrive while BEFORE_LINE is actually
-     *  active need our own draw/offset machinery at all. */
+    /** chat_heads' ChatComponentMixin2.prependChatHead, applied to MultiChat's own copy of the
+     *  message: same condition (BEFORE_LINE and a sender was found), same call. Without it the head
+     *  only exists in the vanilla GuiMessage, which only the All tab renders from. */
+    public static Text withBeforeLineHead(Text message) {
+        if (!present || !headsInText) return message;
+        try {
+            if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE)
+                return message;
+            dzwdz.chat_heads.HeadData sender = dzwdz.chat_heads.ChatHeads.lastSenderData;
+            if (sender == dzwdz.chat_heads.HeadData.EMPTY) return message;
+            return dzwdz.chat_heads.ComponentProcessor.prependChatHead(message, sender.playerInfo());
+        } catch (Throwable t) {
+            disable(t);
+            return message;
+        }
+    }
+
+    /** Marks the message as one that went through chat_heads' pipeline, so its lines take part in
+     *  BEFORE_LINE alignment (MultiChat's own Notes/Info/raw lines never do). 1.3+: every message
+     *  is marked, because chat_heads evaluates the offset live per line in any mode. 1.2.x: only
+     *  messages that arrived in BEFORE_LINE — a BEFORE_NAME head is already in the text, and a
+     *  second, drawn one would be added on a later switch to BEFORE_LINE. */
     public static HeadRef captureLastSenderData() {
         if (!present) return HeadRef.NONE;
         try {
-            if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE)
+            if (!headsInText && dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE)
                 return HeadRef.NONE;
             return new HeadRef(dzwdz.chat_heads.ChatHeads.lastSenderData);
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            disable(t);
             return HeadRef.NONE;
         }
     }
@@ -173,93 +174,158 @@ public final class ChatHeadsSupport {
         return headByEntry.getOrDefault(entry, HeadRef.NONE);
     }
 
-    /** Pixels of leading space to reserve for the head on this entry's first wrapped line. 0 if none. */
-    public static int headWidth(HeadRef ref) {
-        if (!present || ref == HeadRef.NONE) return 0;
+    // ── Layout ────────────────────────────────────────────────────────────────────────────────
+
+    /** Pixels this wrapped line's text is shifted right. 1.3+: chat_heads' getChatOffset(line) —
+     *  {@code headWidth()} when "offset non-player text" applies and the line doesn't start with a
+     *  head. 1.2.x: getChatOffset(HeadData) — the head line makes room for the drawn head, other
+     *  lines follow "offset non-player text". 0 for lines that never went through chat_heads. */
+    public static int lineOffset(LzChatLine line) {
+        if (!present || line == null) return 0;
+        HeadRef ref = get(line.entry());
+        if (ref == HeadRef.NONE) return 0;
         try {
-            // Head already sits at the start of the text (see headsInText) — nothing to make room for.
-            // A message with no head still gets the "offset non-player text" alignment, like chat_heads
-            // 1.3's own getChatOffset(line) (offset unless the line starts with a head).
-            if (headsInText && ref.data != dzwdz.chat_heads.HeadData.EMPTY) return 0;
-            return chatOffset(ref.data);
+            if (headsInText)
+                return offsetEnabled() && !startsWithHead(line.content()) ? dzwdz.chat_heads.ChatHeads.headWidth() : 0;
+            return legacyChatOffset(line.startOfEntry() ? ref.data : dzwdz.chat_heads.HeadData.EMPTY);
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            disable(t);
             return 0;
         }
     }
 
-    /** Offset for a line that never carries head data of its own — every continuation line of a
-     *  wrapped multi-line message (real chat_heads resets its per-line head data to EMPTY right
-     *  after the first line consumes it, unconditionally, whether or not that entry had a real
-     *  head), and effectively also the first line of any entry with no head at all (headWidth of
-     *  a ref wrapping HeadData.EMPTY reduces to exactly this). Purely driven by chat_heads' own
-     *  "offset non-player text" alignment setting — when that's on, every line indents to stay
-     *  flush with lines that do have a real head; when it's off, only actual head lines indent. */
-    public static int emptyLineWidth() {
+    /** Wrap-width to reserve on a non-primary panel for an entry, so its widest shifted line still
+     *  fits inside the panel's fixed edge. 1.3+: the head itself is a glyph the wrap already counts;
+     *  only lines that get shifted need room. 1.2.x: the drawn head on the first line, or the
+     *  alignment shift on the others. */
+    public static int wrapReserve(LzChatEntry entry) {
+        HeadRef ref = get(entry);
+        if (ref == HeadRef.NONE) return 0;
+        try {
+            if (headsInText) return offsetEnabled() ? dzwdz.chat_heads.ChatHeads.headWidth() : 0;
+            return Math.max(legacyChatOffset(ref.data), legacyChatOffset(dzwdz.chat_heads.HeadData.EMPTY));
+        } catch (Throwable t) {
+            disable(t);
+            return 0;
+        }
+    }
+
+    /** Extra width the primary panel's background/render bound grows by — chat_heads'
+     *  ChatComponentMixin.fixTextOverflow, which widens vanilla's line fill by
+     *  getTextWidthDifference(). 1.3+: {@code headWidth()} only while lines are being offset.
+     *  1.2.x: {@code headWidth()} in BEFORE_LINE. */
+    public static int maxHeadWidth() {
         if (!present) return 0;
         try {
-            return chatOffset(dzwdz.chat_heads.HeadData.EMPTY);
+            if (headsInText) return offsetEnabled() ? dzwdz.chat_heads.ChatHeads.headWidth() : 0;
+            if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE)
+                return 0;
+            return dzwdz.chat_heads.ChatHeads.headWidth();
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            disable(t);
             return 0;
         }
     }
 
-    /** chat_heads 1.2.x's {@code ChatHeads.getChatOffset(HeadData)}, re-derived from members every
-     *  release shares. 1.3.x changed that method to take a {@code ChatHudLine.Visible}, so calling
-     *  either signature directly throws NoSuchMethodError on the other and disables compat. */
-    private static int chatOffset(dzwdz.chat_heads.HeadData data) {
+    // chat_heads 1.3's private ChatHeads.offsetEnabled().
+    private static boolean offsetEnabled() {
+        return dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() == dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE
+            && dzwdz.chat_heads.ChatHeads.CONFIG.offsetNonPlayerText()
+            && !dzwdz.chat_heads.ChatHeads.serverDisabledChatHeads;
+    }
+
+    // chat_heads 1.3's private ChatHeads.startsWithHead(line): only the first codepoint counts.
+    private static boolean startsWithHead(LzOrderedText content) {
+        boolean[] r = new boolean[1];
+        content.mc().accept((index, style, codepoint) -> {
+            r[0] = style.getFont() instanceof StyleSpriteSource.Player;
+            return false;
+        });
+        return r[0];
+    }
+
+    // chat_heads 1.2.x's ChatHeads.getChatOffset(HeadData) (1.3 replaced it with getChatOffset(line)).
+    private static int legacyChatOffset(dzwdz.chat_heads.HeadData data) {
         if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE) return 0;
         boolean offset = data != dzwdz.chat_heads.HeadData.EMPTY
             || (dzwdz.chat_heads.ChatHeads.CONFIG.offsetNonPlayerText() && !dzwdz.chat_heads.ChatHeads.serverDisabledChatHeads);
         return offset ? dzwdz.chat_heads.ChatHeads.headWidth() : 0;
     }
 
-    /** Fixed per-panel width to reserve so chat_heads' render-time shift+overflow (see class doc)
-     *  has somewhere to go without falling off a fixed-width panel edge — 0 unless chat_heads is
-     *  actually in BEFORE_LINE mode (in BEFORE_NAME, nothing ever shifts, so there's nothing to
-     *  reserve for). Same constant chat_heads itself always reserves for a head
-     *  ({@code headWidth()} = {@code 8 + 2 + drawShadow}px) — not per-message, doesn't need a
-     *  HeadRef. Callers apply this per-panel (see ChatPanel.resolveRenderWidth), not per-row. */
-    public static int maxHeadWidth() {
-        if (!present) return 0;
+    // ── Timestamps ────────────────────────────────────────────────────────────────────────────
+
+    /** If {@code text} starts with a BEFORE_LINE head, splits it off: [head, rest]. Otherwise null.
+     *  chat_heads applies after Chat Timestamps on purpose so a line's head stays in front of its
+     *  timestamp; MultiChat's own timestamps keep that order through this. */
+    public static Text[] splitLeadingHead(Text text) {
+        if (!present || !headsInText) return null;
         try {
             if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE)
-                return 0;
-            return dzwdz.chat_heads.ChatHeads.headWidth();
+                return null;
+            Text[] head = new Text[1];
+            Text rest = withoutFirstLeaf(text, head);
+            if (head[0] == null || !(head[0].getContent() instanceof ObjectTextContent) || !isPlayerSprite(head[0]))
+                return null;
+            return new Text[]{ head[0], rest };
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
-            return 0;
+            disable(t);
+            return null;
         }
     }
 
-    /** Draws the head texture at (x, y). No-op if ref is {@link HeadRef#NONE} or carries no real
-     *  head (a nonzero {@link #headWidth} can still happen with no head to draw — chat_heads'
-     *  "offset non-player text" alignment option reserves the space without a texture to fill
-     *  it, matching real chat_heads' own {@code headData != HeadData.EMPTY} guard). */
-    public static void renderHead(DrawContext context, int x, int y, HeadRef ref, float opacity) {
-        if (!present || ref == HeadRef.NONE || headsInText) return;
+    // An object node renders as one codepoint whose style font is the object's sprite source — the
+    // same thing chat_heads' startsWithHead checks on a wrapped line.
+    private static boolean isPlayerSprite(Text node) {
+        boolean[] r = new boolean[1];
+        node.asOrderedText().accept((index, style, codepoint) -> {
+            r[0] = style.getFont() instanceof StyleSpriteSource.Player;
+            return false;
+        });
+        return r[0];
+    }
+
+    // Depth-first first leaf with non-empty content (the first thing that renders), removed from a
+    // copy of the tree. Styles of the nodes above it stay on the copy; the leaf is returned with its
+    // own style. Returns the tree unchanged (and out[0] null) if the first leaf isn't found.
+    private static Text withoutFirstLeaf(Text node, Text[] out) {
+        if (!(node.getContent() instanceof PlainTextContent plain && plain.string().isEmpty())) {
+            out[0] = node.copyContentOnly().setStyle(node.getStyle());
+            MutableText copy = MutableText.of(PlainTextContent.EMPTY).setStyle(node.getStyle());
+            for (Text sibling : node.getSiblings()) copy.append(sibling);
+            return copy;
+        }
+        List<Text> siblings = node.getSiblings();
+        if (siblings.isEmpty()) return node;
+        MutableText copy = MutableText.of(PlainTextContent.EMPTY).setStyle(node.getStyle());
+        copy.append(withoutFirstLeaf(siblings.get(0), out));
+        for (int i = 1; i < siblings.size(); i++) copy.append(siblings.get(i));
+        return copy;
+    }
+
+    // ── Drawing ───────────────────────────────────────────────────────────────────────────────
+
+    /** Draws a 1.2.x BEFORE_LINE head at (x, y). No-op on 1.3+, where the head is part of the text,
+     *  and for a ref with no real head (the alignment-only case). */
+    public static void renderHead(DrawContext context, int x, int y, LzChatLine line, float opacity) {
+        if (!present || headsInText || line == null || !line.startOfEntry()) return;
+        HeadRef ref = get(line.entry());
+        if (ref == HeadRef.NONE) return;
         try {
             if (ref.data == dzwdz.chat_heads.HeadData.EMPTY) return;
             dzwdz.chat_heads.ChatHeads.renderChatHead(context, x, y, ref.data.playerInfo(), opacity);
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            disable(t);
         }
     }
 
-    /** Call immediately before measuring/wrapping or drawing text that may contain a chat_heads object. */
+    /** Call immediately before measuring or drawing text that may contain a chat_heads head. */
     public static void beginHeadRendering() {
         if (!present) return;
         if (depth++ > 0) return;
         try {
             dzwdz.chat_heads.ChatHeads.customHeadRendering = true;
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            disable(t);
         }
     }
 
@@ -270,8 +336,12 @@ public final class ChatHeadsSupport {
         try {
             dzwdz.chat_heads.ChatHeads.customHeadRendering = false;
         } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+            disable(t);
         }
+    }
+
+    private static void disable(Throwable t) {
+        present = false;
+        MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
     }
 }
