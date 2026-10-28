@@ -54,7 +54,23 @@ public final class ChatHeadsSupport {
      *  not whenever the first chat line happens to render. Detection itself is lazy-safe
      *  either way (isModLoaded only reads Fabric's static mod list) — this just moves *when*
      *  it's first touched. */
-    public static void init() {}
+    public static void init() {
+        if (!present) return;
+        // MC-VERSION-SENSITIVE: chat_heads 0.15.x (MC <= 1.21.8) has no inline-object heads. Its
+        // BEFORE_NAME mode draws heads from a font-renderer hook fed by statics that only its own
+        // ChatHud mixin sets, so MultiChat's panels can't show them. forceBeforeLine is the switch
+        // chat_heads itself flips for mods that can't do BEFORE_NAME (Caxton, ModernUI): its config
+        // then reports BEFORE_LINE everywhere, which the BEFORE_LINE support below handles.
+        try {
+            if (!dzwdz.chat_heads.ChatHeads.forceBeforeLine) {
+                dzwdz.chat_heads.ChatHeads.forceBeforeLine = true;
+                MultichatClient.LOGGER.info("[MultiChat] Chat Heads: \"Before Name\" not supported on this version, using \"Before Line\"");
+            }
+        } catch (Throwable t) {
+            present = false;
+            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
+        }
+    }
 
     public static boolean isPresent() { return present; }
 
@@ -227,24 +243,14 @@ public final class ChatHeadsSupport {
     /** Call immediately before measuring/wrapping or drawing text that may contain a chat_heads object. */
     public static void beginHeadRendering() {
         if (!present) return;
-        if (depth++ > 0) return;
-        try {
-            dzwdz.chat_heads.ChatHeads.customHeadRendering = true;
-        } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
-        }
+        // MC-VERSION-SENSITIVE: chat_heads 0.15.x has no glyph heads and no customHeadRendering
+        // flag, so there's nothing to bracket. Kept so callers stay identical across branches.
+        depth++;
     }
 
     /** Always call in a finally paired with {@link #beginHeadRendering()} — never leave the flag on. */
     public static void endHeadRendering() {
         if (!present) return;
-        if (--depth > 0) return;
-        try {
-            dzwdz.chat_heads.ChatHeads.customHeadRendering = false;
-        } catch (Throwable t) {
-            present = false;
-            MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
-        }
+        depth--;
     }
 }

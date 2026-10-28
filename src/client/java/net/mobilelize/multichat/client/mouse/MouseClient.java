@@ -3,8 +3,6 @@ package net.mobilelize.multichat.client.mouse;
 import net.mobilelize.fabriclib.client.LzClient;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.logging.Logger;
-
 public class MouseClient {
 
     private static long arrowCursor;

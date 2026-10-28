@@ -1,14 +1,8 @@
 package net.mobilelize.fabriclib.text;
 
-import net.minecraft.text.ObjectTextContent;
-import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
-import net.minecraft.text.TranslatableTextContent;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Stable wrapper for MC Text.
@@ -46,73 +40,16 @@ public class LzText {
 
     public String string() { return text.getString(); }
 
-    // MC-VERSION-SENSITIVE: ObjectTextContent added MC 1.21.9. Delete this method (and its
-    // call sites) outright when porting to an older branch — there's nothing to strip there.
-    // Mods that embed an inline "object" in chat (e.g. chat_heads' player-head sprite) make
-    // Text.getString() resolve to junk like "<[Bob head]Bob> hi", which breaks filter/search
-    // matching. This finds each ObjectTextContent node's own fallback string (its content
-    // only, not siblings) and cuts those substrings back out of the fully-resolved string.
+    // MC-VERSION-SENSITIVE: ObjectTextContent only exists on MC 1.21.9+. On this branch there are
+    // no inline objects, so these are pass-throughs that keep the callers identical across branches.
     public static String stringSkippingObjects(Text text) {
-        String full = text.getString();
-        List<String> fallbacks = new ArrayList<>();
-        collectObjectFallbacks(text, fallbacks);
-        for (String fallback : fallbacks) {
-            if (fallback.isEmpty()) continue;
-            int idx = full.indexOf(fallback);
-            if (idx >= 0) full = full.substring(0, idx) + full.substring(idx + fallback.length());
-        }
-        return full;
+        return text.getString();
     }
 
-    private static void collectObjectFallbacks(Text text, List<String> out) {
-        TextContent content = text.getContent();
-        if (content instanceof ObjectTextContent) {
-            StringBuilder sb = new StringBuilder();
-            content.visit(s -> { sb.append(s); return Optional.empty(); });
-            if (!sb.isEmpty()) out.add(sb.toString());
-        } else if (content instanceof TranslatableTextContent translatable) {
-            for (Object arg : translatable.getArgs())
-                if (arg instanceof Text argText) collectObjectFallbacks(argText, out);
-        }
-        for (Text sibling : text.getSiblings()) collectObjectFallbacks(sibling, out);
-    }
-
-    // MC-VERSION-SENSITIVE: ObjectTextContent added MC 1.21.9. Delete this method (and its call
-    // sites) outright when porting to an older branch. For a caller that needs to REBUILD a Text
-    // tree from Text.getString() (e.g. HighlightEngine.reformat, which reformats a message into a
-    // highlight-colored copy) — unlike stringSkippingObjects, which just removes the junk for
-    // matching purposes, this locates each object's own fallback-string range within getString()
-    // so the caller can splice the real node back in there instead of literal-copying the junk.
     public record ObjectSpan(int start, int end, Text node) {}
 
     public static List<ObjectSpan> objectSpans(Text text) {
-        String full = text.getString();
-        List<Text> nodes = new ArrayList<>();
-        collectObjectNodes(text, nodes);
-        List<ObjectSpan> spans = new ArrayList<>();
-        int searchFrom = 0;
-        for (Text node : nodes) {
-            StringBuilder sb = new StringBuilder();
-            node.getContent().visit(s -> { sb.append(s); return Optional.empty(); });
-            String fallback = sb.toString();
-            if (fallback.isEmpty()) continue;
-            int idx = full.indexOf(fallback, searchFrom);
-            if (idx < 0) continue; // shouldn't happen, but never splice at a made-up position
-            spans.add(new ObjectSpan(idx, idx + fallback.length(), node));
-            searchFrom = idx + fallback.length();
-        }
-        return spans;
-    }
-
-    private static void collectObjectNodes(Text text, List<Text> out) {
-        TextContent content = text.getContent();
-        if (content instanceof ObjectTextContent) {
-            out.add(text);
-        } else if (content instanceof TranslatableTextContent translatable) {
-            for (Object arg : translatable.getArgs())
-                if (arg instanceof Text argText) collectObjectNodes(argText, out);
-        }
-        for (Text sibling : text.getSiblings()) collectObjectNodes(sibling, out);
+        return List.of();
     }
 
     // ── Static factories ────────────────────────────────────────────────────

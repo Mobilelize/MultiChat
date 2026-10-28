@@ -18,16 +18,16 @@ public class LzPlayer {
 
     // 1.21: player.getUuid()   26.1: player.getUUID()
     public UUID uuid()             { return player.getUuid(); }
-    // unchanged: player.getGameProfile().name()
-    public String name()           { return player.getGameProfile().name(); }
-    // unchanged: player.getGameProfile().id()
-    public UUID profileId()        { return player.getGameProfile().id(); }
+    // unchanged: player.getGameProfile().getName()
+    public String name()           { return player.getGameProfile().getName(); }
+    // unchanged: player.getGameProfile().getId()
+    public UUID profileId()        { return player.getGameProfile().getId(); }
     // 1.21: player.isMainPlayer()   26.1: player.isLocalPlayer()
     public boolean isLocalPlayer() { return player.isMainPlayer(); }
     // unchanged: player.getId()
     public int entityId()          { return player.getId(); }
-    // 1.21: player.getEntityPos()   26.1: player.position()
-    public LzVec3 pos()            { return LzVec3.of(player.getEntityPos()); }
+    // 1.21: player.getPos()   26.1: player.position()
+    public LzVec3 pos()            { return LzVec3.of(player.getPos()); }
 
     /** Raw MC player — escape hatch for advanced use. */
     public AbstractClientPlayerEntity mc() { return player; }

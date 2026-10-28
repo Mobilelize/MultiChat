@@ -233,13 +233,15 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.selectionUsesOriginalText = v)
                 .build());
 
-        selection.addEntry(eb.startBooleanToggle(
-                LzText.literal("Copy Includes Object Placeholder").mc(),
-                MultichatClient.CONFIG.copyIncludesObjectPlaceholder)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Messages containing an inline object (e.g. a chat_heads player-head icon) show a placeholder character (￼) where it was. ON: copying keeps that placeholder in the clipboard text. OFF: it's left out.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.copyIncludesObjectPlaceholder = v)
-                .build());
+        // MC-VERSION-SENSITIVE: inline objects (ObjectTextContent) are MC 1.21.9+ only, so this
+        // toggle does nothing here. Field kept in MultiChatConfig so config files stay compatible.
+        // selection.addEntry(eb.startBooleanToggle(
+        //         LzText.literal("Copy Includes Object Placeholder").mc(),
+        //         MultichatClient.CONFIG.copyIncludesObjectPlaceholder)
+        //         .setDefaultValue(true)
+        //         .setTooltip(LzText.literal("Messages containing an inline object (e.g. a chat_heads player-head icon) show a placeholder character (￼) where it was. ON: copying keeps that placeholder in the clipboard text. OFF: it's left out.").mc())
+        //         .setSaveConsumer(v -> MultichatClient.CONFIG.copyIncludesObjectPlaceholder = v)
+        //         .build());
 
         // ── Highlight Words ──────────────────────────────────────────────────
         ConfigCategory highlight = builder.getOrCreateCategory(LzText.literal("Highlight Words").mc());
@@ -558,13 +560,15 @@ public class ConfigMenu {
                 .setSaveConsumer(v -> MultichatClient.CONFIG.normalizeFilterText = v)
                 .build());
 
-        advanced.addEntry(eb.startBooleanToggle(
-                LzText.literal("Strip Object Content").mc(),
-                MultichatClient.CONFIG.stripObjectContent)
-                .setDefaultValue(true)
-                .setTooltip(LzText.literal("Strip inline \"object\" content (e.g. chat_heads' player-head sprite) from messages before matching filter rules. MC 1.21.9+ only. Only affects routing — not collapse, count, or display.").mc())
-                .setSaveConsumer(v -> MultichatClient.CONFIG.stripObjectContent = v)
-                .build());
+        // MC-VERSION-SENSITIVE: inline objects (ObjectTextContent) are MC 1.21.9+ only, so this
+        // toggle does nothing here. Field kept in MultiChatConfig so config files stay compatible.
+        // advanced.addEntry(eb.startBooleanToggle(
+        //         LzText.literal("Strip Object Content").mc(),
+        //         MultichatClient.CONFIG.stripObjectContent)
+        //         .setDefaultValue(true)
+        //         .setTooltip(LzText.literal("Strip inline \"object\" content (e.g. chat_heads' player-head sprite) from messages before matching filter rules. MC 1.21.9+ only. Only affects routing — not collapse, count, or display.").mc())
+        //         .setSaveConsumer(v -> MultichatClient.CONFIG.stripObjectContent = v)
+        //         .build());
 
         advanced.addEntry(eb.startBooleanToggle(
                 LzText.literal("Disable MultiChat").mc(),

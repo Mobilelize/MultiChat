@@ -1,8 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -404,23 +402,22 @@ public class TabListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == Keys.ESCAPE && swapPending) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == Keys.ESCAPE && swapPending) {
             swapPending = false;
             return true;
         }
         if (selectedIdx >= 0 && selectedIdx < allTabs().size()
                 && isMoveable(allTabs().get(selectedIdx))) {
-            if (input.key() == Keys.UP)   { moveTab(selectedIdx, true);  return true; }
-            if (input.key() == Keys.DOWN) { moveTab(selectedIdx, false); return true; }
+            if (keyCode == Keys.UP)   { moveTab(selectedIdx, true);  return true; }
+            if (keyCode == Keys.DOWN) { moveTab(selectedIdx, false); return true; }
         }
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
-        double mx = click.x(); double my = click.y(); int button = click.button();
-        if (super.mouseClicked(click, isDoubleClick)) return true;
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (super.mouseClicked(mx, my, button)) return true;
 
         int lx = width / 2 - 200;
 
@@ -529,8 +526,7 @@ public class TabListScreen extends ConfigScreen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dx, double dy) {
-        double my = click.y();
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
         if (scrollDragging) {
             int max    = maxScroll();
             int trackH = listBottom() - LIST_TOP;
@@ -542,13 +538,13 @@ public class TabListScreen extends ConfigScreen {
                     scrollDragStartOff + (int)((my - scrollDragStartY) * max / travel)));
             return true;
         }
-        return super.mouseDragged(click, dx, dy);
+        return super.mouseDragged(mx, my, button, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(double mx, double my, int button) {
         scrollDragging = false;
-        return super.mouseReleased(click);
+        return super.mouseReleased(mx, my, button);
     }
 
     @Override

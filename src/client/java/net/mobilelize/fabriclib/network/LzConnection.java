@@ -50,7 +50,7 @@ public final class LzConnection {
         var h = handler();
         if (h == null) return Optional.empty();
         return h.getPlayerList().stream()
-            .filter(e -> e.getProfile().name().equalsIgnoreCase(name))
+            .filter(e -> e.getProfile().getName().equalsIgnoreCase(name))
             .map(LzPlayerInfo::new)
             .findFirst();
     }

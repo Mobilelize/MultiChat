@@ -1,10 +1,7 @@
 package net.mobilelize.multichat.mixin.client;
 
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.cursor.StandardCursors;
 import net.minecraft.client.gui.screen.ChatInputSuggestor;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.mobilelize.fabriclib.client.LzChat;
@@ -123,7 +120,7 @@ public abstract class ChatScreenMixin {
         ContextMenu.render(lzCtx);
         MessageContextMenu.render(lzCtx);
 
-        updateCursor(context, mouseX, mouseY);
+        updateCursor(mouseX, mouseY);
     }
 
     @Inject(method = "removed()V", at = @At("HEAD"))
@@ -138,12 +135,12 @@ public abstract class ChatScreenMixin {
     // Key press — search keybind
     // ------------------------------------------------------------------
 
-    @Inject(method = "keyPressed(Lnet/minecraft/client/input/KeyInput;)Z", at = @At("HEAD"), cancellable = true)
-    private void onKeyPressed(KeyInput input,
+    @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
+    private void onKeyPressed(int keyCode, int scanCode, int modifiers,
                                CallbackInfoReturnable<Boolean> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
         if (MultichatClient.CONFIG.selectionEnabled
-                && input.key() == Keys.C && (input.modifiers() & 2) != 0 && ChatSelection.hasSelection()) {
+                && keyCode == Keys.C && (modifiers & 2) != 0 && ChatSelection.hasSelection()) {
             String text = ChatSelection.getSelectedText();
             if (!text.isEmpty()) {
                 LzClient.setClipboard(text);
@@ -153,8 +150,8 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.searchKeybindEnabled
-                && input.key() == MultichatClient.CONFIG.searchKeybindKey
-                && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
+                && keyCode == MultichatClient.CONFIG.searchKeybindKey
+                && (!MultichatClient.CONFIG.searchKeybindRequireCtrl || (modifiers & 2) != 0)) {
             String selText = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", "").trim() : "";
             LzClient.mc().setScreen(new SearchOverlay(LzClient.currentScreen(), null, selText));
@@ -163,8 +160,8 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.quickActionKeybindEnabled
-                && input.key() == MultichatClient.CONFIG.quickActionKeybindKey
-                && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || (input.modifiers() & 2) != 0)) {
+                && keyCode == MultichatClient.CONFIG.quickActionKeybindKey
+                && (!MultichatClient.CONFIG.quickActionKeybindRequireCtrl || (modifiers & 2) != 0)) {
             String sel = ChatSelection.hasSelection()
                 ? ChatSelection.getSelectedText().replaceAll("\n", " ").trim() : "";
             LzClient.mc().setScreen(new QuickActionsOverlay(LzClient.currentScreen(), sel));
@@ -173,10 +170,10 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.arrowKeySwitchTabs
-                && (input.key() == Keys.RIGHT || input.key() == Keys.LEFT)
+                && (keyCode == Keys.RIGHT || keyCode == Keys.LEFT)
                 && chatField.getText().isEmpty()) {
-            boolean goRight   = input.key() == Keys.RIGHT;
-            boolean ctrlHeld  = (input.modifiers() & 2) != 0;
+            boolean goRight   = keyCode == Keys.RIGHT;
+            boolean ctrlHeld  = (modifiers & 2) != 0;
 
             if (ctrlHeld) {
                 // Ctrl+Arrow → cycle focused panel
@@ -226,13 +223,9 @@ public abstract class ChatScreenMixin {
     // Mouse click — tabs, context menus
     // ------------------------------------------------------------------
 
-    @Inject(method = "mouseClicked(Lnet/minecraft/client/gui/Click;Z)Z", at = @At("HEAD"), cancellable = true)
-    private void onMouseClicked(Click click, boolean isDoubleClickParam,
+    @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"), cancellable = true)
+    private void onMouseClicked(double mouseX, double mouseY, int button,
                                  CallbackInfoReturnable<Boolean> cir) {
-        // Truncate to int to match render()'s mouseX/mouseY, which the hover-cursor hit-test
-        // (updateCursor) uses — Click gives full sub-pixel precision, so leaving it unfloored
-        // makes click land a fraction of a pixel to the right/below hover, missing at edges.
-        double mouseX = (int) click.x(); double mouseY = (int) click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
         if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
         if (button == 0 && ContextMenu.isOpen()) {
@@ -509,24 +502,17 @@ public abstract class ChatScreenMixin {
     @Unique private static double lastClickY    = -1;
     @Unique private static long   lastClickTime = 0;
 
-    // Cursor is set on the same DrawContext that GameRenderer reads at the very end of the frame
-    // (context.applyCursorTo(window), called after Screen.render() returns). Setting it via
-    // MouseClient's raw glfwSetCursor instead — bypassing DrawContext/Window entirely — desyncs
-    // vanilla's own cursor tracking from what's actually on screen: the next time ANY vanilla
-    // widget (chatField, buttons...) touches the cursor, that end-of-frame apply silently stomps
-    // our hand/IBeam back to arrow one frame later. Routing through context.setCursor keeps us
-    // inside vanilla's own accumulator so there's nothing left to race.
     @Unique
-    private void updateCursor(DrawContext context, int mouseX, int mouseY) {
+    private void updateCursor(int mouseX, int mouseY) {
         if (!MultichatClient.CONFIG.cursorChangingEnabled) return;
 
         if (isMouseOverSuggestor(mouseX, mouseY)) {
-            context.setCursor(StandardCursors.ARROW);
+            MouseClient.resetCursor();
             return;
         }
 
         if (ContextMenu.containsMouse(mouseX, mouseY) || MessageContextMenu.containsMouse(mouseX, mouseY)) {
-            context.setCursor(StandardCursors.POINTING_HAND);
+            MouseClient.setHandCursor();
             return;
         }
 
@@ -581,7 +567,7 @@ public abstract class ChatScreenMixin {
                             renderX += tabWidth + 1;
                         }
                     }
-                    if (overTab) { context.setCursor(StandardCursors.POINTING_HAND); return; }
+                    if (overTab) { MouseClient.setHandCursor(); return; }
                 }
             }
 
@@ -606,13 +592,13 @@ public abstract class ChatScreenMixin {
                         if (!ctrlHeld) {
                             LzStyle style = ChatSelection.styleAtX(line, localX);
                             if (style != null && style.mc().getClickEvent() != null) {
-                                context.setCursor(StandardCursors.POINTING_HAND);
+                                MouseClient.setHandCursor();
                                 return;
                             }
                         }
                         // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
                         if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
-                            context.setCursor(StandardCursors.IBEAM);
+                            MouseClient.setIBeamCursor();
                             return;
                         }
                     }
@@ -621,11 +607,11 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
-            context.setCursor(StandardCursors.IBEAM);
+            MouseClient.setIBeamCursor();
             return;
         }
 
-        context.setCursor(StandardCursors.ARROW);
+        MouseClient.resetCursor();
     }
 
     @Unique

@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.input;
 
-import net.mobilelize.fabriclib.client.LzClient;
+import net.minecraft.client.gui.screen.Screen;
 
 /**
  * Common GLFW key code constants and keyboard modifier queries.
@@ -36,10 +36,10 @@ public final class LzKeys {
 
     // ── Modifier queries ──────────────────────────────────────────────────
 
-    // 1.21.9: Screen.hasControlDown() removed — use MinecraftClient modifier state
-    public static boolean isCtrlDown()  { return LzClient.mc().isCtrlPressed(); }
-    // 1.21.9: Screen.hasShiftDown() removed — use MinecraftClient modifier state
-    public static boolean isShiftDown() { return LzClient.mc().isShiftPressed(); }
-    // 1.21.9: Screen.hasAltDown() removed — use MinecraftClient modifier state
-    public static boolean isAltDown()   { return LzClient.mc().isAltPressed(); }
+    // 1.21: Screen.hasControlDown()   26.1: same (VERIFY package change)
+    public static boolean isCtrlDown()  { return Screen.hasControlDown(); }
+    // 1.21: Screen.hasShiftDown()   26.1: same (VERIFY package change)
+    public static boolean isShiftDown() { return Screen.hasShiftDown(); }
+    // 1.21: Screen.hasAltDown()   26.1: same (VERIFY package change)
+    public static boolean isAltDown()   { return Screen.hasAltDown(); }
 }

@@ -11,8 +11,8 @@ public final class LzInputUtil {
 
     private LzInputUtil() {}
 
-    // 1.21.8: InputUtil.fromKeyCode(int, int)   1.21.9+: fromKeyCode(KeyInput) — scanCode dropped
+    // 1.21: InputUtil.fromKeyCode(int keyCode, int scanCode)   26.1: VERIFY
     public static InputUtil.Key fromKeyCode(int keyCode, int scanCode) {
-        return InputUtil.Type.KEYSYM.createFromCode(keyCode);
+        return InputUtil.fromKeyCode(keyCode, scanCode);
     }
 }

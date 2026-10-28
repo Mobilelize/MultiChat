@@ -1,8 +1,6 @@
 package net.mobilelize.multichat.client.quickaction;
 
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -177,9 +175,8 @@ public class QuickActionsOverlay extends LzScreen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isDoubleClick) {
-        double mouseX = click.x(); double mouseY = click.y(); int button = click.button();
-        if (super.mouseClicked(click, isDoubleClick)) return true;
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
 
         if (mouseX < ox || mouseX > ox + W || mouseY < oy || mouseY > oy + oh) {
             close(); return true;
@@ -215,15 +212,15 @@ public class QuickActionsOverlay extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == Keys.ENTER || input.key() == Keys.NUMPAD_ENTER) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == Keys.ENTER || keyCode == Keys.NUMPAD_ENTER) {
             if (selectedIdx >= 0) { runCurrent(); return true; }
         }
-        if (input.key() == Keys.ESCAPE) {
+        if (keyCode == Keys.ESCAPE) {
             if (selectedIdx >= 0) { selectedIdx = -1; reinit(); return true; }
             close(); return true;
         }
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void runCurrent() {

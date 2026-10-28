@@ -8,7 +8,6 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
-import net.minecraft.client.input.KeyInput;
 import net.mobilelize.multichat.client.Colors;
 import net.mobilelize.multichat.client.Keys;
 
@@ -39,6 +38,7 @@ public class ConfirmScreen extends LzScreen {
     @Override
     public void lzRenderBackground(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
+        super.lzRender(ctx, mouseX, mouseY, delta);
 
         int mw  = 240, mh = 74;
         int mx1 = width  / 2 - mw / 2;
@@ -60,9 +60,9 @@ public class ConfirmScreen extends LzScreen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == Keys.ESCAPE) { close(); return true; }
-        return super.keyPressed(input);
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == Keys.ESCAPE) { close(); return true; }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
