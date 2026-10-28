@@ -378,25 +378,16 @@ public class ChatRenderer {
                 // Gated on the entry having gone through chat_heads' pipeline at all (get() !=
                 // NONE) — MultiChat's own synthetic lines (Notes/Info tabs, custom raw text) never
                 // do, and shouldn't pick up alignment padding meant for real chat messages.
-                ChatHeadsSupport.HeadRef headRef = ChatHeadsSupport.get(visible.entry());
-                int headOffset = 0;
-                if (headRef != ChatHeadsSupport.HeadRef.NONE) {
-                    if (visible.startOfEntry()) {
-                        headOffset = ChatHeadsSupport.headWidth(headRef);
-                        if (headOffset > 0) {
-                            ChatHeadsSupport.renderHead(context.mc(), 0, textY, headRef, textAlpha / 255.0f);
-                        }
-                    } else {
-                        headOffset = ChatHeadsSupport.emptyLineWidth();
-                    }
-                }
+                int headOffset = ChatHeadsSupport.lineOffset(visible);
+                ChatHeadsSupport.renderHead(context.mc(), 0, textY, visible, textAlpha / 255.0f);
 
                 if (MultichatClient.CONFIG.showIndicators) {
                     LzMessageIndicator indicator = visible.indicator();
                     if (indicator != null) {
                         LzDraw.fill(context, -4, row.lineBot(), -2, row.lineTop(), indicator.indicatorColor() | (textAlpha << 24));
                         if (row.s() == hoveredIndex && indicator.hasIcon()) {
-                            int iconX = headOffset + LzDraw.textWidth(visible.content()) + 4;
+                            // chat_heads 0.15 moves the tag icon by getTextWidthDifference (chatheads$moveTagIcon)
+                            int iconX = LzDraw.textWidth(visible.content()) + 4 + ChatHeadsSupport.lineWidthExtra(visible);
                             int iconY = textY + 9 - indicator.iconHeight() - 1;
                             indicator.drawIcon(context, iconX, iconY);
                         }
@@ -405,7 +396,13 @@ public class ChatRenderer {
 
                 LzDraw.pushMatrix(context);
                 LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
-                LzDraw.drawText(context, visible.content(), headOffset, textY, theme.messageTextRgb + (textAlpha << 24));
+                // BEFORE_NAME: chat_heads' font hook draws the head inside this text (see ChatHeadsSupport)
+                ChatHeadsSupport.beginLineText(context.mc(), visible, textAlpha / 255.0f);
+                try {
+                    LzDraw.drawText(context, visible.content(), headOffset, textY, theme.messageTextRgb + (textAlpha << 24));
+                } finally {
+                    ChatHeadsSupport.endLineText();
+                }
                 LzDraw.popMatrix(context);
             }
         } finally {
