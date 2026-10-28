@@ -99,7 +99,7 @@ public class TabListScreen extends ConfigScreen {
         nameField = new LzTextField(width / 2 - 198, height - 74, 248, 20);
         nameField.setHint(LzText.literal("New tab name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         this.addWidget(nameField);
-        addRenderableOnly(LzButton.of("Add", width / 2 + 54,  height - 74, 40, 20, b -> addTab()));
+        addRenderableWidget(LzButton.of("Add", width / 2 + 54,  height - 74, 40, 20, b -> addTab()));
         addRenderableWidget(LzButton.of("Add Note Tab", width / 2 + 98, height - 74, 100, 20, b -> addNoteTab()));
 
         addConfigNav(width, height, NavPage.TABS);
