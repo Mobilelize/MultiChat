@@ -258,6 +258,10 @@ public final class ChatHeadsSupport {
             dzwdz.chat_heads.ChatHeads.guiGraphics = context;
             dzwdz.chat_heads.ChatHeads.renderHeadData = new dzwdz.chat_heads.HeadData(lineData(line).playerInfo(), index);
             dzwdz.chat_heads.ChatHeads.renderHeadOpacity = opacity;
+            // MC-VERSION-SENSITIVE: chat_heads 0.15.7 (MC 1.21) counts drawn characters in these
+            // statics instead of per text renderer, and resets them here too.
+            dzwdz.chat_heads.ChatHeads.renderedChars = 0;
+            dzwdz.chat_heads.ChatHeads.renderedShadowChars = 0;
         } catch (Throwable t) {
             disable(t);
         }
