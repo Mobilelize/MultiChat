@@ -226,6 +226,10 @@ public abstract class ChatScreenMixin {
     @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(double mouseX, double mouseY, int button,
                                  CallbackInfoReturnable<Boolean> cir) {
+        // Truncate to int to match render()'s mouseX/mouseY, which the hover-cursor hit-test
+        // (updateCursor) uses — the click gives full sub-pixel precision, so leaving it unfloored
+        // makes click land a fraction of a pixel to the right/below hover, missing at edges.
+        mouseX = (int) mouseX; mouseY = (int) mouseY;
         if (MultichatClient.CONFIG.modDisabled) return;
         if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
         if (button == 0 && ContextMenu.isOpen()) {
