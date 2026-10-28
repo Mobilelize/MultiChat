@@ -181,18 +181,10 @@ public class ChatPanel {
      *  WrapCoordinator's background thread as well as the main thread. */
     private static int computeEntryWidth(ChatTab.MessageEntry entry, int baseWidth, boolean isPrimary) {
         int width = baseWidth - ChatManager.getIndicatorWidth(LzMessageIndicator.wrapNullable(entry.entry().indicator != null ? entry.entry().indicator.mc() : null));
-        if (!isPrimary) {
-            // Reserve only what this entry will actually use — headWidth() for a real head on
-            // line 0, emptyLineWidth() for the "offset non-player text" alignment case on every
-            // other line, both correctly 0 when neither applies (e.g. no head found AND that
-            // alignment setting is off). Blindly reserving maxHeadWidth() for every entry that
-            // merely participated in chat_heads' pipeline wrapped messages a line early even when
-            // nothing was ever going to render an offset for them.
-            ChatHeadsSupport.HeadRef ref = ChatHeadsSupport.get(entry.entry());
-            if (ref != ChatHeadsSupport.HeadRef.NONE) {
-                width -= Math.max(ChatHeadsSupport.headWidth(ref), ChatHeadsSupport.emptyLineWidth());
-            }
-        }
+        // MC-VERSION-SENSITIVE (chat_heads 0.15): vanilla chat wraps a message with a head (or any
+        // offset line) narrower by getTextWidthDifference — on every panel, primary included, since
+        // the chat box doesn't grow for it. See ChatHeadsSupport.wrapReserve.
+        width -= ChatHeadsSupport.wrapReserve(entry.entry());
         return width;
     }
 
