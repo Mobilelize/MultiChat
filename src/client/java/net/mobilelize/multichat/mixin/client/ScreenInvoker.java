@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(Screen.class)
 public interface ScreenInvoker {
-    @Invoker("defaultHandleGameClickEvent")
+    @Invoker("defaultHandleClickEvent")
     static void invokeHandleClickEvent(ClickEvent event, Minecraft client, Screen screen) {
         throw new AssertionError();
     }

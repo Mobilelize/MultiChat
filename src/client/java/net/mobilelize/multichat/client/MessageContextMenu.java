@@ -75,7 +75,7 @@ public class MessageContextMenu {
         int mouseY = (int)(mc.mouseHandler.ypos() / scale);
 
         LzDraw.pushMatrix(ctx);
-        LzDraw.translate(ctx, 0, 0, 400);
+        ctx.mc().nextStratum();
         LzDraw.fill(ctx, mx, my, mx + menuW, my + menuH, Colors.MENU_BG);
         LzDraw.drawBorder(ctx, mx, my, mx + menuW, my + menuH, Colors.BORDER);
         for (int i = 0; i < items.size(); i++) {

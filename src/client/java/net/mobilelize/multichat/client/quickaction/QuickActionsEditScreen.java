@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.quickaction;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -144,8 +144,8 @@ public class QuickActionsEditScreen extends ConfigScreen {
     public void lzRender(LzDrawContext ctx, int mouseX, int mouseY, float delta) {
         super.lzRender(ctx, mouseX, mouseY, delta);
 
-        nameField.render(ctx.mc(), mouseX, mouseY, delta);
-        templateField.render(ctx.mc(), mouseX, mouseY, delta);
+        nameField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
+        templateField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         LzDraw.drawCenteredText(ctx, LzText.literal("Quick Actions"), width / 2, 10, Colors.GOLD);
         if (editingIdx >= 0)
@@ -383,7 +383,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
         else if (selectedIdx == i) selectedIdx = -1;
         swapPending = false;
         MultichatClient.saveTabsToConfig();
-        clearWidgets(); init();
+        rebuildWidgets(); init();
     }
 
     @Override

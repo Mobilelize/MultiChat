@@ -57,7 +57,7 @@ public class TabHandle {
         if (addToAll) {
             MessageRouter.skipTabOnRoute = tab;
             try {
-                LzChat.chatHud().addMessage(message.mc(), null, null);
+                LzChat.chatHud().addPlayerMessage(message.mc(), null, null);
             } finally {
                 MessageRouter.skipTabOnRoute = null;
             }

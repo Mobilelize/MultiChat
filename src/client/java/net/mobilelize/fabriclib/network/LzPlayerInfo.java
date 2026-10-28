@@ -19,15 +19,15 @@ public final class LzPlayerInfo {
 
     public LzPlayerInfo(PlayerInfo entry) { this.entry = entry; }
 
-    // 1.21: entry.getProfile().id()
+    // 1.21: entry.getProfile().getId()
     public UUID uuid()           { return entry.getProfile().id(); }
-    // 1.21: entry.getProfile().name()
+    // 1.21: entry.getProfile().getName()
     public String name()         { return entry.getProfile().name(); }
     // unchanged: entry.getProfile()
     public GameProfile profile() { return entry.getProfile(); }
-    // 1.21: entry.getLatency()   26.1: stable
+    // 1.21: entry.getLatency()   26.1: entry.getLatency()  (stable)
     public int ping()            { return entry.getLatency(); }
-    // 1.21: entry.getGameMode()   26.1: stable
+    // 1.21: entry.getGameMode()   26.1: entry.getGameMode()  (stable)
     public LzGameMode gameMode() { return LzGameMode.fromMC(entry.getGameMode()); }
 
     // 1.21: entry.getDisplayName()
@@ -36,9 +36,9 @@ public final class LzPlayerInfo {
         return t == null ? null : LzText.wrapMc(t);
     }
 
-    // unchanged: entry.hasPublicKey()
+    // 1.21: entry.hasPublicKey()   26.1: entry.hasVerifiableChat()
     public boolean hasPublicKey() { return entry.hasVerifiableChat(); }
 
-    /** Raw MC PlayerListEntry — escape hatch (skin textures, scoreboard team, session, etc.). */
+    /** Raw MC PlayerInfo — escape hatch (skin textures, scoreboard team, session, etc.). */
     public PlayerInfo mc() { return entry; }
 }

@@ -5,7 +5,7 @@ import net.minecraft.world.entity.player.ChatVisiblity;
 /**
  * Visibility setting for the chat HUD.
  * 1.21 (Yarn): net.minecraft.network.message.ChatVisibility
- * 26.1 (Mojang): VERIFY package/class rename
+ * 26.1 (Mojang): net.minecraft.world.entity.player.ChatVisiblity  (Mojang typo — single 'i')
  */
 public enum LzChatVisibility {
 
@@ -17,7 +17,7 @@ public enum LzChatVisibility {
 
     LzChatVisibility(ChatVisiblity mc) { this.mc = mc; }
 
-    /** Raw MC ChatVisibility — escape hatch. */
+    /** Raw MC ChatVisiblity — escape hatch. */
     public ChatVisiblity mc() { return mc; }
 
     public static LzChatVisibility fromMC(ChatVisiblity v) {

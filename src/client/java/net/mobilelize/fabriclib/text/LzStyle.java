@@ -1,11 +1,12 @@
 package net.mobilelize.fabriclib.text;
 
-import java.net.URI;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
+import net.minecraft.ChatFormatting;
+
+import java.net.URI;
 
 /**
  * Stable wrapper for MC Style.
@@ -28,9 +29,9 @@ public final class LzStyle {
         return new LzStyle(Style.EMPTY.withColor(TextColor.fromRgb(rgb)));
     }
 
-    // 1.21: style.withColor(Formatting)   26.1: style.withColor(ChatFormatting)
+    // 1.21: style.withColor(Formatting)   26.1: style.applyFormat(ChatFormatting)
     public static LzStyle ofFormatting(LzFormatting formatting) {
-        return new LzStyle(Style.EMPTY.withColor(formatting.mc()));
+        return new LzStyle(Style.EMPTY.applyFormat(formatting.mc()));
     }
 
     public static LzStyle empty() { return EMPTY; }
@@ -40,7 +41,7 @@ public final class LzStyle {
     public LzStyle withColor(int rgb)            { return new LzStyle(style.withColor(TextColor.fromRgb(rgb))); }
 
     /** Package-private — only called from LzFormatting. */
-    LzStyle withFormatting(ChatFormatting formatting) { return new LzStyle(style.withColor(formatting)); }
+    LzStyle withFormatting(ChatFormatting formatting) { return new LzStyle(style.applyFormat(formatting)); }
 
     public LzStyle withObfuscated(boolean v)     { return new LzStyle(style.withObfuscated(v)); }
     public LzStyle withBold(boolean v)           { return new LzStyle(style.withBold(v)); }

@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.client.GuiMessage;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.text.LzText;

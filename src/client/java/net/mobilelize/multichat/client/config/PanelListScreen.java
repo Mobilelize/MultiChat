@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -86,7 +86,7 @@ public class PanelListScreen extends ConfigScreen {
         super.lzRender(ctx, mouseX, mouseY, delta);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, 10, Colors.TEAL);
         LzDraw.drawCenteredText(ctx, LzText.format("&7layout panels  ·  click Tabs to assign"), width / 2, 21, Colors.TEXT_WHITE);
-        if (panelNameField != null) panelNameField.render(ctx.mc(), mouseX, mouseY, delta);
+        if (panelNameField != null) panelNameField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         int lx = width / 2 - 200;
         List<ChatPanel> panels = panels();

@@ -196,7 +196,8 @@ public class ChatManager {
                 toRemove.size(), tab.name(), elapsedMs));
             sendingTrimFeedback = true;
             try {
-                LzChat.chatHud().addMessage(msg.mc(), null, null);
+                // 26.1: addMessage(...) is private; addClientSystemMessage routes through it
+                LzChat.chatHud().addClientSystemMessage(msg.mc());
             } finally {
                 sendingTrimFeedback = false;
             }

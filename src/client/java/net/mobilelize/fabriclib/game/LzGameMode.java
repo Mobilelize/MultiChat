@@ -20,7 +20,7 @@ public enum LzGameMode {
         this.mcMode = mcMode;
     }
 
-    /** Returns the underlying MC GameMode value for this version. */
+    /** Returns the underlying MC GameType value for this version. */
     public GameType mc() {
         return mcMode;
     }

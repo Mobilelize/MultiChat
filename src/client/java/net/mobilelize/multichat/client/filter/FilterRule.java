@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.client.GuiMessageTag;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 
 import java.util.Map;

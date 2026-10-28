@@ -1,11 +1,14 @@
 package net.mobilelize.multichat.mixin.client;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.network.chat.Style;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
@@ -24,11 +27,12 @@ import net.mobilelize.multichat.client.search.SearchOverlay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import com.mojang.blaze3d.platform.cursor.CursorTypes;
+
 import java.util.List;
 
 @Mixin(ChatScreen.class)
@@ -42,14 +46,17 @@ public abstract class ChatScreenMixin {
     @Shadow protected EditBox input;
     @Shadow private CommandSuggestions commandSuggestions;
 
+    @Invoker("handleComponentClicked")
+    abstract boolean invokeHandleComponentClicked(Style style, boolean shiftDown);
+
     @Unique
     private boolean isMouseOverSuggestor(double mouseX, double mouseY) {
-        ChatInputSuggestorAccessor acc = (ChatInputSuggestorAccessor) commandSuggestions;
-        if (!acc.invokeIsOpen()) return false;
-        CommandSuggestions.SuggestionsList window = acc.getWindow();
-        if (window == null) return false;
-        var area = ((ChatInputSuggestorWindowAccessor) window).getArea();
-        return area != null && area.contains((int) mouseX, (int) mouseY);
+        if (!commandSuggestions.isVisible()) return false;
+        CommandSuggestions.SuggestionsList list =
+            ((ChatInputSuggestorAccessor) commandSuggestions).getSuggestionsList();
+        if (list == null) return false;
+        Rect2i rect = ((ChatInputSuggestorWindowAccessor) (Object) list).getRect();
+        return rect != null && rect.contains((int) mouseX, (int) mouseY);
     }
 
     @Inject(method = "init()V", at = @At("RETURN"))
@@ -60,8 +67,8 @@ public abstract class ChatScreenMixin {
         }
     }
 
-    @Inject(method = "render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", at = @At("RETURN"))
-    private void renderOverlays(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Inject(method = "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V", at = @At("RETURN"))
+    private void renderOverlays(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         LzDrawContext lzCtx = LzDrawContext.wrap(context);
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
@@ -171,7 +178,7 @@ public abstract class ChatScreenMixin {
 
         if (MultichatClient.CONFIG.arrowKeySwitchTabs
                 && (input.key() == Keys.RIGHT || input.key() == Keys.LEFT)
-                && input.getValue().isEmpty()) {
+                && this.input.getValue().isEmpty()) {
             boolean goRight   = input.key() == Keys.RIGHT;
             boolean ctrlHeld  = (input.modifiers() & 2) != 0;
 
@@ -226,11 +233,9 @@ public abstract class ChatScreenMixin {
     @Inject(method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(MouseButtonEvent click, boolean isDoubleClickParam,
                                  CallbackInfoReturnable<Boolean> cir) {
-        // Truncate to int to match render()'s mouseX/mouseY, which is what populates
-        // ChatRenderer.lastHoveredStyle and hoverCapture — Click gives full sub-pixel precision,
-        // so leaving it unfloored makes click land a fraction of a pixel to the right/below
-        // hover, missing the clickable style at edges (resolveStyleAt would resolve a different,
-        // usually null, style than the one hover just captured).
+        // Truncate to int to match extractRenderState's mouseX/mouseY (what populates
+        // ChatRenderer.lastHoveredStyle) — click gives full sub-pixel precision, unfloored,
+        // which misses the clickable style at edges vs what hover just captured.
         double mouseX = (int) click.x(); double mouseY = (int) click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
         if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
@@ -345,8 +350,7 @@ public abstract class ChatScreenMixin {
                 if (!ctrlSkip) {
                     var style = ChatRenderer.resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
                     if (style != null && style.getClickEvent() != null) {
-                        ScreenInvoker.invokeHandleClickEvent(
-                            style.getClickEvent(), LzClient.mc(), (net.minecraft.client.gui.screens.Screen)(Object)this);
+                        invokeHandleComponentClicked(style, false);
                         cir.setReturnValue(true);
                         return;
                     }
@@ -503,15 +507,14 @@ public abstract class ChatScreenMixin {
     @Unique private static double lastClickY    = -1;
     @Unique private static long   lastClickTime = 0;
 
-    // Cursor is set on the same DrawContext that GameRenderer reads at the very end of the frame
-    // (context.applyCursorTo(window), called after Screen.render() returns). Setting it via
-    // MouseClient's raw glfwSetCursor instead — bypassing DrawContext/Window entirely — desyncs
-    // vanilla's own cursor tracking from what's actually on screen: the next time ANY vanilla
-    // widget (chatField, buttons...) touches the cursor, that end-of-frame apply silently stomps
-    // our hand/IBeam back to arrow one frame later. Routing through context.setCursor keeps us
-    // inside vanilla's own accumulator so there's nothing left to race.
+    // Cursor is requested on the same GuiGraphicsExtractor vanilla applies to the window at the
+    // very end of the frame. Setting it via MouseClient's raw glfwSetCursor instead — bypassing
+    // that accumulator — desyncs vanilla's own cursor tracking from what's actually on screen:
+    // the next time ANY vanilla widget touches the cursor, vanilla's end-of-frame apply silently
+    // stomps our hand/IBeam back to arrow one frame later. Routing through context.requestCursor
+    // keeps us inside vanilla's own accumulator so there's nothing left to race.
     @Unique
-    private void updateCursor(GuiGraphics context, int mouseX, int mouseY) {
+    private void updateCursor(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         if (!MultichatClient.CONFIG.cursorChangingEnabled) return;
 
         if (isMouseOverSuggestor(mouseX, mouseY)) {

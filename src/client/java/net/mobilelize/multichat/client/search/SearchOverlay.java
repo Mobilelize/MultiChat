@@ -1,7 +1,6 @@
 package net.mobilelize.multichat.client.search;
 
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -11,6 +10,7 @@ import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzFormatting;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.multichat.client.*;
 
 public class SearchOverlay extends LzScreen {

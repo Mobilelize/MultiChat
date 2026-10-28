@@ -189,7 +189,7 @@ public class ContextMenu {
         int mouseY = (int)(mc.mouseHandler.ypos() / scale);
 
         LzDraw.pushMatrix(context);
-        LzDraw.translate(context, 0, 0, 400);
+        context.mc().nextStratum();
 
         LzDraw.fill(context, mx, my, mx + menuW, my + menuH, Colors.MENU_BG);
         LzDraw.drawBorder(context, mx, my, mx + menuW, my + menuH, Colors.BORDER);

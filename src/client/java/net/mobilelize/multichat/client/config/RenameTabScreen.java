@@ -1,7 +1,6 @@
 package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
@@ -10,6 +9,7 @@ import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.fabriclib.world.LzWorld;
+import net.minecraft.client.input.KeyEvent;
 import net.mobilelize.multichat.client.*;
 
 public class RenameTabScreen extends LzScreen {
@@ -35,7 +35,7 @@ public class RenameTabScreen extends LzScreen {
         addWidget(field);
         setInitialFocus(field);
 
-        addRenderableWidget(LzButton.of("OK",     cx - 53, cy + 18, 50, 18, b -> save()));
+        addRenderableOnly(LzButton.of("OK",     cx - 53, cy + 18, 50, 18, b -> save()));
         addRenderableWidget(LzButton.of("Cancel", cx + 3,  cy + 18, 50, 18, b -> onClose()));
     }
 
@@ -44,7 +44,7 @@ public class RenameTabScreen extends LzScreen {
         if (LzWorld.isLoaded()) LzDraw.fill(ctx, 0, 0, width, height, Colors.OVERLAY);
         super.lzRender(ctx, mouseX, mouseY, delta);
         LzDraw.drawCenteredText(ctx, LzText.wrapMc(title), width / 2, height / 2 - 26, Colors.TEXT_WHITE);
-        field.render(ctx.mc(), mouseX, mouseY, delta);
+        field.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
     }
 
     private void save() {

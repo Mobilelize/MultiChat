@@ -75,7 +75,7 @@ public final class LzConnection {
 
     /**
      * Sends a chat message as the local player. No-op if not connected.
-     * 1.21: handler.sendChatMessage(msg)   26.1: connection.chat(msg)  (VERIFY)
+     * 1.21: handler.sendChatMessage(msg)   26.1: connection.chat(msg)
      */
     public static void sendChatMessage(String message) {
         var h = handler();
@@ -84,7 +84,7 @@ public final class LzConnection {
 
     /**
      * Sends a command as the local player (without leading slash). No-op if not connected.
-     * 1.21: handler.sendChatCommand(cmd)   26.1: connection.sendCommand(cmd)  (VERIFY)
+     * 1.21: handler.sendChatCommand(cmd)   26.1: connection.sendCommand(cmd)
      */
     public static void sendChatCommand(String command) {
         var h = handler();

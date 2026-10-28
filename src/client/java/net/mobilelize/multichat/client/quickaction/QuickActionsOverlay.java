@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.quickaction;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzScreen;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -123,7 +123,7 @@ public class QuickActionsOverlay extends LzScreen {
 
         LzDraw.drawText(ctx, LzText.literal("Quick Actions"), x + PAD, y + PAD, Colors.GOLD);
         LzDraw.drawText(ctx, LzText.format("&7Selected text &8(editable)&7:"), x + PAD, y + PAD + 12, Colors.TEXT_WHITE);
-        selectionField.render(ctx.mc(), mouseX, mouseY, delta);
+        selectionField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         LzDraw.fill(ctx, x + 1, y + HEADER_H - 1, x + W - 1, y + HEADER_H, Colors.PANEL_BG);
 
@@ -170,7 +170,7 @@ public class QuickActionsOverlay extends LzScreen {
             int divY = listEndY() - 1;
             LzDraw.fill(ctx, x + 1, divY, x + W - 1, divY + 1, Colors.BORDER_DARK);
             LzDraw.drawText(ctx, LzText.format("&7Command &8(editable)&7:"), x + PAD, listEndY() + 3, Colors.TEXT_WHITE);
-            commandField.render(ctx.mc(), mouseX, mouseY, delta);
+            commandField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
             LzDraw.drawCenteredText(ctx, LzText.format("&7Enter to run  ·  Esc to cancel"),
                 x + W / 2, cmdFieldY() + 22, Colors.TEXT_WHITE);
         }

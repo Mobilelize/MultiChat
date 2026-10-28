@@ -1,9 +1,9 @@
 package net.mobilelize.multichat.client.config;
 
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
@@ -118,7 +118,7 @@ public class NoteEditScreen extends LzScreen {
 
         LzDraw.drawText(ctx, LzText.literal("Use &X codes or click swatches"), px1, cy - 36, Colors.TEXT_DISABLED);
 
-        field.render(ctx.mc(), mouseX, mouseY, delta);
+        field.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         // Scrollable preview
         List<LzOrderedText> lines = previewLines();

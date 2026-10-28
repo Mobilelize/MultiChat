@@ -1,7 +1,7 @@
 package net.mobilelize.multichat.integration.chatheads;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.multichat.client.MultichatClient;
 
@@ -213,7 +213,7 @@ public final class ChatHeadsSupport {
      *  head (a nonzero {@link #headWidth} can still happen with no head to draw — chat_heads'
      *  "offset non-player text" alignment option reserves the space without a texture to fill
      *  it, matching real chat_heads' own {@code headData != HeadData.EMPTY} guard). */
-    public static void renderHead(GuiGraphics context, int x, int y, HeadRef ref, float opacity) {
+    public static void renderHead(GuiGraphicsExtractor context, int x, int y, HeadRef ref, float opacity) {
         if (!present || ref == HeadRef.NONE) return;
         try {
             if (ref.data == dzwdz.chat_heads.HeadData.EMPTY) return;

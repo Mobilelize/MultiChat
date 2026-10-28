@@ -1,11 +1,12 @@
 package net.mobilelize.multichat.client.render;
 
-import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.TextAlignment;
+import net.minecraft.client.gui.ActiveTextCollector;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.profiling.Profiler;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
@@ -277,9 +278,9 @@ public class ChatRenderer {
         ActiveTextCollector.Parameters hoverTransform = null;
         Style[] hoverCapture = { null };
         if (showScrollbar) {
-            GuiGraphics rawCtx = context.mc();
+            GuiGraphicsExtractor rawCtx = context.mc();
             hoverDrawer = rawCtx.textRenderer(
-                GuiGraphics.HoveredTextEffects.TOOLTIP_AND_CURSOR,
+                GuiGraphicsExtractor.HoveredTextEffects.TOOLTIP_AND_CURSOR,
                 style -> { if (hoverCapture[0] == null) hoverCapture[0] = style; }
             );
             hoverTransform = hoverDrawer.defaultParameters()
@@ -418,7 +419,7 @@ public class ChatRenderer {
                         hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
                 } else {
                     LzDraw.pushMatrix(context);
-                    LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
+                    context.mc().nextStratum();
                     LzDraw.drawText(context, visible.content(), headOffset, textY, theme.messageTextRgb + (textAlpha << 24));
                     LzDraw.popMatrix(context);
                 }
@@ -434,7 +435,7 @@ public class ChatRenderer {
             LzDraw.pushMatrix(context);
             LzDraw.translate(context, 0.0F, (float) topY);
             LzDraw.fill(context, -2, 0, chatWidth + 4, 9, queueBgAlpha << 24);
-            LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
+            context.mc().nextStratum();
             LzDraw.drawText(context, LzText.translatable("chat.queue", queueCount).ordered(), 0, 1, theme.messageTextRgb + (queueTextAlpha << 24));
             LzDraw.popMatrix(context);
         }
@@ -542,7 +543,7 @@ public class ChatRenderer {
     }
 
     private static @org.jetbrains.annotations.Nullable Style getStyleAt(FormattedCharSequence text, int x) {
-        net.minecraft.client.StringSplitter handler = LzDraw.textHandler();
+        StringSplitter handler = LzDraw.textHandler();
         float[] w = { 0 };
         Style[] out = { null };
         text.accept((index, style, codePoint) -> {

@@ -37,12 +37,12 @@ public enum LzFormatting {
 
     LzFormatting(ChatFormatting formatting) { this.formatting = formatting; }
 
-    /** Raw MC Formatting — escape hatch. */
+    /** Raw MC ChatFormatting — escape hatch. */
     public ChatFormatting mc() { return formatting; }
 
     /**
      * Applies a single lowercase format code character to the given style.
-     * Color codes 0-9 / a-f map to Formatting constants.
+     * Color codes 0-9 / a-f map to ChatFormatting constants.
      * Style codes k-o / r are applied directly.
      * 1.21: Formatting constants — 26.1: ChatFormatting  (VERIFY)
      */

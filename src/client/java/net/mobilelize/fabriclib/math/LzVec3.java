@@ -17,7 +17,7 @@ public final class LzVec3 {
 
     // 1.21: new Vec3d(x, y, z)   26.1: new Vec3(x, y, z)
     public static LzVec3 of(double x, double y, double z) { return new LzVec3(new Vec3(x, y, z)); }
-    public static LzVec3 of(Vec3 vec)                    { return new LzVec3(vec); }
+    public static LzVec3 of(Vec3 vec)                     { return new LzVec3(vec); }
     // 1.21: Vec3d.ZERO   26.1: Vec3.ZERO
     public static LzVec3 zero()                            { return new LzVec3(Vec3.ZERO); }
 
@@ -35,7 +35,7 @@ public final class LzVec3 {
     public LzVec3 subtract(LzVec3 other)               { return new LzVec3(vec.subtract(other.vec)); }
 
     /** 1.21: vec.multiply(f,f,f)   26.1: vec.scale(f) */
-    public LzVec3 scale(double factor)   { return new LzVec3(vec.multiply(factor, factor, factor)); }
+    public LzVec3 scale(double factor)   { return new LzVec3(vec.scale(factor)); }
     public LzVec3 normalize()            { return new LzVec3(vec.normalize()); }
     public double length()               { return vec.length(); }
 
@@ -58,7 +58,7 @@ public final class LzVec3 {
         return LzVec3.of(x() + (other.x() - x()) * t, y() + (other.y() - y()) * t, z() + (other.z() - z()) * t);
     }
 
-    /** Raw MC Vec3d — escape hatch. */
+    /** Raw MC Vec3 — escape hatch. */
     public Vec3 mc() { return vec; }
 
     @Override public String toString()        { return "(" + x() + ", " + y() + ", " + z() + ")"; }

@@ -4,9 +4,9 @@ import net.minecraft.client.gui.components.EditBox;
 import net.mobilelize.fabriclib.text.LzText;
 
 /**
- * TextFieldWidget with a minimal constructor — no textRenderer arg needed at call site.
+ * EditBox with a minimal constructor — no font arg needed at call site.
  * 1.21 (Yarn): TextFieldWidget(TextRenderer, x, y, w, h, Text)
- * 26.1 (Mojang): VERIFY constructor params and TextRenderer→font rename.
+ * 26.1 (Mojang): EditBox(Font, x, y, w, h, Component)
  */
 public class LzTextField extends EditBox {
 

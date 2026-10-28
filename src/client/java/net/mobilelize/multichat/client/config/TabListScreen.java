@@ -1,8 +1,8 @@
 package net.mobilelize.multichat.client.config;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.mobilelize.fabriclib.client.LzButton;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.client.LzTextField;
@@ -99,7 +99,7 @@ public class TabListScreen extends ConfigScreen {
         nameField = new LzTextField(width / 2 - 198, height - 74, 248, 20);
         nameField.setHint(LzText.literal("New tab name...").withStyle(LzStyle.ofFormatting(LzFormatting.DARK_GRAY)).mc());
         this.addWidget(nameField);
-        addRenderableWidget(LzButton.of("Add", width / 2 + 54,  height - 74, 40, 20, b -> addTab()));
+        addRenderableOnly(LzButton.of("Add", width / 2 + 54,  height - 74, 40, 20, b -> addTab()));
         addRenderableWidget(LzButton.of("Add Note Tab", width / 2 + 98, height - 74, 100, 20, b -> addNoteTab()));
 
         addConfigNav(width, height, NavPage.TABS);
@@ -187,7 +187,7 @@ public class TabListScreen extends ConfigScreen {
             LzDraw.drawCenteredText(ctx, LzText.format("&bSwap mode&7: click target tab  ·  &fEsc &7to cancel"), width / 2, 21, Colors.TEXT_WHITE);
         else
             LzDraw.drawCenteredText(ctx, LzText.format("&7add, edit & reorder tabs  ·  WL/BL filter rules"), width / 2, 21, Colors.TEXT_WHITE);
-        nameField.render(ctx.mc(), mouseX, mouseY, delta);
+        nameField.extractRenderState(ctx.mc(), mouseX, mouseY, delta);
 
         int lx = width / 2 - 200;
 

@@ -1,12 +1,13 @@
 package net.mobilelize.fabriclib.registry;
 
-import java.util.Optional;
 import net.minecraft.resources.Identifier;
+
+import java.util.Optional;
 
 /**
  * Stable wrapper for a resource location / identifier.
  * 1.21 (Yarn): net.minecraft.util.Identifier
- * 26.1 (Mojang): net.minecraft.resources.ResourceLocation
+ * 26.1 (Mojang): net.minecraft.resources.Identifier
  */
 public final class LzId {
 
@@ -16,12 +17,12 @@ public final class LzId {
 
     // ── Factories ────────────────────────────────────────────────────────────
 
-    // 1.21: Identifier.of(ns, path)   26.1: ResourceLocation.fromNamespaceAndPath(ns, path)
+    // 1.21: Identifier.of(ns, path)   26.1: Identifier.fromNamespaceAndPath(ns, path)
     public static LzId of(String namespace, String path) {
         return new LzId(Identifier.fromNamespaceAndPath(namespace, path));
     }
 
-    // 1.21: Identifier.tryParse(combined)   26.1: ResourceLocation.tryParse(combined)
+    // 1.21: Identifier.tryParse(combined)   26.1: Identifier.tryParse(combined)
     public static Optional<LzId> tryParse(String combined) {
         return Optional.ofNullable(Identifier.tryParse(combined)).map(LzId::new);
     }
@@ -31,7 +32,7 @@ public final class LzId {
 
     // ── Accessors ────────────────────────────────────────────────────────────
 
-    // unchanged: id.getPath() / id.getNamespace()
+    // 1.21: id.getPath() / id.getNamespace()   26.1: stable
     public String path()      { return id.getPath(); }
     public String namespace() { return id.getNamespace(); }
 

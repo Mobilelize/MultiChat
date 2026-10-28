@@ -3,7 +3,7 @@ package net.mobilelize.fabriclib.text;
 import net.minecraft.network.chat.MutableComponent;
 
 /**
- * Stable wrapper for MC MutableText.
+ * Stable wrapper for MC MutableComponent.
  * 1.21 (Yarn): net.minecraft.text.MutableText
  * 26.1 (Mojang): net.minecraft.network.chat.MutableComponent
  */
@@ -37,7 +37,7 @@ public final class LzMutableText extends LzText {
         return this;
     }
 
-    // 1.21: MutableText.withColor(int)
+    // 1.21: MutableText.withColor(int)   26.1: MutableComponent.withColor(int)
     public LzMutableText withColor(int rgb) {
         mutable.withColor(rgb);
         return this;

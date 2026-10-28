@@ -1,13 +1,13 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.GuiMessageTag;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Wrapper for MC MessageIndicator (read receipt / system icons in chat).
+ * Wrapper for MC GuiMessageTag (read receipt / system icons in chat).
  * 1.21 (Yarn): net.minecraft.client.gui.hud.MessageIndicator
- * 26.1 (Mojang): VERIFY
+ * 26.1 (Mojang): net.minecraft.client.GuiMessageTag  (VERIFY)
  */
 public final class LzMessageIndicator {
 
@@ -15,7 +15,7 @@ public final class LzMessageIndicator {
 
     private LzMessageIndicator(GuiMessageTag indicator) { this.indicator = indicator; }
 
-    /** Wraps an existing MC MessageIndicator — use only at mixin boundaries. */
+    /** Wraps an existing MC GuiMessageTag — use only at mixin boundaries. */
     public static LzMessageIndicator wrap(GuiMessageTag indicator) {
         return new LzMessageIndicator(indicator);
     }
@@ -25,7 +25,7 @@ public final class LzMessageIndicator {
         return indicator == null ? null : new LzMessageIndicator(indicator);
     }
 
-    /** Raw MC MessageIndicator — escape hatch. */
+    /** Raw MC GuiMessageTag — escape hatch. */
     public GuiMessageTag mc() { return indicator; }
 
     // 1.21: indicator.indicatorColor()   26.1: VERIFY
@@ -50,7 +50,7 @@ public final class LzMessageIndicator {
     // 1.21: indicator.icon().draw(ctx, x, y)   26.1: VERIFY
     public void drawIcon(LzDrawContext ctx, int x, int y) {
         var icon = indicator.icon();
-        if (icon != null) icon.draw(ctx.mc(), x, y);
+        if (icon != null) icon.extractRenderState(ctx.mc(), x, y);
     }
 
     public boolean hasIcon() { return indicator.icon() != null; }

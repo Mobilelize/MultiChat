@@ -9,7 +9,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
  * Call {@link #init()} once from your mod's client initializer.
  *
  * 1.21 (Yarn): entity.getYaw() / entity.getPitch()
- * 26.1 (Mojang): entity.getYRot() / entity.getXRot()  (VERIFY)
+ * 26.1 (Mojang): entity.getYRot() / entity.getXRot()
  */
 public final class LzAfk {
 
@@ -31,13 +31,13 @@ public final class LzAfk {
             }
             if (playerWasNull) {
                 playerWasNull  = false;
-                lastYaw        = client.player.getYaw();
-                lastPitch      = client.player.getPitch();
+                lastYaw        = client.player.getYRot();
+                lastPitch      = client.player.getXRot();
                 lastActivityMs = System.currentTimeMillis();
                 return;
             }
-            float yaw   = client.player.getYaw();
-            float pitch = client.player.getPitch();
+            float yaw   = client.player.getYRot();
+            float pitch = client.player.getXRot();
             if (yaw != lastYaw || pitch != lastPitch) {
                 lastYaw        = yaw;
                 lastPitch      = pitch;

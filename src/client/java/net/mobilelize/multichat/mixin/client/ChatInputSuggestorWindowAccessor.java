@@ -8,5 +8,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(CommandSuggestions.SuggestionsList.class)
 public interface ChatInputSuggestorWindowAccessor {
     @Accessor("rect")
-    Rect2i getArea();
+    Rect2i getRect();
 }

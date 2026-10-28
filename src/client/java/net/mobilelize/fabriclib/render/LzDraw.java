@@ -10,7 +10,7 @@ import net.mobilelize.fabriclib.text.LzText;
 /**
  * Draw utilities for custom MC screens.
  * 1.21 (Yarn): DrawContext / TextRenderer APIs
- * 26.1 (Mojang): VERIFY class/method renames
+ * 26.1 (Mojang): GuiGraphics / Font APIs
  */
 public final class LzDraw {
 
@@ -32,7 +32,7 @@ public final class LzDraw {
         ctx.mc().fillGradient(x1, y1, x2, y2, colourTop, colourBottom);
     }
 
-    // 1.21.6: z-indexed fill removed — z ignored, use LzHudOverlay for layering
+    // 26.1: z-indexed fill removed — z ignored, use LzHudOverlay for layering
     public static void fill(LzDrawContext ctx, int x1, int y1, int x2, int y2, int z, int colour) {
         ctx.mc().fill(x1, y1, x2, y2, colour);
     }
@@ -71,19 +71,14 @@ public final class LzDraw {
 
     // ── Matrix transforms ─────────────────────────────────────────────────
 
-    // 1.21.6: MatrixStack -> Matrix3x2fStack, push/pop renamed
+    // 26.1: pose() returns Matrix3x2fStack — 2D only, method names pushMatrix/popMatrix (confirmed decompiled)
     public static void pushMatrix(LzDrawContext ctx) { ctx.mc().pose().pushMatrix(); }
 
-    // 1.21.6: MatrixStack -> Matrix3x2fStack, push/pop renamed
     public static void popMatrix(LzDrawContext ctx) { ctx.mc().pose().popMatrix(); }
 
-    // 1.21.6: Matrix3x2f is 2D-only — no z component
+    // 26.1: Matrix3x2fStack is 2D only — no z component
     public static void translate(LzDrawContext ctx, float x, float y) { ctx.mc().pose().translate(x, y); }
 
-    // 1.21.6: z ignored — Matrix3x2f has no z axis
-    public static void translate(LzDrawContext ctx, float x, float y, float z) { ctx.mc().pose().translate(x, y); }
-
-    // 1.21.6: ctx.getMatrices().scale(sx, sy)
     public static void scale(LzDrawContext ctx, float sx, float sy) { ctx.mc().pose().scale(sx, sy); }
 
     // 1.21.6: Matrix3x2fStack.rotate(radians) — screen space is Y-down, so a positive angle here
@@ -92,36 +87,36 @@ public final class LzDraw {
 
     // ── Text ──────────────────────────────────────────────────────────────
 
-    // 1.21: ctx.drawTextWithShadow(tr, text, x, y, colour)   26.1: VERIFY name
+    // 1.21: ctx.drawTextWithShadow(tr, text, x, y, colour)   26.1: ctx.text(font, text, x, y, colour)
     public static void drawText(LzDrawContext ctx, String text, int x, int y, int colour) {
-        ctx.mc().drawString(tr(), text, x, y, colour);
+        ctx.mc().text(tr(), text, x, y, colour);
     }
 
     public static void drawText(LzDrawContext ctx, LzText text, int x, int y, int colour) {
-        ctx.mc().drawString(tr(), text.mc(), x, y, colour);
+        ctx.mc().text(tr(), text.mc(), x, y, colour);
     }
 
-    // 1.21: ctx.drawTextWithShadow(tr, OrderedText, x, y, colour)   26.1: VERIFY
+    // 1.21: ctx.drawTextWithShadow(tr, OrderedText, x, y, colour)   26.1: ctx.text(font, FormattedCharSequence, x, y, colour)
     public static void drawText(LzDrawContext ctx, FormattedCharSequence text, int x, int y, int colour) {
-        ctx.mc().drawString(tr(), text, x, y, colour);
+        ctx.mc().text(tr(), text, x, y, colour);
     }
 
     public static void drawText(LzDrawContext ctx, LzOrderedText text, int x, int y, int colour) {
-        ctx.mc().drawString(tr(), text.mc(), x, y, colour);
+        ctx.mc().text(tr(), text.mc(), x, y, colour);
     }
 
-    // 1.21: ctx.drawText(tr, text, x, y, colour, false) — no shadow
+    // 1.21: ctx.drawText(tr, text, x, y, colour, false) — no shadow   26.1: ctx.text(font, text, x, y, colour, false)
     public static void drawTextNoShadow(LzDrawContext ctx, String text, int x, int y, int colour) {
-        ctx.mc().drawString(tr(), text, x, y, colour, false);
+        ctx.mc().text(tr(), text, x, y, colour, false);
     }
 
-    // 1.21: ctx.drawCenteredTextWithShadow(tr, text, cx, y, colour)   26.1: VERIFY
+    // 1.21: ctx.drawCenteredTextWithShadow(tr, text, cx, y, colour)   26.1: ctx.centeredText(font, text, cx, y, colour)
     public static void drawCenteredText(LzDrawContext ctx, String text, int centerX, int y, int colour) {
-        ctx.mc().drawCenteredString(tr(), text, centerX, y, colour);
+        ctx.mc().centeredText(tr(), text, centerX, y, colour);
     }
 
     public static void drawCenteredText(LzDrawContext ctx, LzText text, int centerX, int y, int colour) {
-        ctx.mc().drawCenteredString(tr(), text.mc(), centerX, y, colour);
+        ctx.mc().centeredText(tr(), text.mc(), centerX, y, colour);
     }
 
     public static void drawScaledText(LzDrawContext ctx, String text, int x, int y,
@@ -129,24 +124,24 @@ public final class LzDraw {
         pushMatrix(ctx);
         translate(ctx, x, y);
         scale(ctx, scale, scale);
-        ctx.mc().drawString(tr(), text, 0, 0, colour);
+        ctx.mc().text(tr(), text, 0, 0, colour);
         popMatrix(ctx);
     }
 
-    // 1.21: TextRenderer.getWidth(text)   26.1: VERIFY
+    // 1.21: TextRenderer.getWidth(text)   26.1: Font.width(text)
     public static int textWidth(String text)         { return tr().width(text); }
     public static int textWidth(LzText text)         { return tr().width(text.mc()); }
     public static int textWidth(FormattedCharSequence text)    { return tr().width(text); }
     public static int textWidth(LzOrderedText text)  { return tr().width(text.mc()); }
 
-    // 1.21: client.textRenderer.getTextHandler()   26.1: client.font.getSplitter() (VERIFY)
+    // 1.21: client.textRenderer.getTextHandler()   26.1: client.font.getSplitter() (now top-level StringSplitter class)
     public static StringSplitter textHandler() { return tr().getSplitter(); }
 
-    // ── Window size from DrawContext ──────────────────────────────────────
+    // ── Window size from GuiGraphics ──────────────────────────────────────
 
     // 1.21: ctx.getScaledWindowWidth()   26.1: VERIFY
-    public static int scaledWidth(LzDrawContext ctx)  { return ctx.mc().guiWidth(); }
+    public static int scaledWidth(LzDrawContext ctx)  { return LzClient.mc().getWindow().getGuiScaledWidth(); }
 
     // 1.21: ctx.getScaledWindowHeight()   26.1: VERIFY
-    public static int scaledHeight(LzDrawContext ctx) { return ctx.mc().guiHeight(); }
+    public static int scaledHeight(LzDrawContext ctx) { return LzClient.mc().getWindow().getGuiScaledHeight(); }
 }

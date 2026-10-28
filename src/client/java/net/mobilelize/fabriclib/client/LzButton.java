@@ -5,7 +5,7 @@ import net.mobilelize.fabriclib.text.LzText;
 import java.util.function.Consumer;
 
 /**
- * Factory for buttons — isolates the ButtonWidget builder chain.
+ * Factory for buttons — isolates the Button builder chain.
  * 1.21 (Yarn): ButtonWidget.builder(Text, PressAction).dimensions(x,y,w,h).build()
  * 26.1 (Mojang): renamed to Button, builder chain may change — update here only.
  */

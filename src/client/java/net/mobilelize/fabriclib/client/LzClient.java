@@ -22,6 +22,7 @@ public final class LzClient {
     public static void openScreen(@Nullable LzScreen screen) { mc().setScreen(screen); }
 
     public static boolean hasPlayer() { return mc().player != null; }
+    // 1.21: mc().world   26.1: mc().level
     public static boolean hasWorld()  { return mc().level != null; }
 
     /**
@@ -41,7 +42,7 @@ public final class LzClient {
     // unchanged: client.isRunning()
     public static boolean isRunning() { return mc().isRunning(); }
 
-    // 1.21: client.currentScreen   26.1: client.screen  (VERIFY field rename)
+    // 1.21: client.currentScreen   26.1: client.screen
     @Nullable
     public static net.minecraft.client.gui.screens.Screen currentScreen() {
         return mc().screen;
@@ -60,6 +61,6 @@ public final class LzClient {
     // 1.21: client.getWindow().getHandle()   26.1: VERIFY (GLFW native handle)
     public static long windowHandle() { return mc().getWindow().handle(); }
 
-    // 1.21: client.send(r)   26.1: VERIFY (schedules task on main thread)
-    public static void send(Runnable runnable) { mc().schedule(runnable); }
+    // 1.21: client.send(r)   26.1: execute() (ReentrantBlockableEventLoop — no send/submit(Runnable))
+    public static void send(Runnable runnable) { mc().execute(runnable); }
 }

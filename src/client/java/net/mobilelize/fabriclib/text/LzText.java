@@ -9,7 +9,7 @@ import net.minecraft.network.chat.contents.ObjectContents;
 import net.minecraft.network.chat.contents.TranslatableContents;
 
 /**
- * Stable wrapper for MC Text.
+ * Stable wrapper for MC Component.
  * 1.21 (Yarn): net.minecraft.text.Text
  * 26.1 (Mojang): net.minecraft.network.chat.Component
  */
@@ -19,10 +19,10 @@ public class LzText {
 
     public LzText(Component text) { this.text = text; }
 
-    /** Raw MC Text — escape hatch. */
+    /** Raw MC Component — escape hatch. */
     public Component mc() { return text; }
 
-    // 1.21: text.asOrderedText()   26.1: component.getVisualOrderText() (VERIFY)
+    // 1.21: text.asOrderedText()   26.1: component.getVisualOrderText()
     public LzOrderedText ordered() { return LzOrderedText.wrap(text.getVisualOrderText()); }
 
     public LzMutableText append(LzText other) {
@@ -149,7 +149,7 @@ public class LzText {
         return new LzMutableText(copy);
     }
 
-    /** Wraps an existing MC Text — use only at mixin boundaries. */
+    /** Wraps an existing MC Component — use only at mixin boundaries. */
     public static LzText wrapMc(Component text) { return new LzText(text); }
 
     // ── Format-code parser ──────────────────────────────────────────────────
