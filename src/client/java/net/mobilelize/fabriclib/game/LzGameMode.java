@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.game;
 
-import net.minecraft.world.GameMode;
+import net.minecraft.world.level.GameType;
 
 /**
  * Stable game mode enum. Mods never import MC's GameMode/GameType directly.
@@ -9,23 +9,23 @@ import net.minecraft.world.GameMode;
  */
 public enum LzGameMode {
 
-    SURVIVAL(GameMode.SURVIVAL),
-    CREATIVE(GameMode.CREATIVE),
-    ADVENTURE(GameMode.ADVENTURE),
-    SPECTATOR(GameMode.SPECTATOR);
+    SURVIVAL(GameType.SURVIVAL),
+    CREATIVE(GameType.CREATIVE),
+    ADVENTURE(GameType.ADVENTURE),
+    SPECTATOR(GameType.SPECTATOR);
 
-    private final GameMode mcMode;
+    private final GameType mcMode;
 
-    LzGameMode(GameMode mcMode) {
+    LzGameMode(GameType mcMode) {
         this.mcMode = mcMode;
     }
 
     /** Returns the underlying MC GameMode value for this version. */
-    public GameMode mc() {
+    public GameType mc() {
         return mcMode;
     }
 
-    public static LzGameMode fromMC(GameMode mode) {
+    public static LzGameMode fromMC(GameType mode) {
         return switch (mode) {
             case SURVIVAL  -> SURVIVAL;
             case CREATIVE  -> CREATIVE;

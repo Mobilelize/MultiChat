@@ -13,7 +13,7 @@ public final class LzButton {
 
     private LzButton() {}
 
-    private static net.minecraft.client.gui.widget.ButtonWidget.NarrationSupplier narration() {
+    private static net.minecraft.client.gui.components.Button.CreateNarration narration() {
         return LzButtonWidget.defaultNarration();
     }
 

@@ -1,12 +1,12 @@
 package net.mobilelize.multichat.client.render;
 
-import net.minecraft.client.font.Alignment;
-import net.minecraft.client.font.DrawnTextConsumer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Style;
-import net.minecraft.util.profiler.Profilers;
+import net.minecraft.client.gui.ActiveTextCollector;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.TextAlignment;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.profiling.Profiler;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
@@ -58,7 +58,7 @@ public class ChatRenderer {
         return label;
     }
 
-    public static void render(ChatHud chat, LzDrawContext context, int currentTick,
+    public static void render(ChatComponent chat, LzDrawContext context, int currentTick,
                                int mouseX, int mouseY, boolean focused, boolean skipLeftMessages) {
         lastHoveredStyle     = null;
         lastHoveredIndicator = null;
@@ -73,7 +73,7 @@ public class ChatRenderer {
         boolean anyVisible = ChatManager.getAllPanels().stream().anyMatch(p -> p.isVisibleInChat(focused));
         if (!anyVisible) return;
 
-        Profilers.get().push("multichat");
+        Profiler.get().push("multichat");
 
         int windowHeight   = LzDraw.scaledHeight(context);
         int windowWidth    = LzDraw.scaledWidth(context);
@@ -129,7 +129,7 @@ public class ChatRenderer {
             lastHoveredIndicator = resolveIndicatorAt(mouseX, mouseY, windowWidth, windowHeight);
         }
 
-        Profilers.get().pop();
+        Profiler.get().pop();
     }
 
     private static void renderTabBar(LzDrawContext context,
@@ -273,17 +273,17 @@ public class ChatRenderer {
 
         ChatTheme theme = ThemeRegistry.active();
 
-        DrawnTextConsumer hoverDrawer = null;
-        DrawnTextConsumer.Transformation hoverTransform = null;
+        ActiveTextCollector hoverDrawer = null;
+        ActiveTextCollector.Parameters hoverTransform = null;
         Style[] hoverCapture = { null };
         if (showScrollbar) {
-            DrawContext rawCtx = context.mc();
-            hoverDrawer = rawCtx.getTextConsumer(
-                DrawContext.HoverType.TOOLTIP_AND_CURSOR,
+            GuiGraphics rawCtx = context.mc();
+            hoverDrawer = rawCtx.textRenderer(
+                GuiGraphics.HoveredTextEffects.TOOLTIP_AND_CURSOR,
                 style -> { if (hoverCapture[0] == null) hoverCapture[0] = style; }
             );
-            hoverTransform = hoverDrawer.getTransformation()
-                .withPose(new Matrix3x2f(rawCtx.getMatrices()));
+            hoverTransform = hoverDrawer.defaultParameters()
+                .withPose(new Matrix3x2f(rawCtx.pose()));
         }
 
         record Row(int s, LzChatLine visible, int lineTop, int lineBot, int textY, int textAlpha, int bgAlpha) {}
@@ -414,7 +414,7 @@ public class ChatRenderer {
                 }
 
                 if (hoverDrawer != null && hoverTransform != null) {
-                    hoverDrawer.text(Alignment.LEFT, headOffset, textY,
+                    hoverDrawer.accept(TextAlignment.LEFT, headOffset, textY,
                         hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
                 } else {
                     LzDraw.pushMatrix(context);
@@ -427,7 +427,7 @@ public class ChatRenderer {
             ChatHeadsSupport.endHeadRendering();
         }
 
-        long queueCount = LzClient.mc().getMessageHandler().getUnprocessedMessageCount();
+        long queueCount = LzClient.mc().getChatListener().queueSize();
         if (queueCount > 0L) {
             int queueTextAlpha = (int)(128.0 * chatOpacity);
             int queueBgAlpha   = (int)(255.0 * bgOpacity);
@@ -541,12 +541,12 @@ public class ChatRenderer {
         return null;
     }
 
-    private static @org.jetbrains.annotations.Nullable Style getStyleAt(OrderedText text, int x) {
-        net.minecraft.client.font.TextHandler handler = LzDraw.textHandler();
+    private static @org.jetbrains.annotations.Nullable Style getStyleAt(FormattedCharSequence text, int x) {
+        net.minecraft.client.StringSplitter handler = LzDraw.textHandler();
         float[] w = { 0 };
         Style[] out = { null };
         text.accept((index, style, codePoint) -> {
-            w[0] += handler.getWidth(v -> v.accept(0, style, codePoint));
+            w[0] += handler.stringWidth(v -> v.accept(0, style, codePoint));
             if (w[0] > x) { out[0] = style; return false; }
             return true;
         });

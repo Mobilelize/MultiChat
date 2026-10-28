@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.world;
 
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.player.LzPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +20,7 @@ public final class LzWorld {
 
     // 1.21: client.world   26.1: client.level
     @Nullable
-    private static ClientWorld world() { return LzClient.mc().world; }
+    private static ClientLevel world() { return LzClient.mc().level; }
 
     public static boolean isLoaded() { return world() != null; }
 
@@ -29,7 +29,7 @@ public final class LzWorld {
         var w = world();
         if (w == null) return Collections.emptyList();
         // 1.21: world.getPlayers()   26.1: level.players()
-        return w.getPlayers().stream()
+        return w.players().stream()
             .map(LzPlayer::new)
             .collect(Collectors.toList());
     }

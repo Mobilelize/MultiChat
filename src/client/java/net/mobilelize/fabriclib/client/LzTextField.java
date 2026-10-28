@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.components.EditBox;
 import net.mobilelize.fabriclib.text.LzText;
 
 /**
@@ -8,9 +8,9 @@ import net.mobilelize.fabriclib.text.LzText;
  * 1.21 (Yarn): TextFieldWidget(TextRenderer, x, y, w, h, Text)
  * 26.1 (Mojang): VERIFY constructor params and TextRenderer→font rename.
  */
-public class LzTextField extends TextFieldWidget {
+public class LzTextField extends EditBox {
 
     public LzTextField(int x, int y, int w, int h) {
-        super(LzClient.mc().textRenderer, x, y, w, h, LzText.empty().mc());
+        super(LzClient.mc().font, x, y, w, h, LzText.empty().mc());
     }
 }

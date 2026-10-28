@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.network.message.ChatVisibility;
+import net.minecraft.world.entity.player.ChatVisiblity;
 
 /**
  * Visibility setting for the chat HUD.
@@ -9,18 +9,18 @@ import net.minecraft.network.message.ChatVisibility;
  */
 public enum LzChatVisibility {
 
-    FULL  (ChatVisibility.FULL),
-    SYSTEM(ChatVisibility.SYSTEM),
-    HIDDEN(ChatVisibility.HIDDEN);
+    FULL  (ChatVisiblity.FULL),
+    SYSTEM(ChatVisiblity.SYSTEM),
+    HIDDEN(ChatVisiblity.HIDDEN);
 
-    private final ChatVisibility mc;
+    private final ChatVisiblity mc;
 
-    LzChatVisibility(ChatVisibility mc) { this.mc = mc; }
+    LzChatVisibility(ChatVisiblity mc) { this.mc = mc; }
 
     /** Raw MC ChatVisibility — escape hatch. */
-    public ChatVisibility mc() { return mc; }
+    public ChatVisiblity mc() { return mc; }
 
-    public static LzChatVisibility fromMC(ChatVisibility v) {
+    public static LzChatVisibility fromMC(ChatVisiblity v) {
         return switch (v) {
             case FULL   -> FULL;
             case SYSTEM -> SYSTEM;

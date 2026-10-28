@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.gui.hud.ChatHudLine;
+import net.minecraft.client.GuiMessage;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,12 +11,12 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class LzChatLine {
 
-    private final ChatHudLine.Visible line;
+    private final GuiMessage.Line line;
     @Nullable private LzChatEntry entry;
     private boolean startOfEntry;
     private boolean skeleton;
 
-    public LzChatLine(ChatHudLine.Visible line) { this.line = line; }
+    public LzChatLine(GuiMessage.Line line) { this.line = line; }
 
     @Nullable
     public LzChatEntry entry() { return entry; }
@@ -32,7 +32,7 @@ public final class LzChatLine {
     public boolean isSkeleton() { return skeleton; }
 
     /** Raw MC ChatHudLine.Visible — escape hatch. */
-    public ChatHudLine.Visible mc() { return line; }
+    public GuiMessage.Line mc() { return line; }
 
     // 1.21: line.addedTime()   26.1: VERIFY
     public int addedTime() { return line.addedTime(); }
@@ -42,7 +42,7 @@ public final class LzChatLine {
 
     // 1.21: line.indicator()   26.1: VERIFY
     @Nullable
-    public LzMessageIndicator indicator() { return LzMessageIndicator.wrapNullable(line.indicator()); }
+    public LzMessageIndicator indicator() { return LzMessageIndicator.wrapNullable(line.tag()); }
 
     // 1.21: line.endOfEntry()   26.1: VERIFY
     public boolean endOfEntry() { return line.endOfEntry(); }
@@ -52,7 +52,7 @@ public final class LzChatLine {
     /** Creates a new chat line. Indicator may be null. */
     public static LzChatLine create(int addedTime, LzOrderedText content,
                                     @Nullable LzMessageIndicator indicator, boolean endOfEntry) {
-        return new LzChatLine(new ChatHudLine.Visible(
+        return new LzChatLine(new GuiMessage.Line(
             addedTime, content.mc(),
             indicator == null ? null : indicator.mc(),
             endOfEntry));
@@ -62,7 +62,7 @@ public final class LzChatLine {
     public static LzChatLine create(int addedTime, LzOrderedText content,
                                     @Nullable LzMessageIndicator indicator, boolean endOfEntry,
                                     @Nullable LzChatEntry entry, boolean startOfEntry) {
-        LzChatLine l = new LzChatLine(new ChatHudLine.Visible(
+        LzChatLine l = new LzChatLine(new GuiMessage.Line(
             addedTime, content.mc(),
             indicator == null ? null : indicator.mc(),
             endOfEntry));
@@ -77,7 +77,7 @@ public final class LzChatLine {
      *  it, and an old/stale addedTime (e.g. 0) reads as an ancient message and gets hidden outright
      *  the moment chat is unfocused instead of fading in normally. */
     public static LzChatLine createSkeleton(int addedTime) {
-        LzChatLine l = new LzChatLine(new ChatHudLine.Visible(addedTime, LzOrderedText.EMPTY.mc(), null, true));
+        LzChatLine l = new LzChatLine(new GuiMessage.Line(addedTime, LzOrderedText.EMPTY.mc(), null, true));
         l.startOfEntry = true;
         l.skeleton = true;
         return l;

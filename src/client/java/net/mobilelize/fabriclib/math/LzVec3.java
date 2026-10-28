@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.math;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Stable wrapper for a 3D floating-point vector.
@@ -9,17 +9,17 @@ import net.minecraft.util.math.Vec3d;
  */
 public final class LzVec3 {
 
-    private final Vec3d vec;
+    private final Vec3 vec;
 
-    public LzVec3(Vec3d vec) { this.vec = vec; }
+    public LzVec3(Vec3 vec) { this.vec = vec; }
 
     // ── Factories ────────────────────────────────────────────────────────────
 
     // 1.21: new Vec3d(x, y, z)   26.1: new Vec3(x, y, z)
-    public static LzVec3 of(double x, double y, double z) { return new LzVec3(new Vec3d(x, y, z)); }
-    public static LzVec3 of(Vec3d vec)                    { return new LzVec3(vec); }
+    public static LzVec3 of(double x, double y, double z) { return new LzVec3(new Vec3(x, y, z)); }
+    public static LzVec3 of(Vec3 vec)                    { return new LzVec3(vec); }
     // 1.21: Vec3d.ZERO   26.1: Vec3.ZERO
-    public static LzVec3 zero()                            { return new LzVec3(Vec3d.ZERO); }
+    public static LzVec3 zero()                            { return new LzVec3(Vec3.ZERO); }
 
     // ── Components ───────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ public final class LzVec3 {
     public double length()               { return vec.length(); }
 
     /** 1.21: vec.lengthSquared()   26.1: vec.lengthSqr() */
-    public double squaredLength()        { return vec.lengthSquared(); }
+    public double squaredLength()        { return vec.lengthSqr(); }
     public double distanceTo(LzVec3 other) { return vec.distanceTo(other.vec); }
 
     public double squaredDistanceTo(LzVec3 other) {
@@ -49,17 +49,17 @@ public final class LzVec3 {
     }
 
     /** 1.21: vec.dotProduct(other)   26.1: vec.dot(other) */
-    public double dot(LzVec3 other)   { return vec.dotProduct(other.vec); }
+    public double dot(LzVec3 other)   { return vec.dot(other.vec); }
 
     /** 1.21: vec.crossProduct(other)   26.1: vec.cross(other) */
-    public LzVec3 cross(LzVec3 other) { return new LzVec3(vec.crossProduct(other.vec)); }
+    public LzVec3 cross(LzVec3 other) { return new LzVec3(vec.cross(other.vec)); }
 
     public LzVec3 lerp(LzVec3 other, double t) {
         return LzVec3.of(x() + (other.x() - x()) * t, y() + (other.y() - y()) * t, z() + (other.z() - z()) * t);
     }
 
     /** Raw MC Vec3d — escape hatch. */
-    public Vec3d mc() { return vec; }
+    public Vec3 mc() { return vec; }
 
     @Override public String toString()        { return "(" + x() + ", " + y() + ", " + z() + ")"; }
     @Override public boolean equals(Object o) { return o instanceof LzVec3 other && vec.equals(other.vec); }

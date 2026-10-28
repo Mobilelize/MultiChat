@@ -1,12 +1,11 @@
 package net.mobilelize.fabriclib.text;
 
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Style;
-import net.minecraft.text.TextColor;
-import net.minecraft.util.Formatting;
-
 import java.net.URI;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 
 /**
  * Stable wrapper for MC Style.
@@ -41,12 +40,12 @@ public final class LzStyle {
     public LzStyle withColor(int rgb)            { return new LzStyle(style.withColor(TextColor.fromRgb(rgb))); }
 
     /** Package-private — only called from LzFormatting. */
-    LzStyle withFormatting(Formatting formatting) { return new LzStyle(style.withColor(formatting)); }
+    LzStyle withFormatting(ChatFormatting formatting) { return new LzStyle(style.withColor(formatting)); }
 
     public LzStyle withObfuscated(boolean v)     { return new LzStyle(style.withObfuscated(v)); }
     public LzStyle withBold(boolean v)           { return new LzStyle(style.withBold(v)); }
     public LzStyle withStrikethrough(boolean v)  { return new LzStyle(style.withStrikethrough(v)); }
-    public LzStyle withUnderline(boolean v)      { return new LzStyle(style.withUnderline(v)); }
+    public LzStyle withUnderline(boolean v)      { return new LzStyle(style.withUnderlined(v)); }
     public LzStyle withItalic(boolean v)         { return new LzStyle(style.withItalic(v)); }
 
     // ── Click events ────────────────────────────────────────────────────────

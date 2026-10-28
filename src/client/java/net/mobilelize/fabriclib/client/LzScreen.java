@@ -1,7 +1,7 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import net.mobilelize.fabriclib.text.LzText;
 
@@ -23,13 +23,13 @@ public abstract class LzScreen extends Screen {
 
     // 1.21: Screen.render(DrawContext, int, int, float)   26.1: VERIFY signature
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         lzRender(LzDrawContext.wrap(ctx), mouseX, mouseY, delta);
     }
 
     // 1.21: Screen.renderBackground(DrawContext, int, int, float)   26.1: VERIFY
     @Override
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         lzRenderBackground(LzDrawContext.wrap(ctx), mouseX, mouseY, delta);
     }
 

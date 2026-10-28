@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.network;
 
-import net.minecraft.client.network.ClientPlayNetworkHandler;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.mobilelize.fabriclib.client.LzClient;
 import net.mobilelize.fabriclib.world.LzWorld;
 import org.jetbrains.annotations.Nullable;
@@ -22,8 +22,8 @@ public final class LzConnection {
 
     // 1.21: client.getNetworkHandler()   26.1: client.getConnection()
     @Nullable
-    private static ClientPlayNetworkHandler handler() {
-        return LzClient.mc().getNetworkHandler();
+    private static ClientPacketListener handler() {
+        return LzClient.mc().getConnection();
     }
 
     /** All players visible in the tab list. Empty if not connected. */
@@ -31,7 +31,7 @@ public final class LzConnection {
         var h = handler();
         if (h == null) return Collections.emptyList();
         // 1.21: handler.getPlayerList()   26.1: connection.getOnlinePlayers()
-        return h.getPlayerList().stream()
+        return h.getOnlinePlayers().stream()
             .map(LzPlayerInfo::new)
             .collect(Collectors.toList());
     }
@@ -41,7 +41,7 @@ public final class LzConnection {
         var h = handler();
         if (h == null) return Optional.empty();
         // 1.21: handler.getPlayerListEntry(uuid)   26.1: connection.getPlayerInfo(uuid)
-        var entry = h.getPlayerListEntry(uuid);
+        var entry = h.getPlayerInfo(uuid);
         return Optional.ofNullable(entry).map(LzPlayerInfo::new);
     }
 
@@ -49,7 +49,7 @@ public final class LzConnection {
     public static Optional<LzPlayerInfo> playerInfoByName(String name) {
         var h = handler();
         if (h == null) return Optional.empty();
-        return h.getPlayerList().stream()
+        return h.getOnlinePlayers().stream()
             .filter(e -> e.getProfile().name().equalsIgnoreCase(name))
             .map(LzPlayerInfo::new)
             .findFirst();
@@ -79,7 +79,7 @@ public final class LzConnection {
      */
     public static void sendChatMessage(String message) {
         var h = handler();
-        if (h != null) h.sendChatMessage(message);
+        if (h != null) h.sendChat(message);
     }
 
     /**
@@ -88,6 +88,6 @@ public final class LzConnection {
      */
     public static void sendChatCommand(String command) {
         var h = handler();
-        if (h != null) h.sendChatCommand(command);
+        if (h != null) h.sendCommand(command);
     }
 }

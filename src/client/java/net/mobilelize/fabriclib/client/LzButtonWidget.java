@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.components.Button;
 import net.mobilelize.fabriclib.text.LzText;
 
 /**
@@ -8,19 +8,19 @@ import net.mobilelize.fabriclib.text.LzText;
  * 1.21 (Yarn): net.minecraft.client.gui.widget.ButtonWidget
  * 26.1 (Mojang): net.minecraft.client.gui.components.Button  (VERIFY)
  */
-public final class LzButtonWidget extends ButtonWidget.Text {
+public final class LzButtonWidget extends Button.Plain {
 
     // 1.21.11: extend ButtonWidget.Text (concrete subclass) — ButtonWidget itself is abstract with abstract drawIcon
     LzButtonWidget(int x, int y, int w, int h,
-                   net.minecraft.text.Text message,
-                   PressAction onPress,
-                   NarrationSupplier narration) {
+                   net.minecraft.network.chat.Component message,
+                   OnPress onPress,
+                   CreateNarration narration) {
         super(x, y, w, h, message, onPress, narration);
     }
 
     // 1.21: ButtonWidget.DEFAULT_NARRATION_SUPPLIER (protected)   26.1: VERIFY
-    static NarrationSupplier defaultNarration() {
-        return DEFAULT_NARRATION_SUPPLIER;
+    static CreateNarration defaultNarration() {
+        return DEFAULT_NARRATION;
     }
 
     // 1.21: ButtonWidget.setMessage(Text)   26.1: AbstractButton.setMessage (VERIFY)

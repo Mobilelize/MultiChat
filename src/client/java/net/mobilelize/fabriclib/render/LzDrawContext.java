@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.render;
 
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphics;
 
 /**
  * Stable wrapper for MC DrawContext.
@@ -9,15 +9,15 @@ import net.minecraft.client.gui.DrawContext;
  */
 public final class LzDrawContext {
 
-    private final DrawContext ctx;
+    private final GuiGraphics ctx;
 
-    private LzDrawContext(DrawContext ctx) { this.ctx = ctx; }
+    private LzDrawContext(GuiGraphics ctx) { this.ctx = ctx; }
 
     /** Raw MC DrawContext — escape hatch. */
-    public DrawContext mc() { return ctx; }
+    public GuiGraphics mc() { return ctx; }
 
     // 1.21: new LzDrawContext(ctx)   26.1: VERIFY class rename
-    public static LzDrawContext wrap(DrawContext ctx) {
+    public static LzDrawContext wrap(GuiGraphics ctx) {
         return ctx == null ? null : new LzDrawContext(ctx);
     }
 }

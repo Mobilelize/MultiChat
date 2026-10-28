@@ -1,8 +1,7 @@
 package net.mobilelize.fabriclib.registry;
 
-import net.minecraft.util.Identifier;
-
 import java.util.Optional;
+import net.minecraft.resources.Identifier;
 
 /**
  * Stable wrapper for a resource location / identifier.
@@ -19,7 +18,7 @@ public final class LzId {
 
     // 1.21: Identifier.of(ns, path)   26.1: ResourceLocation.fromNamespaceAndPath(ns, path)
     public static LzId of(String namespace, String path) {
-        return new LzId(Identifier.of(namespace, path));
+        return new LzId(Identifier.fromNamespaceAndPath(namespace, path));
     }
 
     // 1.21: Identifier.tryParse(combined)   26.1: ResourceLocation.tryParse(combined)

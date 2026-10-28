@@ -186,7 +186,7 @@ public class MultichatClient implements ClientModInitializer {
 
     static String textToJson(LzText text) {
         try {
-            com.google.gson.JsonElement el = net.minecraft.text.TextCodecs.CODEC
+            com.google.gson.JsonElement el = net.minecraft.network.chat.ComponentSerialization.CODEC
                     .encodeStart(com.mojang.serialization.JsonOps.INSTANCE, text.mc())
                     .getOrThrow();
             return el.toString();
@@ -198,7 +198,7 @@ public class MultichatClient implements ClientModInitializer {
     static LzText textFromJson(String json) {
         try {
             com.google.gson.JsonElement el = com.google.gson.JsonParser.parseString(json);
-            net.minecraft.text.Text t = net.minecraft.text.TextCodecs.CODEC
+            net.minecraft.network.chat.Component t = net.minecraft.network.chat.ComponentSerialization.CODEC
                     .parse(com.mojang.serialization.JsonOps.INSTANCE, el)
                     .getOrThrow();
             return LzText.wrapMc(t);

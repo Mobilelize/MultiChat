@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.gui.hud.MessageIndicator;
+import net.minecraft.client.GuiMessageTag;
 import net.mobilelize.fabriclib.render.LzDrawContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,29 +11,29 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class LzMessageIndicator {
 
-    private final MessageIndicator indicator;
+    private final GuiMessageTag indicator;
 
-    private LzMessageIndicator(MessageIndicator indicator) { this.indicator = indicator; }
+    private LzMessageIndicator(GuiMessageTag indicator) { this.indicator = indicator; }
 
     /** Wraps an existing MC MessageIndicator — use only at mixin boundaries. */
-    public static LzMessageIndicator wrap(MessageIndicator indicator) {
+    public static LzMessageIndicator wrap(GuiMessageTag indicator) {
         return new LzMessageIndicator(indicator);
     }
 
     @Nullable
-    public static LzMessageIndicator wrapNullable(@Nullable MessageIndicator indicator) {
+    public static LzMessageIndicator wrapNullable(@Nullable GuiMessageTag indicator) {
         return indicator == null ? null : new LzMessageIndicator(indicator);
     }
 
     /** Raw MC MessageIndicator — escape hatch. */
-    public MessageIndicator mc() { return indicator; }
+    public GuiMessageTag mc() { return indicator; }
 
     // 1.21: indicator.indicatorColor()   26.1: VERIFY
     public int indicatorColor() { return indicator.indicatorColor(); }
 
     // 1.21: indicator.icon()   26.1: VERIFY
     @Nullable
-    public MessageIndicator.Icon icon() { return indicator.icon(); }
+    public GuiMessageTag.Icon icon() { return indicator.icon(); }
 
     // 1.21: indicator.icon().width   26.1: VERIFY
     public int iconWidth() {

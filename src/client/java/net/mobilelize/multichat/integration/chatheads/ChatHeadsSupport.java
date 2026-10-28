@@ -1,7 +1,7 @@
 package net.mobilelize.multichat.integration.chatheads;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphics;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.multichat.client.MultichatClient;
 
@@ -154,7 +154,7 @@ public final class ChatHeadsSupport {
     public static int headWidth(HeadRef ref) {
         if (!present || ref == HeadRef.NONE) return 0;
         try {
-            return dzwdz.chat_heads.ChatHeads.getChatOffset(ref.data);
+            return chatOffset(ref.data);
         } catch (Throwable t) {
             present = false;
             MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
@@ -172,12 +172,22 @@ public final class ChatHeadsSupport {
     public static int emptyLineWidth() {
         if (!present) return 0;
         try {
-            return dzwdz.chat_heads.ChatHeads.getChatOffset(dzwdz.chat_heads.HeadData.EMPTY);
+            return chatOffset(dzwdz.chat_heads.HeadData.EMPTY);
         } catch (Throwable t) {
             present = false;
             MultichatClient.LOGGER.warn("[MultiChat] Chat Heads compatibility disabled after a failed call", t);
             return 0;
         }
+    }
+
+    /** chat_heads 1.2.x's {@code ChatHeads.getChatOffset(HeadData)}, re-derived from members every
+     *  release shares. 1.3.x changed that method to take a {@code ChatHudLine.Visible}, so calling
+     *  either signature directly throws NoSuchMethodError on the other and disables compat. */
+    private static int chatOffset(dzwdz.chat_heads.HeadData data) {
+        if (dzwdz.chat_heads.ChatHeads.CONFIG.renderPosition() != dzwdz.chat_heads.config.RenderPosition.BEFORE_LINE) return 0;
+        boolean offset = data != dzwdz.chat_heads.HeadData.EMPTY
+            || (dzwdz.chat_heads.ChatHeads.CONFIG.offsetNonPlayerText() && !dzwdz.chat_heads.ChatHeads.serverDisabledChatHeads);
+        return offset ? dzwdz.chat_heads.ChatHeads.headWidth() : 0;
     }
 
     /** Fixed per-panel width to reserve so chat_heads' render-time shift+overflow (see class doc)
@@ -203,7 +213,7 @@ public final class ChatHeadsSupport {
      *  head (a nonzero {@link #headWidth} can still happen with no head to draw — chat_heads'
      *  "offset non-player text" alignment option reserves the space without a texture to fill
      *  it, matching real chat_heads' own {@code headData != HeadData.EMPTY} guard). */
-    public static void renderHead(DrawContext context, int x, int y, HeadRef ref, float opacity) {
+    public static void renderHead(GuiGraphics context, int x, int y, HeadRef ref, float opacity) {
         if (!present || ref == HeadRef.NONE) return;
         try {
             if (ref.data == dzwdz.chat_heads.HeadData.EMPTY) return;

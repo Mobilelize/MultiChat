@@ -507,7 +507,7 @@ public class ChatPanel {
     // Focused line count from MC options — not isChatFocused()-dependent.
     public int resolveFocusedLines() {
         if (primary || customHeightLines <= 0) {
-            double h = LzClient.mc().options.getChatHeightFocused().getValue();
+            double h = LzClient.mc().options.chatHeightFocused().get();
             int heightPx = (int)(h * 160.0 + 20.0);
             return Math.max(1, heightPx / resolveLineHeight());
         }

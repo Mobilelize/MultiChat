@@ -1,8 +1,8 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.client.util.ChatMessages;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.gui.components.ComponentRenderUtils;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzText;
 import org.jetbrains.annotations.Nullable;
@@ -20,41 +20,41 @@ public final class LzChat {
 
     // 1.21: client.inGameHud   26.1: client.gui  (VERIFY)
     @Nullable
-    private static InGameHud inGameHud() { return LzClient.mc().inGameHud; }
+    private static Gui inGameHud() { return LzClient.mc().gui; }
 
     // 1.21: inGameHud.getChatHud()   26.1: VERIFY
     @Nullable
-    public static ChatHud chatHud() {
+    public static ChatComponent chatHud() {
         var hud = inGameHud();
-        return hud == null ? null : hud.getChatHud();
+        return hud == null ? null : hud.getChat();
     }
 
     // 1.21.11: getChatScale() went private — read option directly
     public static double chatScale() {
-        return (double) LzClient.mc().options.getChatScale().getValue();
+        return (double) LzClient.mc().options.chatScale().get();
     }
 
     // 1.21.11: getWidth() (instance) went private — public static ChatHud.getWidth(double) still exists
     public static int chatWidth() {
-        return ChatHud.getWidth((double) LzClient.mc().options.getChatWidth().getValue());
+        return ChatComponent.getWidth((double) LzClient.mc().options.chatWidth().get());
     }
 
     // 1.21: inGameHud.getChatHud().getVisibleLineCount()   26.1: VERIFY
     public static int visibleLineCount() {
         var hud = inGameHud();
-        return hud == null ? 0 : hud.getChatHud().getVisibleLineCount();
+        return hud == null ? 0 : hud.getChat().getLinesPerPage();
     }
 
     // 1.21: inGameHud.getTicks()   26.1: VERIFY
     public static int ticks() {
         var hud = inGameHud();
-        return hud == null ? 0 : hud.getTicks();
+        return hud == null ? 0 : hud.getGuiTicks();
     }
 
     // 1.21: inGameHud.getChatHud().addToMessageHistory(msg)   26.1: VERIFY
     public static void addToMessageHistory(String msg) {
         var hud = inGameHud();
-        if (hud != null) hud.getChatHud().addToMessageHistory(msg);
+        if (hud != null) hud.getChat().addRecentChat(msg);
     }
 
     // 1.21: chatLineSpacing drives line height   26.1: VERIFY
@@ -68,8 +68,8 @@ public final class LzChat {
      * 26.1: VERIFY method/class rename
      */
     public static List<LzOrderedText> breakLines(LzText text, int width) {
-        return ChatMessages.breakRenderedChatMessageLines(
-            text.mc(), width, LzClient.mc().textRenderer)
+        return ComponentRenderUtils.wrapComponents(
+            text.mc(), width, LzClient.mc().font)
             .stream().map(LzOrderedText::wrap).toList();
     }
 }

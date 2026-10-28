@@ -1,14 +1,12 @@
 package net.mobilelize.fabriclib.text;
 
-import net.minecraft.text.ObjectTextContent;
-import net.minecraft.text.StringVisitable;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
-import net.minecraft.text.TranslatableTextContent;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentContents;
+import net.minecraft.network.chat.contents.ObjectContents;
+import net.minecraft.network.chat.contents.TranslatableContents;
 
 /**
  * Stable wrapper for MC Text.
@@ -17,15 +15,15 @@ import java.util.Optional;
  */
 public class LzText {
 
-    protected final Text text;
+    protected final Component text;
 
-    public LzText(Text text) { this.text = text; }
+    public LzText(Component text) { this.text = text; }
 
     /** Raw MC Text — escape hatch. */
-    public Text mc() { return text; }
+    public Component mc() { return text; }
 
     // 1.21: text.asOrderedText()   26.1: component.getVisualOrderText() (VERIFY)
-    public LzOrderedText ordered() { return LzOrderedText.wrap(text.asOrderedText()); }
+    public LzOrderedText ordered() { return LzOrderedText.wrap(text.getVisualOrderText()); }
 
     public LzMutableText append(LzText other) {
         // 1.21: text.copy()   26.1: component.copy()
@@ -52,7 +50,7 @@ public class LzText {
     // Text.getString() resolve to junk like "<[Bob head]Bob> hi", which breaks filter/search
     // matching. This finds each ObjectTextContent node's own fallback string (its content
     // only, not siblings) and cuts those substrings back out of the fully-resolved string.
-    public static String stringSkippingObjects(Text text) {
+    public static String stringSkippingObjects(Component text) {
         String full = text.getString();
         List<String> fallbacks = new ArrayList<>();
         collectObjectFallbacks(text, fallbacks);
@@ -64,17 +62,17 @@ public class LzText {
         return full;
     }
 
-    private static void collectObjectFallbacks(Text text, List<String> out) {
-        TextContent content = text.getContent();
-        if (content instanceof ObjectTextContent) {
+    private static void collectObjectFallbacks(Component text, List<String> out) {
+        ComponentContents content = text.getContents();
+        if (content instanceof ObjectContents) {
             StringBuilder sb = new StringBuilder();
             content.visit(s -> { sb.append(s); return Optional.empty(); });
             if (!sb.isEmpty()) out.add(sb.toString());
-        } else if (content instanceof TranslatableTextContent translatable) {
+        } else if (content instanceof TranslatableContents translatable) {
             for (Object arg : translatable.getArgs())
-                if (arg instanceof Text argText) collectObjectFallbacks(argText, out);
+                if (arg instanceof Component argText) collectObjectFallbacks(argText, out);
         }
-        for (Text sibling : text.getSiblings()) collectObjectFallbacks(sibling, out);
+        for (Component sibling : text.getSiblings()) collectObjectFallbacks(sibling, out);
     }
 
     // MC-VERSION-SENSITIVE: ObjectTextContent added MC 1.21.9. Delete this method (and its call
@@ -83,17 +81,17 @@ public class LzText {
     // highlight-colored copy) — unlike stringSkippingObjects, which just removes the junk for
     // matching purposes, this locates each object's own fallback-string range within getString()
     // so the caller can splice the real node back in there instead of literal-copying the junk.
-    public record ObjectSpan(int start, int end, Text node) {}
+    public record ObjectSpan(int start, int end, Component node) {}
 
-    public static List<ObjectSpan> objectSpans(Text text) {
+    public static List<ObjectSpan> objectSpans(Component text) {
         String full = text.getString();
-        List<Text> nodes = new ArrayList<>();
+        List<Component> nodes = new ArrayList<>();
         collectObjectNodes(text, nodes);
         List<ObjectSpan> spans = new ArrayList<>();
         int searchFrom = 0;
-        for (Text node : nodes) {
+        for (Component node : nodes) {
             StringBuilder sb = new StringBuilder();
-            node.getContent().visit(s -> { sb.append(s); return Optional.empty(); });
+            node.getContents().visit(s -> { sb.append(s); return Optional.empty(); });
             String fallback = sb.toString();
             if (fallback.isEmpty()) continue;
             int idx = full.indexOf(fallback, searchFrom);
@@ -104,15 +102,15 @@ public class LzText {
         return spans;
     }
 
-    private static void collectObjectNodes(Text text, List<Text> out) {
-        TextContent content = text.getContent();
-        if (content instanceof ObjectTextContent) {
+    private static void collectObjectNodes(Component text, List<Component> out) {
+        ComponentContents content = text.getContents();
+        if (content instanceof ObjectContents) {
             out.add(text);
-        } else if (content instanceof TranslatableTextContent translatable) {
+        } else if (content instanceof TranslatableContents translatable) {
             for (Object arg : translatable.getArgs())
-                if (arg instanceof Text argText) collectObjectNodes(argText, out);
+                if (arg instanceof Component argText) collectObjectNodes(argText, out);
         }
-        for (Text sibling : text.getSiblings()) collectObjectNodes(sibling, out);
+        for (Component sibling : text.getSiblings()) collectObjectNodes(sibling, out);
     }
 
     // ── Static factories ────────────────────────────────────────────────────
@@ -134,16 +132,16 @@ public class LzText {
     }
 
     // 1.21: Text.literal(text)   26.1: Component.literal(text)
-    public static LzMutableText literal(String text) { return new LzMutableText(Text.literal(text)); }
+    public static LzMutableText literal(String text) { return new LzMutableText(Component.literal(text)); }
 
     // 1.21: Text.empty()   26.1: Component.empty()
-    public static LzMutableText empty() { return new LzMutableText(Text.empty()); }
+    public static LzMutableText empty() { return new LzMutableText(Component.empty()); }
 
     // 1.21: Text.translatable(key)   26.1: Component.translatable(key)
-    public static LzMutableText translatable(String key) { return new LzMutableText(Text.translatable(key)); }
+    public static LzMutableText translatable(String key) { return new LzMutableText(Component.translatable(key)); }
 
     // 1.21: Text.translatable(key, args)   26.1: Component.translatable(key, args)
-    public static LzMutableText translatable(String key, Object... args) { return new LzMutableText(Text.translatable(key, args)); }
+    public static LzMutableText translatable(String key, Object... args) { return new LzMutableText(Component.translatable(key, args)); }
 
     public static LzMutableText append(LzText a, LzText b) {
         var copy = a.mc().copy();
@@ -152,7 +150,7 @@ public class LzText {
     }
 
     /** Wraps an existing MC Text — use only at mixin boundaries. */
-    public static LzText wrapMc(Text text) { return new LzText(text); }
+    public static LzText wrapMc(Component text) { return new LzText(text); }
 
     // ── Format-code parser ──────────────────────────────────────────────────
 

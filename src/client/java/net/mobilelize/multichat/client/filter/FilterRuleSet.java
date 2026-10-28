@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzMessageIndicator;
 import net.mobilelize.fabriclib.text.LzText;
@@ -23,7 +23,7 @@ public class FilterRuleSet {
     public void              setBlacklistMode(BlacklistMode v)  { blacklistMode = v; }
 
     public boolean matches(LzChatLine text) {
-        final LzText message = new LzText((Text) text.content().mc());
+        final LzText message = new LzText((Component) text.content().mc());
         return matches(message.mc().getString(), text.indicator());
     }
 

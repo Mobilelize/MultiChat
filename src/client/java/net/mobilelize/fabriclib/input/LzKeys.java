@@ -37,9 +37,9 @@ public final class LzKeys {
     // ── Modifier queries ──────────────────────────────────────────────────
 
     // 1.21.9: Screen.hasControlDown() removed — use MinecraftClient modifier state
-    public static boolean isCtrlDown()  { return LzClient.mc().isCtrlPressed(); }
+    public static boolean isCtrlDown()  { return LzClient.mc().hasControlDown(); }
     // 1.21.9: Screen.hasShiftDown() removed — use MinecraftClient modifier state
-    public static boolean isShiftDown() { return LzClient.mc().isShiftPressed(); }
+    public static boolean isShiftDown() { return LzClient.mc().hasShiftDown(); }
     // 1.21.9: Screen.hasAltDown() removed — use MinecraftClient modifier state
-    public static boolean isAltDown()   { return LzClient.mc().isAltPressed(); }
+    public static boolean isAltDown()   { return LzClient.mc().hasAltDown(); }
 }

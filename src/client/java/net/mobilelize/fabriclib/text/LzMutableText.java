@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.text;
 
-import net.minecraft.text.MutableText;
+import net.minecraft.network.chat.MutableComponent;
 
 /**
  * Stable wrapper for MC MutableText.
@@ -9,15 +9,15 @@ import net.minecraft.text.MutableText;
  */
 public final class LzMutableText extends LzText {
 
-    private final MutableText mutable;
+    private final MutableComponent mutable;
 
-    public LzMutableText(MutableText mutable) {
+    public LzMutableText(MutableComponent mutable) {
         super(mutable);
         this.mutable = mutable;
     }
 
     @Override
-    public MutableText mc() { return mutable; }
+    public MutableComponent mc() { return mutable; }
 
     @Override
     public LzMutableText append(LzText other) {

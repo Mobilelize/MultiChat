@@ -1,12 +1,11 @@
 package net.mobilelize.multichat.mixin.client;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.cursor.StandardCursors;
-import net.minecraft.client.gui.screen.ChatInputSuggestor;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.CommandSuggestions;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatLine;
 import net.mobilelize.fabriclib.client.LzClient;
@@ -29,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import java.util.List;
 
 @Mixin(ChatScreen.class)
@@ -39,15 +38,15 @@ public abstract class ChatScreenMixin {
     // Render — status bar + context menu overlays
     // ------------------------------------------------------------------
 
-    @Shadow public abstract String normalize(String chatText);
-    @Shadow protected TextFieldWidget chatField;
-    @Shadow private ChatInputSuggestor chatInputSuggestor;
+    @Shadow public abstract String normalizeChatMessage(String chatText);
+    @Shadow protected EditBox input;
+    @Shadow private CommandSuggestions commandSuggestions;
 
     @Unique
     private boolean isMouseOverSuggestor(double mouseX, double mouseY) {
-        ChatInputSuggestorAccessor acc = (ChatInputSuggestorAccessor) chatInputSuggestor;
+        ChatInputSuggestorAccessor acc = (ChatInputSuggestorAccessor) commandSuggestions;
         if (!acc.invokeIsOpen()) return false;
-        ChatInputSuggestor.SuggestionWindow window = acc.getWindow();
+        CommandSuggestions.SuggestionsList window = acc.getWindow();
         if (window == null) return false;
         var area = ((ChatInputSuggestorWindowAccessor) window).getArea();
         return area != null && area.contains((int) mouseX, (int) mouseY);
@@ -56,13 +55,13 @@ public abstract class ChatScreenMixin {
     @Inject(method = "init()V", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
         if (MultichatClient.pendingChatText != null) {
-            chatField.setText(MultichatClient.pendingChatText);
+            input.setValue(MultichatClient.pendingChatText);
             MultichatClient.pendingChatText = null;
         }
     }
 
-    @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("RETURN"))
-    private void renderOverlays(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Inject(method = "render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", at = @At("RETURN"))
+    private void renderOverlays(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
         LzDrawContext lzCtx = LzDrawContext.wrap(context);
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
@@ -136,8 +135,8 @@ public abstract class ChatScreenMixin {
     // Key press — search keybind
     // ------------------------------------------------------------------
 
-    @Inject(method = "keyPressed(Lnet/minecraft/client/input/KeyInput;)Z", at = @At("HEAD"), cancellable = true)
-    private void onKeyPressed(KeyInput input,
+    @Inject(method = "keyPressed(Lnet/minecraft/client/input/KeyEvent;)Z", at = @At("HEAD"), cancellable = true)
+    private void onKeyPressed(KeyEvent input,
                                CallbackInfoReturnable<Boolean> cir) {
         if (MultichatClient.CONFIG.modDisabled) return;
         if (MultichatClient.CONFIG.selectionEnabled
@@ -172,7 +171,7 @@ public abstract class ChatScreenMixin {
 
         if (MultichatClient.CONFIG.arrowKeySwitchTabs
                 && (input.key() == Keys.RIGHT || input.key() == Keys.LEFT)
-                && chatField.getText().isEmpty()) {
+                && input.getValue().isEmpty()) {
             boolean goRight   = input.key() == Keys.RIGHT;
             boolean ctrlHeld  = (input.modifiers() & 2) != 0;
 
@@ -224,8 +223,8 @@ public abstract class ChatScreenMixin {
     // Mouse click — tabs, context menus
     // ------------------------------------------------------------------
 
-    @Inject(method = "mouseClicked(Lnet/minecraft/client/gui/Click;Z)Z", at = @At("HEAD"), cancellable = true)
-    private void onMouseClicked(Click click, boolean isDoubleClickParam,
+    @Inject(method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z", at = @At("HEAD"), cancellable = true)
+    private void onMouseClicked(MouseButtonEvent click, boolean isDoubleClickParam,
                                  CallbackInfoReturnable<Boolean> cir) {
         // Truncate to int to match render()'s mouseX/mouseY, which is what populates
         // ChatRenderer.lastHoveredStyle and hoverCapture — Click gives full sub-pixel precision,
@@ -347,7 +346,7 @@ public abstract class ChatScreenMixin {
                     var style = ChatRenderer.resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
                     if (style != null && style.getClickEvent() != null) {
                         ScreenInvoker.invokeHandleClickEvent(
-                            style.getClickEvent(), LzClient.mc(), (net.minecraft.client.gui.screen.Screen)(Object)this);
+                            style.getClickEvent(), LzClient.mc(), (net.minecraft.client.gui.screens.Screen)(Object)this);
                         cir.setReturnValue(true);
                         return;
                     }
@@ -512,16 +511,16 @@ public abstract class ChatScreenMixin {
     // our hand/IBeam back to arrow one frame later. Routing through context.setCursor keeps us
     // inside vanilla's own accumulator so there's nothing left to race.
     @Unique
-    private void updateCursor(DrawContext context, int mouseX, int mouseY) {
+    private void updateCursor(GuiGraphics context, int mouseX, int mouseY) {
         if (!MultichatClient.CONFIG.cursorChangingEnabled) return;
 
         if (isMouseOverSuggestor(mouseX, mouseY)) {
-            context.setCursor(StandardCursors.ARROW);
+            context.requestCursor(CursorTypes.ARROW);
             return;
         }
 
         if (ContextMenu.containsMouse(mouseX, mouseY) || MessageContextMenu.containsMouse(mouseX, mouseY)) {
-            context.setCursor(StandardCursors.POINTING_HAND);
+            context.requestCursor(CursorTypes.POINTING_HAND);
             return;
         }
 
@@ -576,7 +575,7 @@ public abstract class ChatScreenMixin {
                             renderX += tabWidth + 1;
                         }
                     }
-                    if (overTab) { context.setCursor(StandardCursors.POINTING_HAND); return; }
+                    if (overTab) { context.requestCursor(CursorTypes.POINTING_HAND); return; }
                 }
             }
 
@@ -586,7 +585,7 @@ public abstract class ChatScreenMixin {
             if (!ctrlHeld) {
                 var style = ChatRenderer.lastHoveredStyle;
                 if (style != null && style.getClickEvent() != null) {
-                    context.setCursor(StandardCursors.POINTING_HAND);
+                    context.requestCursor(CursorTypes.POINTING_HAND);
                     return;
                 }
             }
@@ -600,9 +599,9 @@ public abstract class ChatScreenMixin {
                     List<LzChatLine> lines = active != null ? panel.getTabLines(active) : null;
                     if (lines != null && hit < lines.size()) {
                         float localX = Math.max(0f, mouseX / scale - 4 - xOff);
-                        int textW = LzClient.mc().textRenderer.getWidth(lines.get(hit).content().mc());
+                        int textW = LzClient.mc().font.width(lines.get(hit).content().mc());
                         if (localX <= textW) {
-                            context.setCursor(StandardCursors.IBEAM);
+                            context.requestCursor(CursorTypes.IBEAM);
                             return;
                         }
                     }
@@ -611,11 +610,11 @@ public abstract class ChatScreenMixin {
         }
 
         if (MultichatClient.CONFIG.selectionEnabled && ChatSelection.isSelecting()) {
-            context.setCursor(StandardCursors.IBEAM);
+            context.requestCursor(CursorTypes.IBEAM);
             return;
         }
 
-        context.setCursor(StandardCursors.ARROW);
+        context.requestCursor(CursorTypes.ARROW);
     }
 
     @Unique
@@ -636,10 +635,10 @@ public abstract class ChatScreenMixin {
     // Send message — apply context prefix
     // ------------------------------------------------------------------
 
-    @Inject(method = "sendMessage(Ljava/lang/String;Z)V", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "handleChatInput(Ljava/lang/String;Z)V", at = @At("HEAD"), cancellable = true)
     private void interceptSendMessage(String chatText, boolean addToHistory, CallbackInfo ci) {
         if (MultichatClient.CONFIG.modDisabled) return;
-        String text = normalize(chatText);
+        String text = normalizeChatMessage(chatText);
         if (text.isEmpty() || text.startsWith("/")) return;
 
         if (MessageSentCallback.EVENT.invoker().onMessageSent(text)) {

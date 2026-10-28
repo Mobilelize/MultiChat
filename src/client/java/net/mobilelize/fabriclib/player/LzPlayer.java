@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.player;
 
-import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.mobilelize.fabriclib.math.LzVec3;
 
 import java.util.UUID;
@@ -12,25 +12,25 @@ import java.util.UUID;
  */
 public class LzPlayer {
 
-    protected final AbstractClientPlayerEntity player;
+    protected final AbstractClientPlayer player;
 
-    public LzPlayer(AbstractClientPlayerEntity player) { this.player = player; }
+    public LzPlayer(AbstractClientPlayer player) { this.player = player; }
 
     // 1.21: player.getUuid()   26.1: player.getUUID()
-    public UUID uuid()             { return player.getUuid(); }
+    public UUID uuid()             { return player.getUUID(); }
     // unchanged: player.getGameProfile().name()
     public String name()           { return player.getGameProfile().name(); }
     // unchanged: player.getGameProfile().id()
     public UUID profileId()        { return player.getGameProfile().id(); }
     // 1.21: player.isMainPlayer()   26.1: player.isLocalPlayer()
-    public boolean isLocalPlayer() { return player.isMainPlayer(); }
+    public boolean isLocalPlayer() { return player.isLocalPlayer(); }
     // unchanged: player.getId()
     public int entityId()          { return player.getId(); }
     // 1.21: player.getEntityPos()   26.1: player.position()
-    public LzVec3 pos()            { return LzVec3.of(player.getEntityPos()); }
+    public LzVec3 pos()            { return LzVec3.of(player.position()); }
 
     /** Raw MC player — escape hatch for advanced use. */
-    public AbstractClientPlayerEntity mc() { return player; }
+    public AbstractClientPlayer mc() { return player; }
 
     /** True if {@code name} matches the standard MC username format (3–16 alphanumeric/underscore). */
     public static boolean isValidUsername(String name) {

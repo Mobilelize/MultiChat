@@ -1,6 +1,6 @@
 package net.mobilelize.fabriclib.client;
 
-import net.minecraft.client.option.GameOptions;
+import net.minecraft.client.Options;
 import org.jetbrains.annotations.Nullable;
 
 public final class LzOptions {
@@ -9,7 +9,7 @@ public final class LzOptions {
 
     // 1.21: client.options   26.1: client.options  (stable)
     @Nullable
-    private static GameOptions opts() { return LzClient.mc().options; }
+    private static Options opts() { return LzClient.mc().options; }
 
     public static boolean isReady() { return opts() != null; }
 
@@ -19,25 +19,25 @@ public final class LzOptions {
      */
     public static double gamma() {
         var opts = opts();
-        return opts == null ? 0.0 : opts.getGamma().getValue();
+        return opts == null ? 0.0 : opts.gamma().get();
     }
 
     // 1.21: options.getChatOpacity().getValue()   26.1: VERIFY
     public static double chatOpacity() {
         var opts = opts();
-        return opts == null ? 1.0 : (Double) opts.getChatOpacity().getValue();
+        return opts == null ? 1.0 : (Double) opts.chatOpacity().get();
     }
 
     // 1.21: options.getChatLineSpacing().getValue()   26.1: VERIFY
     public static double chatLineSpacing() {
         var opts = opts();
-        return opts == null ? 0.0 : (Double) opts.getChatLineSpacing().getValue();
+        return opts == null ? 0.0 : (Double) opts.chatLineSpacing().get();
     }
 
     // 1.21: options.getTextBackgroundOpacity().getValue()   26.1: VERIFY
     public static double textBackgroundOpacity() {
         var opts = opts();
-        return opts == null ? 0.5 : (Double) opts.getTextBackgroundOpacity().getValue();
+        return opts == null ? 0.5 : (Double) opts.textBackgroundOpacity().get();
     }
 
     // 1.21: options.getChatVisibility().getValue()   26.1: VERIFY enum rename
@@ -45,7 +45,7 @@ public final class LzOptions {
     public static LzChatVisibility chatVisibility() {
         var opts = opts();
         if (opts == null) return null;
-        var v = opts.getChatVisibility().getValue();
+        var v = opts.chatVisibility().get();
         return v == null ? null : LzChatVisibility.fromMC(v);
     }
 }

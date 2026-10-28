@@ -1,7 +1,7 @@
 package net.mobilelize.multichat.client.filter;
 
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
 import net.mobilelize.fabriclib.text.LzOrderedText;
 import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
@@ -131,10 +131,10 @@ public record StyleCondition(StyleTarget target, String word, WordLocation wordL
             boolean inList = false;
             for (StyleColor c : colors) {
                 Integer rgb = c.rgb();
-                if (rgb != null && mc.getRgb() == rgb) { inList = true; break; }
+                if (rgb != null && mc.getValue() == rgb) { inList = true; break; }
             }
             if (!inList) for (int hex : hexColors) {
-                if (mc.getRgb() == (hex & 0xFFFFFF)) { inList = true; break; }
+                if (mc.getValue() == (hex & 0xFFFFFF)) { inList = true; break; }
             }
             if (!inList) return false;
         }

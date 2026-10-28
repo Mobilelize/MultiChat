@@ -1,6 +1,6 @@
 package net.mobilelize.multichat.api;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import net.mobilelize.fabriclib.client.LzChat;
 import net.mobilelize.fabriclib.client.LzChatEntry;
 import net.mobilelize.fabriclib.text.LzStyle;
@@ -68,13 +68,13 @@ public class TabHandle {
         return true;
     }
 
-    /** Send a vanilla {@link Text} message (wrapped internally to LzText). */
-    public boolean sendMessage(Text message) {
+    /** Send a vanilla {@link Component} message (wrapped internally to LzText). */
+    public boolean sendMessage(Component message) {
         return sendMessage(LzText.wrapMc(message), false);
     }
 
-    /** Send a vanilla {@link Text} message, optionally also adding it to the All tab. */
-    public boolean sendMessage(Text message, boolean addToAll) {
+    /** Send a vanilla {@link Component} message, optionally also adding it to the All tab. */
+    public boolean sendMessage(Component message, boolean addToAll) {
         return sendMessage(LzText.wrapMc(message), addToAll);
     }
 
@@ -517,8 +517,8 @@ public class TabHandle {
         return this;
     }
 
-    /** Add a vanilla {@link Text} message silently. */
-    public TabHandle addMessageSilent(Text message) {
+    /** Add a vanilla {@link Component} message silently. */
+    public TabHandle addMessageSilent(Component message) {
         return addMessageSilent(LzText.wrapMc(message));
     }
 
