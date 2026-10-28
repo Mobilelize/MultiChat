@@ -384,7 +384,7 @@ public class QuickActionsEditScreen extends ConfigScreen {
         else if (selectedIdx == i) selectedIdx = -1;
         swapPending = false;
         MultichatClient.saveTabsToConfig();
-        rebuildWidgets(); init();
+        clearWidgets(); init();
     }
 
     @Override
