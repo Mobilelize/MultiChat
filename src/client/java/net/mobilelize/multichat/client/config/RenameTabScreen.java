@@ -35,7 +35,7 @@ public class RenameTabScreen extends LzScreen {
         addWidget(field);
         setInitialFocus(field);
 
-        addRenderableOnly(LzButton.of("OK",     cx - 53, cy + 18, 50, 18, b -> save()));
+        addRenderableWidget(LzButton.of("OK",     cx - 53, cy + 18, 50, 18, b -> save()));
         addRenderableWidget(LzButton.of("Cancel", cx + 3,  cy + 18, 50, 18, b -> onClose()));
     }
 
