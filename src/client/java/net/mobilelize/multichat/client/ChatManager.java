@@ -196,8 +196,9 @@ public class ChatManager {
                 toRemove.size(), tab.name(), elapsedMs));
             sendingTrimFeedback = true;
             try {
-                // 26.1: addMessage(...) is private; addClientSystemMessage routes through it
-                LzChat.chatHud().addClientSystemMessage(msg.mc());
+                // 26.1: addMessage(...) is private — invoke it directly to keep 1.21's untagged system message
+                ((net.mobilelize.multichat.mixin.client.ChatHudAccessor) LzChat.chatHud()).invokeAddMessage(
+                    msg.mc(), null, net.minecraft.client.multiplayer.chat.GuiMessageSource.SYSTEM_CLIENT, null);
             } finally {
                 sendingTrimFeedback = false;
             }
