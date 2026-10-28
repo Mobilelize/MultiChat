@@ -591,7 +591,7 @@ public abstract class ChatScreenMixin {
                     LzChatLine    line    = lines.get(hit);
                     LzOrderedText content = line.content();
                     float localX = Math.max(0f, mouseX / scale - 4 - xOff);
-                    int   textW  = LzClient.mc().textRenderer.getWidth(content.mc());
+                    int   textW  = ChatSelection.lineTextRight(line);
                     if (localX <= textW) {
                         // Clickable text → hand (skipped when Ctrl held — Ctrl is selection mode)
                         if (!ctrlHeld) {
