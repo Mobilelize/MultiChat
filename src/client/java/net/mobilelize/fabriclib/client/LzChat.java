@@ -29,14 +29,16 @@ public final class LzChat {
         return hud == null ? null : hud.getChatHud();
     }
 
-    // 1.21.11: getChatScale() went private — read option directly
+    // 1.21: inGameHud.getChatHud().getChatScale()   26.1: VERIFY
     public static double chatScale() {
-        return (double) LzClient.mc().options.getChatScale().getValue();
+        var hud = inGameHud();
+        return hud == null ? 1.0 : hud.getChatHud().getChatScale();
     }
 
-    // 1.21.11: getWidth() (instance) went private — public static ChatHud.getWidth(double) still exists
+    // 1.21: inGameHud.getChatHud().getWidth()   26.1: VERIFY
     public static int chatWidth() {
-        return ChatHud.getWidth((double) LzClient.mc().options.getChatWidth().getValue());
+        var hud = inGameHud();
+        return hud == null ? 0 : hud.getChatHud().getWidth();
     }
 
     // 1.21: inGameHud.getChatHud().getVisibleLineCount()   26.1: VERIFY

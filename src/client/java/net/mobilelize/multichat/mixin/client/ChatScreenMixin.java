@@ -14,6 +14,8 @@ import net.mobilelize.fabriclib.input.LzKeys;
 import net.mobilelize.fabriclib.network.LzConnection;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
+import net.mobilelize.fabriclib.text.LzOrderedText;
+import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.multichat.api.MessageSentCallback;
 import net.mobilelize.multichat.api.PanelFocusedCallback;
 import net.mobilelize.multichat.api.TabChangedCallback;
@@ -227,11 +229,9 @@ public abstract class ChatScreenMixin {
     @Inject(method = "mouseClicked(Lnet/minecraft/client/gui/Click;Z)Z", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(Click click, boolean isDoubleClickParam,
                                  CallbackInfoReturnable<Boolean> cir) {
-        // Truncate to int to match render()'s mouseX/mouseY, which is what populates
-        // ChatRenderer.lastHoveredStyle and hoverCapture — Click gives full sub-pixel precision,
-        // so leaving it unfloored makes click land a fraction of a pixel to the right/below
-        // hover, missing the clickable style at edges (resolveStyleAt would resolve a different,
-        // usually null, style than the one hover just captured).
+        // Truncate to int to match render()'s mouseX/mouseY, which the hover-cursor hit-test
+        // (updateCursor) uses — Click gives full sub-pixel precision, so leaving it unfloored
+        // makes click land a fraction of a pixel to the right/below hover, missing at edges.
         double mouseX = (int) click.x(); double mouseY = (int) click.y(); int button = click.button();
         if (MultichatClient.CONFIG.modDisabled) return;
         if (isMouseOverSuggestor(mouseX, mouseY)) return; // let vanilla's tab-complete popup handle its own click
@@ -341,22 +341,21 @@ public abstract class ChatScreenMixin {
                     visibleLineCount, scale, lineH, windowHeight, chatWidth, xOff);
                 if (exactIdx < 0) continue;
 
-                boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
-                    && LzKeys.isCtrlDown();
-                if (!ctrlSkip) {
-                    var style = ChatRenderer.resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
-                    if (style != null && style.getClickEvent() != null) {
-                        ScreenInvoker.invokeHandleClickEvent(
-                            style.getClickEvent(), LzClient.mc(), (net.minecraft.client.gui.screen.Screen)(Object)this);
-                        cir.setReturnValue(true);
-                        return;
-                    }
-                }
-
                 float localX = Math.max(0f, (float)(mouseX / scale) - 4 - xOff);
                 List<LzChatLine> _sglLines = panel.getTabLines(active);
-                int charIdx  = ChatSelection.charIndexAtX(
-                    _sglLines != null ? _sglLines.get(exactIdx) : null, localX);
+                LzChatLine _sglLine = _sglLines != null && exactIdx < _sglLines.size()
+                    ? _sglLines.get(exactIdx) : null;
+
+                // Same hit-test geometry as the hover cursor — skip starting a selection
+                // when the click lands on a clickable span, so the link click falls through.
+                boolean ctrlSkip = MultichatClient.CONFIG.selectionCtrlSkipsClicks
+                    && LzKeys.isCtrlDown();
+                if (!ctrlSkip && _sglLine != null) {
+                    LzStyle style = ChatSelection.styleAtX(_sglLine, localX);
+                    if (style != null && style.mc().getClickEvent() != null) break;
+                }
+
+                int charIdx  = ChatSelection.charIndexAtX(_sglLine, localX);
                 ChatSelection.start(panel, exactIdx, charIdx);
                 cir.setReturnValue(true);
                 return;
@@ -495,6 +494,12 @@ public abstract class ChatScreenMixin {
             double localX = mouseX / (double) scale - 4.0 - xOff;
             if (localX < -4.0 || localX > chatWidth + 8) continue; // see ChatSelection.hitLine
 
+            // Clickable text under the mouse: leave it to vanilla, which resolves the style through
+            // ChatHudMixin's getTextStyleAt hook (MC 1.21.9 has no Screen-level click-event invoker).
+            var hovered = ChatRenderer.lastHoveredStyle;
+            if (hovered != null && hovered.getClickEvent() != null
+                    && !(MultichatClient.CONFIG.selectionCtrlSkipsClicks && LzKeys.isCtrlDown())) return;
+
             cir.setReturnValue(true);
             return;
         }
@@ -582,26 +587,31 @@ public abstract class ChatScreenMixin {
 
             if (!isMouseInMessageArea(panel, mouseY, topY, scale, lineH, visibleLines)) continue;
 
-            // Clickable text → hand (skipped when Ctrl held — Ctrl is selection mode)
-            if (!ctrlHeld) {
-                var style = ChatRenderer.lastHoveredStyle;
-                if (style != null && style.getClickEvent() != null) {
-                    context.setCursor(StandardCursors.POINTING_HAND);
-                    return;
-                }
-            }
-
-            // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
-            if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
-                int hit = ChatSelection.hitLine(panel, mouseX, mouseY,
-                    visibleLines, scale, lineH, windowHeight, panel.resolveRenderWidth(), xOff);
-                if (hit >= 0) {
-                    ChatTab active = panel.getActiveTab();
-                    List<LzChatLine> lines = active != null ? panel.getTabLines(active) : null;
-                    if (lines != null && hit < lines.size()) {
-                        float localX = Math.max(0f, mouseX / scale - 4 - xOff);
-                        int textW = LzClient.mc().textRenderer.getWidth(lines.get(hit).content().mc());
-                        if (localX <= textW) {
+            // Single hit-test against our own rendered line — same geometry drives both the
+            // hand (clickable) and IBeam (plain text) decision, instead of hand-checking against
+            // vanilla's own ChatHud.getTextStyleAt (different coordinate space/geometry than our
+            // custom panels), which is what let hand↔IBeam and text↔text transitions get stuck.
+            int hit = ChatSelection.hitLine(panel, mouseX, mouseY,
+                visibleLines, scale, lineH, windowHeight, panel.resolveRenderWidth(), xOff);
+            if (hit >= 0) {
+                ChatTab active = panel.getActiveTab();
+                List<LzChatLine> lines = active != null ? panel.getTabLines(active) : null;
+                if (lines != null && hit < lines.size()) {
+                    LzChatLine    line    = lines.get(hit);
+                    LzOrderedText content = line.content();
+                    float localX = Math.max(0f, mouseX / scale - 4 - xOff);
+                    int   textW  = LzClient.mc().textRenderer.getWidth(content.mc());
+                    if (localX <= textW) {
+                        // Clickable text → hand (skipped when Ctrl held — Ctrl is selection mode)
+                        if (!ctrlHeld) {
+                            LzStyle style = ChatSelection.styleAtX(line, localX);
+                            if (style != null && style.mc().getClickEvent() != null) {
+                                context.setCursor(StandardCursors.POINTING_HAND);
+                                return;
+                            }
+                        }
+                        // IBeam when there's actual text under the mouse — applies to both Ctrl and normal selection
+                        if (ctrlHeld || MultichatClient.CONFIG.selectionEnabled) {
                             context.setCursor(StandardCursors.IBEAM);
                             return;
                         }

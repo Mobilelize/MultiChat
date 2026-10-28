@@ -1,22 +1,18 @@
 package net.mobilelize.multichat.client.render;
 
-import net.minecraft.client.font.Alignment;
-import net.minecraft.client.font.DrawnTextConsumer;
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.util.profiler.Profilers;
 import net.mobilelize.fabriclib.client.*;
 import net.mobilelize.fabriclib.math.LzMath;
 import net.mobilelize.fabriclib.render.LzDraw;
 import net.mobilelize.fabriclib.render.LzDrawContext;
+import net.mobilelize.fabriclib.text.LzStyle;
 import net.mobilelize.fabriclib.text.LzText;
 import net.mobilelize.multichat.client.*;
 import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix3x2f;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,8 +29,9 @@ public class ChatRenderer {
 
     public static int lastMouseX = 0;
 
-    // lastHoveredStyle: set per-frame via DrawnTextConsumer callback in renderAt().
-    // lastHoveredIndicator: set per-frame via resolveIndicatorAt() in render().
+    // Resolved once per render frame so getTextStyleAt / getIndicatorAt hooks can read from cache.
+    // When those hooks are removed in a newer MC version, pass these to the Interactable/Consumer
+    // callback that replaces them instead of reading from cache in a hook.
     public static @Nullable Style           lastHoveredStyle     = null;
     public static @Nullable IndicatorResult lastHoveredIndicator = null;
 
@@ -126,6 +123,7 @@ public class ChatRenderer {
         }
 
         if (focused) {
+            lastHoveredStyle     = resolveStyleAt(mouseX, mouseY, windowWidth, windowHeight);
             lastHoveredIndicator = resolveIndicatorAt(mouseX, mouseY, windowWidth, windowHeight);
         }
 
@@ -273,19 +271,6 @@ public class ChatRenderer {
 
         ChatTheme theme = ThemeRegistry.active();
 
-        DrawnTextConsumer hoverDrawer = null;
-        DrawnTextConsumer.Transformation hoverTransform = null;
-        Style[] hoverCapture = { null };
-        if (showScrollbar) {
-            DrawContext rawCtx = context.mc();
-            hoverDrawer = rawCtx.getTextConsumer(
-                DrawContext.HoverType.TOOLTIP_AND_CURSOR,
-                style -> { if (hoverCapture[0] == null) hoverCapture[0] = style; }
-            );
-            hoverTransform = hoverDrawer.getTransformation()
-                .withPose(new Matrix3x2f(rawCtx.getMatrices()));
-        }
-
         record Row(int s, LzChatLine visible, int lineTop, int lineBot, int textY, int textAlpha, int bgAlpha) {}
 
         List<Row> rows = new ArrayList<>();
@@ -413,15 +398,10 @@ public class ChatRenderer {
                     }
                 }
 
-                if (hoverDrawer != null && hoverTransform != null) {
-                    hoverDrawer.text(Alignment.LEFT, headOffset, textY,
-                        hoverTransform.withOpacity(textAlpha / 255.0f), visible.content().mc());
-                } else {
-                    LzDraw.pushMatrix(context);
-                    LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
-                    LzDraw.drawText(context, visible.content(), headOffset, textY, theme.messageTextRgb + (textAlpha << 24));
-                    LzDraw.popMatrix(context);
-                }
+                LzDraw.pushMatrix(context);
+                LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
+                LzDraw.drawText(context, visible.content(), headOffset, textY, theme.messageTextRgb + (textAlpha << 24));
+                LzDraw.popMatrix(context);
             }
         } finally {
             ChatHeadsSupport.endHeadRendering();
@@ -467,7 +447,6 @@ public class ChatRenderer {
             }
         }
 
-        if (hoverCapture[0] != null) lastHoveredStyle = hoverCapture[0];
         LzDraw.popMatrix(context);
     }
 
@@ -535,22 +514,11 @@ public class ChatRenderer {
             int lineIdx = LzMath.floor(chatY + panel.getScrolledLines(active));
             if (lineIdx < 0 || lineIdx >= msgs.size()) continue;
 
-            Style style = getStyleAt(msgs.get(lineIdx).content().mc(), LzMath.floor(localChatX));
-            if (style != null) return style;
+            // Same glyph walk as selection, so the chat_heads BEFORE_LINE offset is accounted for.
+            LzStyle style = ChatSelection.styleAtX(msgs.get(lineIdx), (float) localChatX);
+            if (style != null) return style.mc();
         }
         return null;
-    }
-
-    private static @org.jetbrains.annotations.Nullable Style getStyleAt(OrderedText text, int x) {
-        net.minecraft.client.font.TextHandler handler = LzDraw.textHandler();
-        float[] w = { 0 };
-        Style[] out = { null };
-        text.accept((index, style, codePoint) -> {
-            w[0] += handler.getWidth(v -> v.accept(0, style, codePoint));
-            if (w[0] > x) { out[0] = style; return false; }
-            return true;
-        });
-        return out[0];
     }
 
     public static IndicatorResult resolveIndicatorAt(double mouseX, double mouseY,

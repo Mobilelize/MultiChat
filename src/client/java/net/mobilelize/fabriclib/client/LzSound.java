@@ -1,9 +1,7 @@
 package net.mobilelize.fabriclib.client;
 
 import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.registry.Registries;
-import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.mobilelize.fabriclib.registry.LzId;
 import org.lwjgl.glfw.GLFW;
@@ -28,7 +26,7 @@ public final class LzSound {
             SoundEvent event = Registries.SOUND_EVENT.get(id.mc());
             if (event == null) return;
             LzClient.execute(() -> LzClient.mc().getSoundManager().play(
-                new PositionedSoundInstance(event.id(), SoundCategory.MASTER, volume, pitch, SoundInstance.createRandom(), false, 0, SoundInstance.AttenuationType.NONE, 0.0, 0.0, 0.0, true)
+                PositionedSoundInstance.master(event, volume, pitch)
             ));
         });
     }

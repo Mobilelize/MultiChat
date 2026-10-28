@@ -8,8 +8,7 @@
     "ChatHudMixin",
     "ChatInputSuggestorAccessor",
     "ChatInputSuggestorWindowAccessor",
-    "ChatScreenMixin",
-    "ScreenInvoker"
+    "ChatScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

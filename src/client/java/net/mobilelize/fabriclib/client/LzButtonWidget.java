@@ -8,9 +8,9 @@ import net.mobilelize.fabriclib.text.LzText;
  * 1.21 (Yarn): net.minecraft.client.gui.widget.ButtonWidget
  * 26.1 (Mojang): net.minecraft.client.gui.components.Button  (VERIFY)
  */
-public final class LzButtonWidget extends ButtonWidget.Text {
+public final class LzButtonWidget extends ButtonWidget {
 
-    // 1.21.11: extend ButtonWidget.Text (concrete subclass) — ButtonWidget itself is abstract with abstract drawIcon
+    // 1.21: ButtonWidget(int, int, int, int, Text, PressAction, NarrationSupplier)   26.1: VERIFY
     LzButtonWidget(int x, int y, int w, int h,
                    net.minecraft.text.Text message,
                    PressAction onPress,
