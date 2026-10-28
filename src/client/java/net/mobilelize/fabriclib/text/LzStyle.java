@@ -51,14 +51,14 @@ public final class LzStyle {
 
     // ── Click events ────────────────────────────────────────────────────────
 
-    public LzStyle withClickRunCommand(String command)      { return new LzStyle(style.withClickEvent(new ClickEvent.RunCommand(command))); }
-    public LzStyle withClickSuggestCommand(String command)  { return new LzStyle(style.withClickEvent(new ClickEvent.SuggestCommand(command))); }
-    public LzStyle withClickOpenUrl(String url)             { return new LzStyle(style.withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))); }
-    public LzStyle withClickCopyToClipboard(String text)    { return new LzStyle(style.withClickEvent(new ClickEvent.CopyToClipboard(text))); }
+    public LzStyle withClickRunCommand(String command)      { return new LzStyle(style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))); }
+    public LzStyle withClickSuggestCommand(String command)  { return new LzStyle(style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command))); }
+    public LzStyle withClickOpenUrl(String url)             { return new LzStyle(style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))); }
+    public LzStyle withClickCopyToClipboard(String text)    { return new LzStyle(style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, text))); }
 
     // ── Hover events ────────────────────────────────────────────────────────
 
-    public LzStyle withHoverText(LzText text)               { return new LzStyle(style.withHoverEvent(new HoverEvent.ShowText(text.mc()))); }
+    public LzStyle withHoverText(LzText text)               { return new LzStyle(style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, text.mc()))); }
 
     // ── Raw escape hatches ──────────────────────────────────────────────────
 

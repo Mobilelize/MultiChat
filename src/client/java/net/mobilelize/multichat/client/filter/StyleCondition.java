@@ -215,11 +215,17 @@ public record StyleCondition(StyleTarget target, String word, WordLocation wordL
             case OBFUSCATED    -> mc.isObfuscated();
             case HAS_CLICK              -> mc.getClickEvent() != null;
             case HAS_HOVER              -> mc.getHoverEvent() != null;
-            case CLICK_RUN_COMMAND      -> mc.getClickEvent() instanceof ClickEvent.RunCommand;
-            case CLICK_SUGGEST_COMMAND  -> mc.getClickEvent() instanceof ClickEvent.SuggestCommand;
-            case CLICK_OPEN_URL         -> mc.getClickEvent() instanceof ClickEvent.OpenUrl;
-            case CLICK_COPY_TO_CLIPBOARD -> mc.getClickEvent() instanceof ClickEvent.CopyToClipboard;
-            case HOVER_SHOW_TEXT        -> mc.getHoverEvent() instanceof HoverEvent.ShowText;
+            // MC-VERSION-SENSITIVE: before 1.21.5 click/hover events are one class with an Action enum.
+            case CLICK_RUN_COMMAND      -> clickAction(mc) == ClickEvent.Action.RUN_COMMAND;
+            case CLICK_SUGGEST_COMMAND  -> clickAction(mc) == ClickEvent.Action.SUGGEST_COMMAND;
+            case CLICK_OPEN_URL         -> clickAction(mc) == ClickEvent.Action.OPEN_URL;
+            case CLICK_COPY_TO_CLIPBOARD -> clickAction(mc) == ClickEvent.Action.COPY_TO_CLIPBOARD;
+            case HOVER_SHOW_TEXT        -> mc.getHoverEvent() != null
+                                        && mc.getHoverEvent().getAction() == HoverEvent.Action.SHOW_TEXT;
         };
+    }
+
+    private static ClickEvent.Action clickAction(net.minecraft.text.Style mc) {
+        return mc.getClickEvent() != null ? mc.getClickEvent().getAction() : null;
     }
 }
