@@ -344,7 +344,10 @@ public class ChatRenderer {
             }
 
             // Pass 2: indicators + text, for every row, always drawn on top of every background above.
-            for (Row row : rows) {
+            // MC-VERSION-SENSITIVE: bottom row first, like vanilla's chat loop before 1.21.6, so
+            // chat_heads heads (shadow, hat, 3D-ness can reach a neighbouring row) overlap each other
+            // the same way they do in vanilla chat. 1.21.6+ vanilla draws top row first.
+            for (Row row : rows.reversed()) {
                 LzChatLine visible = row.visible();
                 int textAlpha = row.textAlpha();
                 int textY     = row.textY();
@@ -371,7 +374,6 @@ public class ChatRenderer {
                 // chat_heads 0.15: BEFORE_LINE text shift + drawn head; BEFORE_NAME head is drawn by
                 // chat_heads' font hook inside the text below (see ChatHeadsSupport).
                 int headOffset = ChatHeadsSupport.lineOffset(visible);
-                ChatHeadsSupport.renderHead(context.mc(), 0, textY, visible, textAlpha / 255.0f);
 
                 if (MultichatClient.CONFIG.showIndicators) {
                     LzMessageIndicator indicator = visible.indicator();
@@ -388,6 +390,9 @@ public class ChatRenderer {
 
                 LzDraw.pushMatrix(context);
                 LzDraw.translate(context, 0.0F, 0.0F, 50.0F);
+                // BEFORE_LINE head: drawn here, under the text's z+50 and right before it, where
+                // chat_heads draws it in vanilla (its hook on drawTextWithShadow).
+                ChatHeadsSupport.renderHead(context.mc(), 0, textY, visible, textAlpha / 255.0f);
                 // BEFORE_NAME: chat_heads' font hook draws the head inside this text (see ChatHeadsSupport)
                 ChatHeadsSupport.beginLineText(context.mc(), visible, textAlpha / 255.0f);
                 try {
