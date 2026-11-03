@@ -13,7 +13,6 @@ import net.mobilelize.multichat.integration.chatheads.ChatHeadsSupport;
 import net.mobilelize.multichat.mixin.client.ChatHudAccessor;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -276,56 +275,52 @@ public class ChatRenderer {
 
         ChatTheme theme = ThemeRegistry.active();
 
-        record Row(int s, LzChatLine visible, int lineTop, int lineBot, int textY, int textAlpha, int bgAlpha) {}
+        // MC-VERSION-SENSITIVE: single pass, bottom row first — the f-1.21.5 (1.0.1) loop, which
+        // mirrors vanilla's chat render before 1.21.6. Each row draws its fills, then its text at
+        // z+50, so no fill ever covers text. chat_heads 0.15 draws a BEFORE_LINE head from its hook
+        // on vanilla's drawTextWithShadow, i.e. inside that z+50 right before the text, and heads
+        // that reach a neighbouring row (shadow, hat, 3D-ness) overlap in this same order.
+        int linesDrawn = 0;
 
-        List<Row> rows = new ArrayList<>();
-        int maxR = Math.min(visibleLineCount, totalMessages - scrolledLines) - 1;
-        for (int r = maxR; r >= 0; r--) {
-            int s = r + scrolledLines;
-            LzChatLine visible = visibleMessages.get(s);
-            if (visible == null) continue;
-
-            int age = currentTick - visible.addedTime();
-            if (age >= 200 && !focused) continue;
-
-            double opacityMult = focused ? 1.0 : getOpacityMultiplier(age);
-            int textAlpha = (int)(255.0 * opacityMult * chatOpacity);
-            int bgAlpha   = (int)(255.0 * opacityMult * bgOpacity);
-
-            if (textAlpha <= 3) continue;
-
-            int lineTop = topY - r * lineHeight;
-            int lineBot = lineTop - lineHeight;
-            int textY   = lineTop + textOffset;
-
-            rows.add(new Row(s, visible, lineTop, lineBot, textY, textAlpha, bgAlpha));
-        }
-        int linesDrawn = rows.size();
-
-        // Both passes below query glyph widths (Pass 1's lineHighlight/selection math, Pass 2's
-        // indicator icon offset and the actual text draw) that must agree with each other and
-        // with the wrap-time measurement in ChatPanel.wrapEntryInto — one begin/end bracket
-        // around both, rather than per-call, so they can't drift out of sync with each other.
+        // Selection math and the text draw query glyph widths that must agree with each other and
+        // with the wrap-time measurement in ChatPanel.wrapEntryInto — one bracket around the loop.
         ChatHeadsSupport.beginHeadRendering();
         try {
-            // Pass 1: all background-layer fills, for every row, before any text is drawn.
-            for (Row row : rows) {
-                LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (row.bgAlpha() << 24) | lineBgRgb);
+            for (int r = 0; r + scrolledLines < totalMessages && r < visibleLineCount; r++) {
+                int s = r + scrolledLines;
+                LzChatLine visible = visibleMessages.get(s);
+                if (visible == null) continue;
 
-                LzChatEntry visibleEntry = row.visible().entry();
+                int age = currentTick - visible.addedTime();
+                if (age >= 200 && !focused) continue;
+
+                double opacityMult = focused ? 1.0 : getOpacityMultiplier(age);
+                int textAlpha = (int)(255.0 * opacityMult * chatOpacity);
+                int bgAlpha   = (int)(255.0 * opacityMult * bgOpacity);
+                linesDrawn++;
+
+                if (textAlpha <= 3) continue;
+
+                int lineTop = topY - r * lineHeight;
+                int lineBot = lineTop - lineHeight;
+                int textY   = lineTop + textOffset;
+
+                LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (bgAlpha << 24) | lineBgRgb);
+
+                LzChatEntry visibleEntry = visible.entry();
                 if (!ChatRenderer.highlightEntries.isEmpty()
                         && ChatRenderer.currentTick < ChatRenderer.highlightUntilTick
                         && visibleEntry != null && ChatRenderer.highlightEntries.contains(visibleEntry)) {
                     int remaining = ChatRenderer.highlightUntilTick - ChatRenderer.currentTick;
                     int hlAlpha = Math.min(120, remaining * 6);
-                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightSearchRgb);
+                    LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | theme.highlightSearchRgb);
                 }
                 if (!ChatRenderer.copyHighlightEntries.isEmpty()
                         && ChatRenderer.currentTick < ChatRenderer.copyHighlightUntil
                         && visibleEntry != null && ChatRenderer.copyHighlightEntries.contains(visibleEntry)) {
                     int remaining = ChatRenderer.copyHighlightUntil - ChatRenderer.currentTick;
                     int hlAlpha = Math.min(120, remaining * 6);
-                    LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (hlAlpha << 24) | theme.highlightNewRgb);
+                    LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (hlAlpha << 24) | theme.highlightNewRgb);
                 }
 
                 int flashAge = currentTick - panel.tabFlashTick();
@@ -333,37 +328,27 @@ public class ChatRenderer {
                     float t = (float) flashAge / FLASH_TICKS;
                     int flashAlpha = (int)(80 * (1f - t) * (1f - t));
                     if (flashAlpha > 0)
-                        LzDraw.fill(context, -4, row.lineBot(), chatWidth + 4 + 4, row.lineTop(), (flashAlpha << 24) | theme.highlightFlashRgb);
+                        LzDraw.fill(context, -4, lineBot, chatWidth + 4 + 4, lineTop, (flashAlpha << 24) | theme.highlightFlashRgb);
                 }
 
                 if (MultichatClient.CONFIG.selectionEnabled) {
-                    int[] selRect = ChatSelection.lineHighlight(row.visible(), row.s(), panel);
+                    int[] selRect = ChatSelection.lineHighlight(visible, s, panel);
                     if (selRect != null)
-                        LzDraw.fill(context, selRect[0], row.lineBot(), selRect[1], row.lineTop(), theme.selection);
+                        LzDraw.fill(context, selRect[0], lineBot, selRect[1], lineTop, theme.selection);
                 }
-            }
-
-            // Pass 2: indicators + text, for every row, always drawn on top of every background above.
-            // MC-VERSION-SENSITIVE: bottom row first, like vanilla's chat loop before 1.21.6, so
-            // chat_heads heads (shadow, hat, 3D-ness can reach a neighbouring row) overlap each other
-            // the same way they do in vanilla chat. 1.21.6+ vanilla draws top row first.
-            for (Row row : rows.reversed()) {
-                LzChatLine visible = row.visible();
-                int textAlpha = row.textAlpha();
-                int textY     = row.textY();
 
                 if (visible.isSkeleton()) {
                     // Whole tab is wrapping on a background thread (see WrapCoordinator) — draw a
                     // plain loading bar instead of real text. Width is a deterministic pseudo-random
                     // spread (keyed off the row) so a block of placeholders doesn't read as one
                     // solid rectangle. Alpha pulses (wall-clock, not tick, so it stays smooth
-                    // regardless of tick rate/freeze) with the phase offset keyed off row.s() itself
+                    // regardless of tick rate/freeze) with the phase offset keyed off s itself
                     // (row order, NOT the scrambled width-seed) — that's what makes it travel down
                     // the rows in sequence like one wave/snake instead of each row pulsing on its own
                     // unrelated schedule, which read as noise rather than motion.
-                    int seed = row.s() * 0x9E3779B1;
+                    int seed = s * 0x9E3779B1;
                     int barW = 30 + Math.floorMod(seed, Math.max(1, chatWidth - 40));
-                    double phase = (System.currentTimeMillis() % 1500) / 1500.0 * (Math.PI * 2) + row.s() * 0.4;
+                    double phase = (System.currentTimeMillis() % 1500) / 1500.0 * (Math.PI * 2) + s * 0.4;
                     double pulse = 0.75 + 0.25 * Math.sin(phase);
                     int barAlpha = (int)(textAlpha * 0.35 * pulse);
                     if (barAlpha > 2)
@@ -378,8 +363,8 @@ public class ChatRenderer {
                 if (MultichatClient.CONFIG.showIndicators) {
                     LzMessageIndicator indicator = visible.indicator();
                     if (indicator != null) {
-                        LzDraw.fill(context, -4, row.lineBot(), -2, row.lineTop(), indicator.indicatorColor() | (textAlpha << 24));
-                        if (row.s() == hoveredIndex && indicator.hasIcon()) {
+                        LzDraw.fill(context, -4, lineBot, -2, lineTop, indicator.indicatorColor() | (textAlpha << 24));
+                        if (s == hoveredIndex && indicator.hasIcon()) {
                             // chat_heads 0.15 moves the tag icon by getTextWidthDifference (chatheads$moveTagIcon)
                             int iconX = LzDraw.textWidth(visible.content()) + 4 + ChatHeadsSupport.lineWidthExtra(visible);
                             int iconY = textY + 9 - indicator.iconHeight() - 1;
