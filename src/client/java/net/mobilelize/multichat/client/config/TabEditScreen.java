@@ -294,10 +294,6 @@ public class TabEditScreen {
                 .setSaveConsumer(tab::setPingUseGlobalConditions)
                 .build());
 
-        pingsCat.addEntry(eb.startTextDescription(LzText.literal(
-                "Tab-specific conditions below are ignored when Use Global is ON.\n" +
-                "OR logic: ping fires if any enabled condition is true.").mc()).build());
-
         pingsCat.addEntry(eb.startBooleanToggle(
                 LzText.literal("Ping Always").mc(),
                 tab.pingCondAlways())
@@ -400,14 +396,6 @@ public class TabEditScreen {
                 .setTooltip(LzText.literal("When enabled, this tab blocks the difference pipeline even when it is not the active tab — as long as it is assigned to any enabled panel.").mc())
                 .setSaveConsumer(tab::setDifferenceInclusion)
                 .build());
-
-            diffCat.addEntry(eb.startTextDescription(LzText.format(
-                            """
-                                    &eExample&r: &aGuild&r layer &e2&r, &aTrade&r layer &e2&r, &6Other&r layer &e0
-                                    &7Guild message matches &aGuild&7 (layer 2, highest) — both &aGuild&7 and &aTrade&7
-                                    &7share layer 2, so &aGuild&7 gets it. &6Other&7 at layer 0 never sees it.
-                                    &7A message matching neither layer-2 tab falls down to &6Other&7 at layer 0.""").mc())
-                .build());
         }
 
         // ── Whitelist ──────────────────────────────────────────────────────
@@ -446,33 +434,6 @@ public class TabEditScreen {
         // whitelist/blacklist shape as the text rules, just style-based instead of text-based.
         ConfigCategory styleWlCat = builder.getOrCreateCategory(LzText.literal("Style Whitelist").mc());
 
-        styleWlCat.addEntry(eb.startTextDescription(LzText.format(
-                """
-                        &e&lStyle Whitelist&r
-                        &7Checks how part of the message actually &frenders&r&7, not its text. &fEmpty list
-                        = no restriction.&r Each condition has three small sections:
-                          &fFormatting&r&7 — toggle on every style that must be present at once (e.g. bold
-                            AND italic).
-                          &fColors&r&7 — toggle on the named colors allowed; &fHex Colors&r&7 — add raw RGB
-                            values for colors outside the 16 named ones. Every character checked must be ONE
-                            of the toggled/added colors, not necessarily the SAME one throughout — so a
-                            multi-colored word (different color per letter) can still match, as long as each
-                            color it uses is toggled on or listed.
-                        Leave Formatting/Colors/Hex Colors empty to not check them. At least one must be set.
-                          &fWORD&r&7 — find a specific word and check its style. &fWord Location&r&7 decides
-                            where: &fANYWHERE&r&7 searches for the word anywhere in the message, &fSTART&r&7/
-                            &fEND&r&7 pin it to the first/last word, &fINDEX&r&7 pins it to an exact position
-                            via &fWord Index&r&7 (1 = first word, 2 = second, etc.) — e.g. word &f"Jack"&r&7 +
-                            &fSTART&r&7 requires the first word to be "Jack" AND colored red.
-                          &fSTART_OF_MESSAGE&r&7 / &fEND_OF_MESSAGE&r&7 — does the message's first/last word
-                            have this formatting? Simple boundary check, &fWord&r&7 field is ignored.
-                          &7Leave &fWord&r&7 blank to skip content matching and just check formatting at that
-                            location instead, without caring what it says (e.g. "is the sender's name italic,"
-                            regardless of the actual name). For &fANYWHERE&r&7, blank instead checks if this
-                            formatting appears &fanywhere at all&r&7 in the message (at least one character) —
-                            useful for click/hover checks, where only a small part (a link, a name) is styled."""
-        ).mc()).build());
-
         styleWlCat.addEntry(eb.startEnumSelector(LzText.literal("Style Whitelist Mode").mc(), WhitelistMode.class,
                 tab.styleRules().whitelistMode())
             .setDefaultValue(WhitelistMode.ANY)
@@ -487,9 +448,6 @@ public class TabEditScreen {
 
         // ── Style Blacklist ───────────────────────────────────────────────
         ConfigCategory styleBlCat = builder.getOrCreateCategory(LzText.literal("Style Blacklist").mc());
-
-        styleBlCat.addEntry(eb.startTextDescription(LzText.literal(
-                "Same shape as Style Whitelist, but excludes a match instead of requiring one.").mc()).build());
 
         styleBlCat.addEntry(eb.startEnumSelector(LzText.literal("Style Blacklist Mode").mc(), BlacklistMode.class,
                 tab.styleRules().blacklistMode())
@@ -514,7 +472,143 @@ public class TabEditScreen {
                 .build());
         }
 
+        addHelp(builder, eb, tab);
         return builder.build();
+    }
+
+    // ── Help ──────────────────────────────────────────────────────────────
+    // One collapsible section per part of this screen (plus what the tab can do from chat), so the
+    // categories themselves stay just settings. Sections for features this tab can't use are left out.
+    private static void addHelp(ConfigBuilder builder, ConfigEntryBuilder eb, ChatTab tab) {
+        ConfigCategory help = builder.getOrCreateCategory(LzText.literal("Help").mc());
+        boolean filtered = tab.type() == TabType.FILTERED;
+        boolean subTab   = ChatManager.findParentOf(tab) != null;
+
+        help.addEntry(helpSection(eb, "How messages get into this tab", """
+                &7Every incoming message is checked against this tab's rules. It lands here only if it
+                &7passes &fall four&7 lists: &fWhitelist&7, &fBlacklist&7, &fStyle Whitelist&7 and
+                &fStyle Blacklist&7.
+                  &f• &7An &fempty&7 whitelist lets everything through; an empty blacklist blocks nothing.
+                  &f• &7Blacklists are checked first — a blacklist match always keeps the message out.
+                  &f• &7Text rules check what the message &fsays&7, style rules check how it &flooks&7.
+                &7Changes only affect new messages unless you turn on &fRefilter on Save&7 (Settings),
+                &7which rescans the whole history with the new rules when you save."""));
+
+        help.addEntry(helpSection(eb, "Settings", """
+                  &fName&7 — the tab's label. Must be unique (among its siblings, for a sub-tab).
+                  &fShow Timestamps&7 — puts the time in front of every message in this tab.
+                  &fCollapse Repeating&7 — the same message twice in a row is stacked with a counter
+                    instead of repeated. &fMatch Formatting&7 only stacks it if the colors match too.
+                  &fMessage Cap&7 — most messages this tab keeps; the oldest go first. 0 = unlimited.
+                  &fForce Highlight Matches&7 — a message that triggers Highlight Words gets in even if
+                    it fails this tab's rules.
+                  &fShow Badge&7 — the unread counter on the tab. &fTab Color&7 — custom tab color
+                    (000000 = default).
+                  &fRefilter on Save&7 — rescan all messages with the rules from this screen on save."""));
+
+        help.addEntry(helpSection(eb, "Context prefix", """
+                &7Lets you talk "in" this tab: while its context is on, whatever you type is sent with
+                &fContext Prefix&7 in front, e.g. prefix &f/msg Steve&7 turns "hi" into "/msg Steve hi".
+                  &f• &7Turn it on or off with right-click on the tab → &fToggle Context&7. The chat box
+                    shows the active prefix above it.
+                  &f• &fContext Command Mode&7 ON sends the result as a command, OFF as normal chat.
+                  &f• &fContext Prefix Space&7 OFF glues your message straight onto the prefix.
+                  &f• &7Messages starting with "/" are never prefixed."""));
+
+        if (filtered) {
+            help.addEntry(helpSection(eb, "Multi Tab (sub-tabs)", """
+                    &7Turns this tab into a folder of sub-tabs. A sub-tab only ever sees messages this
+                    &7tab already let in, then filters them again with its own rules.
+                      &f• &7Turn on &fMulti Tab&7, then add names under &fSub-Tabs&7. A built-in &fAll&7
+                        sub-tab always shows everything this tab let in.
+                      &f• &7In chat, click the tab to open its sub-tabs. The red &fX&7, or right-click →
+                        &fCollapse Sub-tabs&7, goes back.
+                      &f• &7Edit a sub-tab's own rules with right-click on it → &fEdit Tab&7."""));
+        }
+
+        help.addEntry(helpSection(eb, "Sound Pings", """
+                &7Plays a sound when a message arrives here. Needs the global switch in
+                &fSettings → Sound Pings&7 on as well.
+                  &f• &fPing Sound / Volume / Pitch&7 — leave at the default (-1) to use the global ones.
+                    &fTest Ping Sound&7: turn on, then Save, to hear it.
+                  &f• &fUse Global Ping Conditions&7 ON uses the global "when" rules. Turn it OFF to use
+                    the conditions on this tab: a ping fires if &fany&7 enabled one is true
+                    (Always, Tab Active, Tab Unfocused, Game Unfocused, AFK).
+                  &f• &fRequire Silence&7 is extra: the gap since the previous message must be at least
+                    &fSilence Threshold&7. &fPing Cooldown&7 is the minimum time between two pings."""));
+
+        if (filtered && !subTab) {
+            help.addEntry(helpSection(eb, "Difference Mode", """
+                    &7Makes tabs share messages instead of each showing a copy: a message goes only to
+                    &7the matching tab(s) on the &fhighest Difference Layer&7.
+                      &f• &7Tabs on the same layer that match all receive it together.
+                      &f• &fDifference Exception&7 — this tab still receives messages but never takes
+                        them away from the others.
+                      &f• &fDifference Inclusion&7 — this tab claims messages even when it isn't the
+                        active tab, as long as it's on an enabled panel.
+                    &eExample&r: &aGuild&r layer &e2&r, &aTrade&r layer &e2&r, &6Other&r layer &e0
+                    &7A guild message matches &aGuild&7 (layer 2, highest), so &6Other&7 never sees it.
+                    &7A message matching neither layer-2 tab falls down to &6Other&7 at layer 0."""));
+        }
+
+        help.addEntry(helpSection(eb, "Whitelist & Blacklist (text rules)", """
+                &7Each rule checks the message's text (not case-sensitive, except regex):
+                  &fCONTAINS / STARTS_WITH / ENDS_WITH / EXACT&7 — plain text checks.
+                  &fWORD&7 — the value as a whole word ("ban" won't match "urban").
+                  &fFUZZY&7 — all letters of the value appear in order, with anything in between.
+                  &fREGEX / REGEX_START / REGEX_END&7 — a regular expression anywhere / at the start /
+                    at the end of the message.
+                &fIndicator&7 narrows a rule to one kind of message: &fPLAYER&7 chat, &fSYSTEM&7 messages,
+                &fNOT_SECURE&7, &fMODIFIED&7 or &fCHAT_ERROR&7 (&fANY&7 = no restriction).
+                &fMode&7: whitelist &fANY&7 needs one rule to match, &fALL&7 needs every rule. Blacklist
+                &fANY&7 blocks when one matches, &fALL&7 only when all match."""));
+
+        help.addEntry(helpSection(eb, "Style Whitelist & Blacklist", """
+                &7Checks how part of the message &frenders&7, not what it says. Empty list = no
+                &7restriction. Each condition has three small sections:
+                  &fFormatting&7 — every style toggled on must be present at once (e.g. bold AND
+                    italic), plus click/hover checks (has a link, runs a command, shows a tooltip...).
+                  &fColors&7 — the named colors allowed; &fHex Colors&7 — raw RGB values for any other
+                    color. Every character checked must be ONE of them, not necessarily the same one,
+                    so a word with a different color per letter still matches.
+                &7Leave a section empty to not check it. At least one must be set.
+                &fTarget&7 decides where to look:
+                  &fWORD&7 — find a word and check its style. &fWord Location&7: &fANYWHERE&7 in the
+                    message, &fSTART&7 / &fEND&7 (first / last word), or &fINDEX&7 with &fWord Index&7
+                    (1 = first word). E.g. word "Jack" + START = the first word is Jack AND styled so.
+                  &fSTART_OF_MESSAGE&7 / &fEND_OF_MESSAGE&7 — the first / last word's style.
+                &7Leave &fWord&7 blank to check the style at that spot whatever it says (e.g. "is the
+                &7sender's name italic"). With &fANYWHERE&7, blank checks whether the style appears
+                &fanywhere&7 in the message — handy for links and names.
+                &7Formatting must cover the whole word; click/hover only needs one character of it.
+                &fMode&7 works like the text lists. The style blacklist keeps a message out instead."""));
+
+        help.addEntry(helpSection(eb, "Right-click a tab in chat", """
+                  &fEdit Tab&7 / &fRename Tab&7 — open this screen / rename quickly.
+                  &fToggle Context&7 — use the context prefix (see Context prefix).
+                  &fTimestamps&7 / &fCollapse&7 — quick toggles for those settings.
+                  &fClear Messages&7, &fClear Badge&7, &fToggle Badge&7.
+                  &fSearch in tab…&7 — search only this tab's messages.
+                  &fScroll to Top / Bottom&7, &fExport All&7 — copies the tab's messages to the clipboard.
+                  &fMove Left / Right&7 — reorder tabs.
+                  &fPop Out&7 — gives the tab its own floating panel (&fClose Popout&7 removes it).
+                  &fCollapse Sub-tabs&7 — back out of a multi tab."""));
+
+        help.addEntry(helpSection(eb, "Right-click a message", """
+                  &fCopy&7 / &fCopy with Timestamp&7 / &fCopy Selected&7 — copy the message or your
+                    drag-selection.
+                  &fSearch for this&7 — open a search with the message's text.
+                  &fAdd to Notes&7 — save it to your active note tab.
+                  &fJump to All&7 — find the same message in the All tab.
+                  &fDelete message&7 — remove it from this tab. &fDelete from All&7 — remove it from
+                    every tab that has it."""));
+    }
+
+    private static me.shedaniel.clothconfig2.api.AbstractConfigListEntry<?> helpSection(
+            ConfigEntryBuilder eb, String title, String body) {
+        SubCategoryBuilder section = eb.startSubCategory(LzText.literal(title).mc()).setExpanded(false);
+        section.add(eb.startTextDescription(LzText.format(body).mc()).build());
+        return section.build();
     }
 
     private static NestedListListEntry<MutableRule, MultiElementListEntry<MutableRule>> buildRuleList(
